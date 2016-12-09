@@ -1,19 +1,12 @@
 <html>
 <head>
     <title> OpenWindow </title>
+    <link rel="stylesheet" type="text/css" href="mainstyle.css">
     <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.19/angular.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.3.2/angular-ui-router.js"></script>
     <script src="app.js"></script>
 </head>
-<body ng-app="openwindow" ng-controller="windowopener">
-    <div>
-        {{test}}
-    </div>
-    <div ng-repeat="post in posts">
-        {{post_prefix}}
-        {{post.title}}<br>
-        {{post.body}}<br>
-        {{post_suffix}}
-    </div>
-    <button ng-click="addPost()">Post</button>
+<body ng-app="openwindow">
+    <ui-view></ui-view>
 </body>
 </html>
