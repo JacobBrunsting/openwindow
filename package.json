@@ -1,0 +1,22 @@
+{
+  "name": "openwindow",
+  "version": "1.0.0",
+  "description": "An anonymous posting site",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JacobBrunsting/openwindow.git"
+  },
+  "author": "Jacob Brunsting",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JacobBrunsting/openwindow/issues"
+  },
+  "homepage": "https://github.com/JacobBrunsting/openwindow#readme",
+  "dependencies": {
+    "express": "^4.14.0"
+  }
+}
