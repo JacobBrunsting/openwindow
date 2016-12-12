@@ -1,6 +1,7 @@
 angular.module('openwindow').controller('homectrl', [
         '$scope',
-        function($scope) {
+        '$http',
+        function($scope, $http) {
             // Title
             $scope.test = "this is a test";
             // Posts
@@ -22,6 +23,17 @@ angular.module('openwindow').controller('homectrl', [
                     $scope.title = '';
                 }
             }
+            getAllSitePosts = function() {
+                $http.get("/api/siteposts")
+                     .success(function(posts) {
+                         $scope.posts = posts;
+                     });
+                
+            }
+            function init() {
+                getAllSitePosts();
+            }
+            init();
         }
 ]);
 
