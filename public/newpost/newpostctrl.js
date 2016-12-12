@@ -7,10 +7,14 @@ angular.module('openwindow').controller('newpostctrl', [
             $scope.createNewSitePost = function() {
                 // add a post to the database
                 $scope.test = "changed";
-                $window.location.href = '#/home';
-                var sitepost = {title : $scope.title, body : 'TEST'};
+                var sitepost = {title : $scope.title, body : $scope.body};
                 $scope.title = '';
-                $http.post("/api/sitepost", sitepost);
+                $scope.body = '';
+                $http.post("/api/sitepost", sitepost)
+                     .success(function(response) {
+                                  $window.location.href = '#/home';
+                              })
+                     .error(function(error) {});
             }
         }
 ]);
