@@ -1,9 +1,66 @@
-body {
-    padding: 40px;
-    background-color: lightblue;
-}
+/* Color Scheme: http://paletton.com/#uid=53t0u0k83Lb1cZJ4dU7ct-hhlsn */
 
 html {
-    margin: 40px;
-    background-color: red;
+    background-color: #CEE1EB;
+    font-family: "Verdana", "Geneva", sans-serif;
+}
+
+body {
+    max-width: 80%;
+    padding: 3%;
+    margin-left: auto;
+    margin-right:auto;
+    margin-top: 5%;
+    background-color: #A9ADD8;
+}
+
+div.post_container {
+    margin: 1.5%;
+    padding: 1%;
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: #D3D6EE;
+    color: #535A9C;
+    background-color: #F4F5FC;
+}
+
+div.post_container:hover {
+    outline-color: #CEE1EB;
+    background-color: #F2F8FB;
+    color: #467690;
+    outline-width: 3px;
+}
+
+div.post:hover {
+    
+}
+
+div.post .title {
+    color: #7C82BB;
+    font-size: 1.4em;
+}
+
+div.post_container:hover .title {
+    color: #6E98AE;
+}
+
+button.float_add_btn {
+    position: fixed;
+    right: 30px;
+    bottom: 30px;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    background-color: #7C82BB;
+    border-color: #535A9C;
+    border-style: none;
+    color: #F4F5FC;
+    font-size: 40px;
+}
+
+button.float_add_btn:hover {
+    right: 29px;
+    bottom: 29px;
+    width: 62px;
+    height: 62px;
 }
