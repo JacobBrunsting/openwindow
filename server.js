@@ -2,6 +2,7 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
+var ObjectId = require('mongodb').ObjectId;
 mongoose.Promise = require('bluebird');
 mongoose.connect('mongodb://localhost/openwindowdatabase');
 

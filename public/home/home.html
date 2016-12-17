@@ -3,7 +3,7 @@
         {{test}}
     </div>
     <div class="post_container" ng-repeat="post in posts">
-        <div class="post">
+        <div data-id={{post._id}} class="post">
             <div class="title">
                 {{post.title}}<br>
             </div>

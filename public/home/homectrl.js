@@ -1,7 +1,8 @@
 angular.module('openwindow').controller('homectrl', [
         '$scope',
         '$http',
-        function($scope, $http) {
+        '$window',
+        function($scope, $http, $window) {
             // Title
             $scope.test = "this is a test";
             // Posts
@@ -13,7 +14,7 @@ angular.module('openwindow').controller('homectrl', [
             ];
             // Input
             $scope.addPost = function() {
-                $scope.posts.push({title:'new',body:'other'});
+                $window.location.href = '#/new';
             }
             $scope.addCustomPost = function() {
                 if ($scope.title != '') {
