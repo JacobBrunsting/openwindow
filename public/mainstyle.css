@@ -56,6 +56,7 @@ button.float_add_btn {
     border-style: none;
     color: #F4F5FC;
     font-size: 40px;
+    outline: none;
 }
 
 button.float_add_btn:hover {
@@ -63,4 +64,46 @@ button.float_add_btn:hover {
     bottom: 29px;
     width: 62px;
     height: 62px;
+}
+
+div.post_section {
+    display: inline-block;
+    width: 70%;
+}
+
+div.voting_section {
+    display: inline-block;
+    float: right;
+    overflow: auto;
+    margin: 2%;
+}
+
+div.voting_section * {
+    margin: 0px;
+    padding: 0px;
+    width: 100%;
+}
+
+div.voting_section button {
+    background-color: transparent;
+    border-style: none;
+    outline: none;
+    font-size: 1em;
+}
+
+div.voting_section button:active {
+    color: grey;
+}
+
+div.voting_section button:hover {
+    color: #7C82BB;
+}
+
+/* This is a wierd bit of css that stops floated elements inside post_container
+ * from collapsing */
+div.post_container:after {
+    content: "";
+    display: block;
+    height: 0;
+    clear: both;
 }

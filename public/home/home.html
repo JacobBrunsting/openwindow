@@ -3,19 +3,32 @@
         {{test}}
     </div>
     <div class="post_container" ng-repeat="post in posts">
-        <div data-id={{post._id}} class="post">
-            <div class="title">
-                {{post.title}}<br>
+        <div class="post" class={{post.selectedClass}}>
+            <div class="post_section">
+                <div class="title">
+                    {{post.title}}<br>
+                </div>
+                <div class="body">
+                    {{post.body}}<br>
+                </div>
             </div>
-            <div class="body">
-                {{post.body}}<br>
+            <div class="voting_section">
+                <button class="upvote_btn" ng-click="upvote(post._id)">
+                    +
+                </button>
+                <p class="countdown">
+                {{post.time_str}}
+                </p>
+                <button class="downvote_btn" ng-click="downvote(post._id)">
+                    -
+                </button>
             </div>
+            <script>
+            function upvote(post_id) {
+               document.getElementById(post_id).scope().upvote(post_id); 
+            }
+            </script>
         </div>
     </div>
-    <form ng-submit="addCustomPost()">
-        <input type="text" ng-model="title" />
-        <button type="submit">Post</button>
-    </form>
     <button class="float_add_btn" ng-click="addPost()">+</button>
-    <a href="#/new">new post</a>
 </html>
