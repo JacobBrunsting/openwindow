@@ -49,7 +49,8 @@ function getAllSitePosts(request, response) {
 
 function upvotePost(request, response) {
     var id = request.body.id;
-    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: 60}},
+    console.log("upvote");
+    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: 80}}, {new:true},
                                    function(err, data) {
                                        if (err) {
                                            response.status(400).send();
@@ -61,7 +62,8 @@ function upvotePost(request, response) {
 
 function unupvotePost(request, response) {
     var id = request.body.id;
-    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: -60}},
+    console.log("unupvoting");
+    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: -80}}, {new:true},
                                    function(err, data) {
                                        if (err) {
                                            response.status(400).send();

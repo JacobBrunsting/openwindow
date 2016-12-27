@@ -14,24 +14,26 @@ angular.module('openwindow').controller('homectrl', [
                 for (postId in $scope.posts) {
                     var post = $scope.posts[postId];
                     if (post._id == id) {
-                        console.log("found id " + id);
+                        console.log("found id " + id + "cur secs left " + post.secondsLeft);
                         if (post.selectedClass == "upvoted") {
                             removeUpvote(post); 
+                            post.selectedClass = "none";
                         } else {
                             upvote(post);
+                            post.selectedClass = "upvoted";
                         }
                     }
                 }
-                updatePostTimes(0);
             }
             upvote = function(post) {
                 $http.post("/api/upvote", {id: post._id})
                      .success(function(response) {
                          if (response.secondsLeft) {
                             post.secondsLeft = response.secondsLeft;
-                            console.log("updating seconds left for post " + post._id);
+                            console.log("updated post " + post._id);
+                            console.log("new seconds " + post.secondsLeft);
+                            updatePostTimes(0);
                          }
-                         post.selectedClass = "upvoted";
                      })
                      .error(function(error) {
                           
@@ -42,9 +44,10 @@ angular.module('openwindow').controller('homectrl', [
                      .success(function(response) {
                          if (response.secondsLeft) {
                             post.secondsLeft = response.secondsLeft;
-                            console.log("updating seconds left for post " + post._id);
+                            console.log("updated post " + post._id + " (unupvote)");
+                            console.log("new seconds " + post.secondsLeft);
+                            updatePostTimes(0);
                          }
-                         post.selectedClass = "none";
                      })
                      .error(function(error) {
                      
