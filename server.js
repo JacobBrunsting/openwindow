@@ -23,6 +23,7 @@ app.use(express.static(__dirname + '/public'));
 app.post("/api/upvote", upvotePost);
 app.post("/api/unupvote", unupvotePost);
 app.post("/api/downvote", downvotePost);
+app.post("/api/undownvote", undownvotePost);
 app.post("/api/sitepost", addNewSitePost);
 app.get("/api/siteposts", getAllSitePosts);
 
@@ -38,7 +39,7 @@ function addNewSitePost(request, response) {
 
 function getAllSitePosts(request, response) {
     sitePostModel.find()
-                 .then( // thie '.then' is a promis that calls a function on success or on failure
+                 .then(
                       function(posts) {
                           response.json(posts);
                       },
@@ -49,8 +50,8 @@ function getAllSitePosts(request, response) {
 
 function upvotePost(request, response) {
     var id = request.body.id;
-    console.log("upvote");
-    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: 80}}, {new:true},
+    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: 80}}, 
+                                    {new:true},
                                    function(err, data) {
                                        if (err) {
                                            response.status(400).send();
@@ -62,8 +63,8 @@ function upvotePost(request, response) {
 
 function unupvotePost(request, response) {
     var id = request.body.id;
-    console.log("unupvoting");
-    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: -80}}, {new:true},
+    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: -80}}, 
+                                    {new:true},
                                    function(err, data) {
                                        if (err) {
                                            response.status(400).send();
@@ -75,9 +76,28 @@ function unupvotePost(request, response) {
 
 function downvotePost(request, response) {
     var id = request.body.id;
-    sitePostModel.find({_id:id}).remove().exec();
-    console.log("downvoting post " + id);
-    response.status(200).send();
+    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: -190}}, 
+                                    {new:true},
+                                   function(err, data) {
+                                       if (err) {
+                                           response.status(400).send();
+                                       } else {
+                                           response.json(data);
+                                       }
+                                   });
+}
+
+function undownvotePost(request, response) {
+    var id = request.body.id;
+    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft: 190}}, 
+                                    {new:true},
+                                   function(err, data) {
+                                       if (err) {
+                                           response.status(400).send();
+                                       } else {
+                                           response.json(data);
+                                       }
+                                   });
 }
 
 app.listen(3000);

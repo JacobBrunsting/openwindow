@@ -10,55 +10,40 @@ angular.module('openwindow').controller('homectrl', [
                 $window.location.href = '#/new';
             }
             $scope.upvote = function(id) {
-                console.log("looking for id " + id);
                 for (postId in $scope.posts) {
                     var post = $scope.posts[postId];
                     if (post._id == id) {
-                        console.log("found id " + id + "cur secs left " + post.secondsLeft);
                         if (post.selectedClass == "upvoted") {
-                            removeUpvote(post); 
+                            updatePostVote("unupvote", post);
                             post.selectedClass = "none";
+                        } else if (post.selectedClass == "downvoted") {
+                            updatePostVote("undownvote", post);
+                            updatePostVote("upvote", post);
+                            post.selectedClass = "upvoted";
                         } else {
-                            upvote(post);
+                            updatePostVote("upvote", post);
                             post.selectedClass = "upvoted";
                         }
                     }
                 }
             }
-            upvote = function(post) {
-                $http.post("/api/upvote", {id: post._id})
-                     .success(function(response) {
-                         if (response.secondsLeft) {
-                            post.secondsLeft = response.secondsLeft;
-                            console.log("updated post " + post._id);
-                            console.log("new seconds " + post.secondsLeft);
-                            updatePostTimes(0);
-                         }
-                     })
-                     .error(function(error) {
-                          
-                     });
-            }
-            removeUpvote = function(post) {
-                $http.post("/api/unupvote", {id: post._id})
-                     .success(function(response) {
-                         if (response.secondsLeft) {
-                            post.secondsLeft = response.secondsLeft;
-                            console.log("updated post " + post._id + " (unupvote)");
-                            console.log("new seconds " + post.secondsLeft);
-                            updatePostTimes(0);
-                         }
-                     })
-                     .error(function(error) {
-                     
-                     });
-            }
             $scope.downvote = function(id) {
-                $http.post("/api/downvote", {id: id})
-                     .success(function(response) {
-                     })
-                     .error(function(error) {});
-
+                for (postId in $scope.posts) {
+                    var post = $scope.posts[postId];
+                    if (post._id == id) {
+                        if (post.selectedClass == "downvoted") {
+                            updatePostVote("undownvote", post);
+                            post.selectedClass = "none";
+                        } else if (post.selectedClass == "upvoted") {
+                            updatePostVote("unupvote", post);
+                            updatePostVote("downvote", post);
+                            post.selectedClass = "downvoted";
+                        } else {
+                            updatePostVote("downvote", post);
+                            post.selectedClass = "downvoted";
+                        }
+                    }
+                }
             }
             getAllSitePosts = function() {
                 $http.get("/api/siteposts")
@@ -73,13 +58,29 @@ angular.module('openwindow').controller('homectrl', [
                     var post = $scope.posts[postId];
                     post.secondsLeft -= timeToRemove;
                     if (post.secondsLeft < 3540) {
-                        post.time_str = Math.ceil(post.secondsLeft / 60) + " min";
+                        post.time_str = Math.ceil(post.secondsLeft / 60) + 
+                                        " min";
                     } else if (post.secondsLeft < 21600) {
-                        post.time_str = Math.floor(post.secondsLeft / 3600) + " hr";
+                        post.time_str = Math.floor(post.secondsLeft / 3600) + 
+                                        " hr";
                     } else {
-                        post.time_str = Math.floor(post.secondsLeft / 21600) + " day";
+                        post.time_str = Math.floor(post.secondsLeft / 21600) + 
+                                        " day";
                     }
                 }
+            }
+            updatePostVote = function(apiCall, post) {
+                var call = "/api/" + apiCall;
+                $http.post(call, {id:post._id})
+                     .success(function(response) {
+                         if (response.secondsLeft) {
+                            post.secondsLeft = response.secondsLeft;
+                            updatePostTimes(0);
+                         }
+                     })
+                     .error(function(error) {
+                     
+                     });
             }
             function init() {
                 getAllSitePosts();
