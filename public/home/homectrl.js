@@ -18,7 +18,7 @@ angular.module('openwindow').controller('homectrl', [
                 vote(DOWNVOTE, id);
             }
             $scope.comments = function(id) {
-               console.log("go to comments for id " + id); 
+               $window.location.href = '#/comments?postId=' + id;
             }
             vote = function(vote, id) {
                 for (postId in $scope.posts) {

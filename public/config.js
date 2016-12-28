@@ -13,7 +13,7 @@ angular.module('openwindow').config([
             controller: 'newpostctrl'
         });
         $stateProvider.state('comments', {
-            url: '/comments',
+            url: '/comments?postId',
             templateUrl: '/comments/comments.html',
             controller: 'commentsctrl'
         });

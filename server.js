@@ -34,7 +34,7 @@ app.post("/api/upvote", upvotePost);
 app.post("/api/downvote", downvotePost);
 app.post("/api/sitepost", addNewSitePost);
 app.get("/api/siteposts", getAllSitePosts);
-app.get("/api/comments", getComments);
+app.get("/api/post", getPost);
 
 // request body must match SitePostSchema (i.e. have title and body strings)
 function addNewSitePost(request, response) {
@@ -100,7 +100,16 @@ function downvotePost(request, response) {
                                    });
 }
 
-function getComments(request, response) {
-
+function getPost(request, response) {
+    var id = request.query.id;
+    sitePostModel.findOne({_id:ObjectId(id)},
+                           function(err, data) {
+                               if (err || data == null) {
+                                   response.status(400).send();
+                               } else {
+                                   response.json(data);
+                               }
+                           });
 }
+
 app.listen(3000);

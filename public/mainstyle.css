@@ -36,7 +36,9 @@ div.post_container:hover {
 
 div.post {
     display: inline-block;
-    width: 70%;
+    width: 85%;
+    word-break: break-all;
+    margin-bottom: 30px;
 }
 
 div.post .title {
