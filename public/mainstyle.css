@@ -31,10 +31,6 @@ div.post_container:hover {
     outline-width: 3px;
 }
 
-div.post:hover {
-    
-}
-
 div.post .title {
     color: #7C82BB;
     font-size: 1.4em;
@@ -88,11 +84,9 @@ div.voting_section button {
     background-color: transparent;
     border-style: none;
     outline: none;
-    font-size: 1em;
-}
-
-div.voting_section button:active {
-    color: grey;
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #A9ADD9;
 }
 
 div.voting_section button:hover {
@@ -106,4 +100,12 @@ div.post_container:after {
     display: block;
     height: 0;
     clear: both;
+}
+
+.upvoted > div.voting_section > button.upvote_btn {
+    color: #7C82BB;
+}
+
+.downvoted > div.voting_section > button.downvote_btn {
+    color: #7C82BB;
 }

@@ -3,45 +3,49 @@ angular.module('openwindow').controller('homectrl', [
         '$http',
         '$window',
         function($scope, $http, $window) {
-            // Title
-            $scope.test = "Posts";
-            // Input
+            // must be consistent with their usages in server.js
+            var UPVOTE = 2;
+            var DOWNVOTE = 1;
+            var NONE = 0;
+
             $scope.addPost = function() {
                 $window.location.href = '#/new';
             }
             $scope.upvote = function(id) {
-                for (postId in $scope.posts) {
-                    var post = $scope.posts[postId];
-                    if (post._id == id) {
-                        if (post.selectedClass == "upvoted") {
-                            updatePostVote("unupvote", post);
-                            post.selectedClass = "none";
-                        } else if (post.selectedClass == "downvoted") {
-                            updatePostVote("undownvote", post);
-                            updatePostVote("upvote", post);
-                            post.selectedClass = "upvoted";
-                        } else {
-                            updatePostVote("upvote", post);
-                            post.selectedClass = "upvoted";
-                        }
-                    }
-                }
+                vote(UPVOTE, id);
             }
             $scope.downvote = function(id) {
+                vote(DOWNVOTE, id);
+            }
+            vote = function(vote, id) {
                 for (postId in $scope.posts) {
                     var post = $scope.posts[postId];
                     if (post._id == id) {
-                        if (post.selectedClass == "downvoted") {
-                            updatePostVote("undownvote", post);
-                            post.selectedClass = "none";
-                        } else if (post.selectedClass == "upvoted") {
-                            updatePostVote("unupvote", post);
-                            updatePostVote("downvote", post);
-                            post.selectedClass = "downvoted";
-                        } else {
-                            updatePostVote("downvote", post);
-                            post.selectedClass = "downvoted";
+                        var oldVote = NONE;
+                        if (post.upvoted) {
+                            oldVote = UPVOTE;
+                        } else if (post.downvoted) {
+                            oldVote = DOWNVOTE;
                         }
+                        updatePostVote(vote, post, function(success) {
+                            if (success) {
+                                if (vote == UPVOTE && oldVote == UPVOTE) {
+                                    post.upvoted = false;
+                                } else if (vote == DOWNVOTE && oldVote == DOWNVOTE) {
+                                    post.downvoted = false;
+                                } else if (vote == UPVOTE) {
+                                    post.upvoted = true;
+                                    post.downvoted = false;
+                                } else if (vote == DOWNVOTE) {
+                                    post.upvoted = false;
+                                    post.downvoted = true;
+                                } else {
+                                    post.upvoted = false;
+                                    post.downvoted = false;
+                                }
+                            }
+                        });
+                        break;
                     }
                 }
             }
@@ -49,6 +53,10 @@ angular.module('openwindow').controller('homectrl', [
                 $http.get("/api/siteposts")
                      .success(function(posts) {
                          $scope.posts = posts;
+                         for (postId in $scope.posts) {
+                            $scope.posts[postId].upvoted = false;
+                            $scope.posts[postId].downvoted = false;
+                         }
                          updatePostTimes(10);
                      });
                 
@@ -69,18 +77,35 @@ angular.module('openwindow').controller('homectrl', [
                     }
                 }
             }
-            updatePostVote = function(apiCall, post) {
-                var call = "/api/" + apiCall;
-                $http.post(call, {id:post._id})
+            updatePostVote = function(vote, post, callback) {
+                var call = "/api/" + getVoteCall(vote);
+                $http.post(call, {id:post._id, oldVote:getPostStatus(post)})
                      .success(function(response) {
                          if (response.secondsLeft) {
                             post.secondsLeft = response.secondsLeft;
                             updatePostTimes(0);
                          }
+                         callback(true);
                      })
                      .error(function(error) {
-                     
+                         callback(false);
                      });
+            }
+            getPostStatus = function(post) {
+                if (post.upvoted) {
+                    return UPVOTE;
+                } else if (post.downvoted) {
+                    return DOWNVOTE;
+                }
+                return NONE;
+            }
+            getVoteCall = function(status) {
+                if (status == UPVOTE) {
+                    return "upvote";
+                } else if (status == DOWNVOTE) {
+                    return "downvote";
+                }
+                return "";
             }
             function init() {
                 getAllSitePosts();

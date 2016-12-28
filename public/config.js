@@ -12,6 +12,11 @@ angular.module('openwindow').config([
             templateUrl: '/newpost/newpost.html',
             controller: 'newpostctrl'
         });
+        $stateProvider.state('comments', {
+            url: '/comments',
+            templateUrl: '/comments/comments.html',
+            controller: 'commentsctrl'
+        });
         $urlRouterProvider.otherwise('home');
     }
 ]);
