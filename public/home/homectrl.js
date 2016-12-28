@@ -17,10 +17,13 @@ angular.module('openwindow').controller('homectrl', [
             $scope.downvote = function(id) {
                 vote(DOWNVOTE, id);
             }
+            $scope.comments = function(id) {
+               console.log("go to comments for id " + id); 
+            }
             vote = function(vote, id) {
                 for (postId in $scope.posts) {
                     var post = $scope.posts[postId];
-                    if (post._id == id) {
+                    if (post.id == id) {
                         var oldVote = NONE;
                         if (post.upvoted) {
                             oldVote = UPVOTE;
@@ -52,10 +55,20 @@ angular.module('openwindow').controller('homectrl', [
             getAllSitePosts = function() {
                 $http.get("/api/siteposts")
                      .success(function(posts) {
-                         $scope.posts = posts;
-                         for (postId in $scope.posts) {
-                            $scope.posts[postId].upvoted = false;
-                            $scope.posts[postId].downvoted = false;
+                         $scope.posts = [];
+                         for (postId in posts) {
+                             var post = posts[postId];
+                             var formattedPost = {
+                                 id:            post._id,
+                                 title:         post.title,
+                                 body:          post.body,
+                                 upvoted:       false,
+                                 downvoted:     false,
+                                 comment_count: post.commentCount,
+                                 seconds_left:  post.secondsLeft,
+                                 time_str:      ""
+                             }
+                             $scope.posts.push(formattedPost);
                          }
                          updatePostTimes(10);
                      });
@@ -65,24 +78,24 @@ angular.module('openwindow').controller('homectrl', [
                 for (var postId in $scope.posts) {
                     var post = $scope.posts[postId];
                     post.secondsLeft -= timeToRemove;
-                    if (post.secondsLeft < 3540) {
-                        post.time_str = Math.ceil(post.secondsLeft / 60) + 
+                    if (post.seconds_left < 3540) {
+                        post.time_str = Math.ceil(post.seconds_left / 60) + 
                                         " min";
-                    } else if (post.secondsLeft < 21600) {
-                        post.time_str = Math.floor(post.secondsLeft / 3600) + 
+                    } else if (post.seconds_left < 21600) {
+                        post.time_str = Math.floor(post.seconds_left / 3600) + 
                                         " hr";
                     } else {
-                        post.time_str = Math.floor(post.secondsLeft / 21600) + 
+                        post.time_str = Math.floor(post.seconds_left / 21600) + 
                                         " day";
                     }
                 }
             }
             updatePostVote = function(vote, post, callback) {
                 var call = "/api/" + getVoteCall(vote);
-                $http.post(call, {id:post._id, oldVote:getPostStatus(post)})
+                $http.post(call, {id:post.id, oldVote:getPostStatus(post)})
                      .success(function(response) {
                          if (response.secondsLeft) {
-                            post.secondsLeft = response.secondsLeft;
+                            post.seconds_left = response.secondsLeft;
                             updatePostTimes(0);
                          }
                          callback(true);

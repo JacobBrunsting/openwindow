@@ -1,30 +1,28 @@
 <html ng-controller="homectrl">
     <div class="post_container" ng-repeat="post in posts">
         <div class="post" ng-class="{upvoted:post.upvoted,downvoted:post.downvoted}">
-            <div class="post_section">
-                <div class="title">
-                    {{post.title}}<br>
-                </div>
-                <div class="body">
-                    {{post.body}}<br>
-                </div>
+            <div class="title">
+                {{post.title}}<br>
             </div>
-            <div class="voting_section">
-                <button class="upvote_btn" ng-click="upvote(post._id)">
-                    +
-                </button>
-                <p class="countdown">
+            <div class="body">
+                {{post.body}}<br>
+            </div>
+        </div>
+        <div class="voting_section">
+            <button class="upvote_btn" ng-click="upvote(post.id)">
+                +
+            </button>
+            <div class="countdown">
                 {{post.time_str}}
-                </p>
-                <button class="downvote_btn" ng-click="downvote(post._id)">
-                    -
-                </button>
             </div>
-            <script>
-            function upvote(post_id) {
-               document.getElementById(post_id).scope().upvote(post_id); 
-            }
-            </script>
+            <button class="downvote_btn" ng-click="downvote(post.id)">
+                -
+            </button>
+        </div>
+        <div class="comments">
+            <button class="comments_btn" ng-click="comments(post.id)">
+                comments ({{post.comment_count || 0}})
+            </button>
         </div>
     </div>
     <button class="float_add_btn" ng-click="addPost()">+</button>

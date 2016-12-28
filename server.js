@@ -21,6 +21,8 @@ var SitePostSchema = mongoose.Schema({
     posterId: {type: Number, default: 0},
     postTime: {type: Date, default: Date.now},
     secondsLeft: {type: Number, default: 0},
+    commentCount: {type: Number, default: 0},
+    comments: {type: [String]},
 }, {collection: collectionName}); // structure of a post
 
 var sitePostModel = mongoose.model("sitePostModel", SitePostSchema);
@@ -32,6 +34,7 @@ app.post("/api/upvote", upvotePost);
 app.post("/api/downvote", downvotePost);
 app.post("/api/sitepost", addNewSitePost);
 app.get("/api/siteposts", getAllSitePosts);
+app.get("/api/comments", getComments);
 
 // request body must match SitePostSchema (i.e. have title and body strings)
 function addNewSitePost(request, response) {
@@ -97,4 +100,7 @@ function downvotePost(request, response) {
                                    });
 }
 
+function getComments(request, response) {
+
+}
 app.listen(3000);

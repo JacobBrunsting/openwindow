@@ -15,8 +15,11 @@ body {
 }
 
 div.post_container {
+    position: relative;
     margin: 1.5%;
-    padding: 1%;
+    padding-left: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
     outline-style: solid;
     outline-width: 2px;
     outline-color: #D3D6EE;
@@ -29,6 +32,11 @@ div.post_container:hover {
     background-color: #F2F8FB;
     color: #467690;
     outline-width: 3px;
+}
+
+div.post {
+    display: inline-block;
+    width: 70%;
 }
 
 div.post .title {
@@ -62,11 +70,6 @@ button.float_add_btn:hover {
     height: 62px;
 }
 
-div.post_section {
-    display: inline-block;
-    width: 70%;
-}
-
 div.voting_section {
     display: inline-block;
     float: right;
@@ -93,7 +96,25 @@ div.voting_section button:hover {
     color: #7C82BB;
 }
 
-/* This is a wierd bit of css that stops floated elements inside post_container
+div.comments {
+    position: absolute;
+    bottom: 0;
+    margin-bottom: 10px;
+    width: 70%;
+}
+
+div.comments > button.comments_btn {
+    background-color: transparent;
+    border-style: none;
+    outline: none;
+    color: #A9ADD9;
+}
+
+div.comments > button.comments_btn:hover {
+    color: #7C82BB;
+}
+
+/* This is an ugly bit of css that stops floated elements inside post_container
  * from collapsing */
 div.post_container:after {
     content: "";
