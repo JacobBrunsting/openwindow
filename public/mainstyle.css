@@ -116,6 +116,11 @@ div.comments > button.comments_btn:hover {
     color: #7C82BB;
 }
 
+div.comment_container {
+    background-color: #F4F5FC;
+    margin: 10px;
+}
+
 /* This is an ugly bit of css that stops floated elements inside post_container
  * from collapsing */
 div.post_container:after {
@@ -132,3 +137,4 @@ div.post_container:after {
 .downvoted > div.voting_section > button.downvote_btn {
     color: #7C82BB;
 }
+

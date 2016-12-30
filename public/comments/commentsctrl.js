@@ -7,6 +7,7 @@ angular.module('openwindow').controller('commentsctrl', [
             $scope.postId = $location.search().postId;
             $scope.title = "";
             $scope.body = "";
+            $scope.comments = [];
 
             getPost = function(id, callback) {
                 $http.get("/api/post", {params:{id:id}})
@@ -21,7 +22,19 @@ angular.module('openwindow').controller('commentsctrl', [
             getPost($scope.postId, function(post) {
                         $scope.title = post.title;
                         $scope.body = post.body;
+                        $scope.comments = post.comments;
                     });
+
+            $scope.addComment = function() {
+                $http.post("/api/comment", 
+                          {id:$scope.postId, comment:$scope.body_box})
+                     .success(function(response) {
+                         $scope.comments = response; 
+                     })
+                     .error(function(error) {
+                     });
+                console.log("adding comment with title " + $scope.title_box + " and body " + $scope.body_box);
+            }
         }
 ]);
 

@@ -21,7 +21,6 @@ var SitePostSchema = mongoose.Schema({
     posterId: {type: Number, default: 0},
     postTime: {type: Date, default: Date.now},
     secondsLeft: {type: Number, default: 0},
-    commentCount: {type: Number, default: 0},
     comments: {type: [String]},
 }, {collection: collectionName}); // structure of a post
 
@@ -33,6 +32,7 @@ app.use(express.static(__dirname + '/public'));
 app.post("/api/upvote", upvotePost);
 app.post("/api/downvote", downvotePost);
 app.post("/api/sitepost", addNewSitePost);
+app.post("/api/comment", comment);
 app.get("/api/siteposts", getAllSitePosts);
 app.get("/api/post", getPost);
 
@@ -110,6 +110,20 @@ function getPost(request, response) {
                                    response.json(data);
                                }
                            });
+}
+
+function comment(request, response) {
+    var id = request.body.id;
+    var comment = request.body.comment;
+    sitePostModel.findByIdAndUpdate({_id:id}, {$push:{comments:comment}},
+                                   {new:true},
+                                   function(err, data) {
+                                       if (err || data == null) {
+                                           response.status(400).send();
+                                       } else {
+                                           response.json(data.comments);
+                                       }
+                                   });
 }
 
 app.listen(3000);
