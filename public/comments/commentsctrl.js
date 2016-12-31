@@ -33,7 +33,6 @@ angular.module('openwindow').controller('commentsctrl', [
                      })
                      .error(function(error) {
                      });
-                console.log("adding comment with title " + $scope.title_box + " and body " + $scope.body_box);
             }
         }
 ]);

@@ -1,15 +1,12 @@
 <html ng-controller="commentsctrl">
-    The post ID is {{postId}} </br>
-    The title and body are </br>
     {{title}}</br>
     {{body}}
-    <div ng-repeat="comment in comments">
+    <div ng-repeat="comment in comments track by $index">
         <div class="comment_container">
             {{comment}}
         </div>
     </div>
     <form ng-submit="addComment()">
-        <input type="text" ng-model="title_box" />
         <input type="text" ng-model="body_box" />
         <button type="submit">Post</button>
     </form>
