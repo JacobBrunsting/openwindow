@@ -1,6 +1,16 @@
 <html ng-controller="commentsctrl">
-    {{title}}</br>
-    {{body}}
+    <div class="post_container">
+        <div ng-include="'/submodules/post/post.html'">
+        </div>
+    </div>
+    <div class="post">
+        <div class="title">
+            {{title}}</br>
+        </div>
+        <div class="body">
+            {{body}}
+        </div>
+    </div>
     <div ng-repeat="comment in comments track by $index">
         <div class="comment_container">
             {{comment}}
