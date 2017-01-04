@@ -24,6 +24,10 @@ angular.module('openwindow').controller('commentsctrl', [
                     });
 
             $scope.addComment = function() {
+                if ($scope.body_box == "") {
+                    // TODO: add more rejected comment types
+                    return;
+                }
                 $http.post("/api/comment", 
                           {id:$scope.postId, comment:$scope.body_box})
                      .success(function(response) {
