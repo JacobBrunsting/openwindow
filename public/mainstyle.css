@@ -18,6 +18,7 @@ div.post_container {
     position: relative;
     margin: 1.5%;
     padding-left: 20px;
+    padding-right: 20px;
     padding-top: 10px;
     padding-bottom: 10px;
     outline-style: solid;
@@ -117,8 +118,24 @@ div.comments > button.comments_btn:hover {
 }
 
 div.comment_container {
+    position: relative;
+    color: #535A9C;
+    border-color: #A9ADD9;
+    border-width: 1px;
+    border-bottom-style: solid;
+    padding: 10px;
+}
+
+div.comments_container {
+    margin: 1.5%;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: #D3D6EE;
     background-color: #F4F5FC;
-    margin: 10px;
 }
 
 /* This is an ugly bit of css that stops floated elements inside post_container
