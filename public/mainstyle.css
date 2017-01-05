@@ -147,11 +147,11 @@ div.post_container:after {
     clear: both;
 }
 
-.upvoted > div.voting_section > button.upvote_btn {
+div.voting_section.upvoted > button.upvote_btn {
     color: #7C82BB;
 }
 
-.downvoted > div.voting_section > button.downvote_btn {
+div.voting_section.downvoted > button.downvote_btn {
     color: #7C82BB;
 }
 

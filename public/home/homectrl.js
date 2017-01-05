@@ -26,6 +26,9 @@ angular.module('openwindow').controller('homectrl', [
                 
             }
             getAllSitePosts();
+            $scope.addPost = function() {
+               $window.location.href = '#/new';
+            }
         }
 ]);
 
