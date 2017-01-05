@@ -36,8 +36,6 @@ div.post_container:hover {
 }
 
 div.post {
-    display: inline-block;
-    width: 85%;
     word-break: break-all;
     margin-bottom: 30px;
 }
@@ -74,9 +72,8 @@ button.float_add_btn:hover {
 }
 
 div.voting_section {
-    display: inline-block;
+    width: 60px;
     float: right;
-    overflow: auto;
     margin: 2%;
 }
 
