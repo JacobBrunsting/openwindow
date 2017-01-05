@@ -1,0 +1,26 @@
+<div ng-controller="postctrl">  
+    <div class="post">
+        <div class="title">
+            {{post.title}}
+        </div>
+        <div class="body">
+            {{post.body}}
+        </div>
+    </div>
+    <div class="voting_section" ng-class="{'upvoted': post.upvoted, 'downvoted': post.downvoted}">
+        <button class="upvote_btn" ng-click="upvote()">
+            +
+        </button>
+        <div class="countdown">
+            {{post.time_str}}
+        </div>
+        <button class="downvote_btn" ng-click="downvote()">
+            -
+        </button>
+    </div>
+    <div class="comments">
+        <button class="comments_btn" ng-click="comments()">
+            comments ({{post.comment_count || 0}})
+        </button>
+    </div>
+</html>
