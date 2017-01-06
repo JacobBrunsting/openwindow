@@ -18,7 +18,7 @@
             {{post.body}}
         </div>
     </div>
-    <div class="comments">
+    <div class="comments" ng-class="{'hidden': page=='comments'}">
         <button class="comments_btn" ng-click="comments()">
             comments ({{post.comment_count || 0}})
         </button>

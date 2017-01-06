@@ -152,3 +152,7 @@ div.voting_section.downvoted > button.downvote_btn {
     color: #7C82BB;
 }
 
+.hidden {
+    display: none;
+}
+

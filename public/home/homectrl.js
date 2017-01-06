@@ -3,8 +3,8 @@ angular.module('openwindow').controller('homectrl', [
         '$http',
         '$window',
         function($scope, $http, $window) {
-            console.log("Home contrtoller");
             getAllSitePosts = function() {
+                $scope.page = "home";
                 $http.get("/api/siteposts")
                      .success(function(posts) {
                          $scope.posts = [];
@@ -16,8 +16,8 @@ angular.module('openwindow').controller('homectrl', [
                                  body:          post.body,
                                  upvoted:       false,
                                  downvoted:     false,
-                                 comment_count: post.commentCount,
-                                 seconds_left:  post.secondsLeft,
+                                 comment_count: post.comments.length,
+                                 secondsLeft:  post.secondsLeft,
                                  time_str:      ""
                              }
                              $scope.posts.push(formattedPost);

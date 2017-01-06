@@ -1,12 +1,9 @@
 angular.module('openwindow').controller('postctrl', [
         '$scope',
         '$http',
-        '$window', /*
-        '$watch',
-        '$interval', */
-        function($scope, $http, $window/*, $watch, $interval */) {
+        '$window',
+        function($scope, $http, $window) {
             // must be consistent with their usages in server.js
-            console.log("post controller");
             var UPVOTE = 2;
             var DOWNVOTE = 1;
             var NONE = 0;
@@ -47,7 +44,7 @@ angular.module('openwindow').controller('postctrl', [
                 });
             }
             $scope.updatePostTimeStr = function() {
-                var time = $scope.post.seconds_left;
+                var time = $scope.post.secondsLeft;
                 if (time < 3540) {
                     $scope.post.time_str = Math.ceil(time / 60) + " min";
                 } else if (time < 21600) {
@@ -55,23 +52,16 @@ angular.module('openwindow').controller('postctrl', [
                 } else {
                     $scope.post.time_str = Math.floor(time / 21600) + " day";
                 }
-            }/*
-            $scope.$watch("post", function(newval, oldval) {
-                console.log("UPDATING");
-                updatePostTimeStr();
+            }
+            $scope.$watch("post.secondsLeft", function(newval, oldval) {
+                $scope.updatePostTimeStr();
             });
-            $interval(function() {
-                $scope.post.seconds_left -= 10;
-                console.log("UDPATING");
-            }, 10);
-            */
             $scope.updatePostVote = function(vote, callback) {
                 var call = "/api/" + getVoteCall(vote);
                 $http.post(call, {id:$scope.post.id, oldVote:$scope.getPostStatus($scope.post)})
                      .success(function(response) {
                          if (response.secondsLeft) {
-                            $scope.post.seconds_left = response.secondsLeft;
-                            $scope.updatePostTimeStr();
+                            $scope.post.secondsLeft = response.secondsLeft;
                          }
                          callback(true);
                      })

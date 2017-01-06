@@ -4,8 +4,15 @@ angular.module('openwindow').controller('commentsctrl', [
         '$window',
         '$location',
         function($scope, $http, $window, $location) {
-            $scope.postId = $location.search().postId;
-            $scope.post = {title:"", body:"", time_str:""}; // TODO: make post structure shared by all files
+            $scope.page = "comments";
+            $scope.post = {
+                id:$location.search().postId, 
+                title:"", 
+                body:"", 
+                comment_count:0, 
+                seconds_left:0, 
+                time_str:""
+            };
             $scope.comments = [];
 
             getPost = function(id, callback) {
@@ -18,8 +25,14 @@ angular.module('openwindow').controller('commentsctrl', [
 
             }
 
-            getPost($scope.postId, function(post) {
-                        $scope.post = post;
+            getPost($scope.post.id, function(post) {
+                         $scope.post = {
+                             id:            post._id,
+                             title:         post.title,
+                             body:          post.body,
+                             comment_count: post.comments.length,
+                             secondsLeft:   post.secondsLeft,
+                         }
                         $scope.comments = post.comments;
                     });
 
@@ -29,7 +42,7 @@ angular.module('openwindow').controller('commentsctrl', [
                     return;
                 }
                 $http.post("/api/comment", 
-                          {id:$scope.postId, comment:$scope.body_box})
+                          {id:$scope.post.id, comment:$scope.body_box})
                      .success(function(response) {
                          $scope.comments = response; 
                      })
