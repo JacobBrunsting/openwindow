@@ -166,7 +166,7 @@ div.voting_section.downvoted > button.downvote_btn {
 input.title_input {
     display: block;
     width: 100%;
-    margin-bottom: 10px;
+    margin: 10px;
 }
 
 input.body_input {
@@ -174,24 +174,26 @@ input.body_input {
     width: 100%;
     height: 50%;
     background-color: #F4F5FC;
-    margin-bottom: 10px;
+    margin: 10px;
 }
 
 input.comment_input {
     display: block;
     width: 100%;
     background-color: #F4F5FC;
-    margin-bottom: 10px;
+    margin: 10px;
 }
 
 div.field_heading {
     font-size: 10pt;
     color: #F4F5FC;
+    margin: 10px;
 }
 
 button.submit_button {
     width: 100%;
     height: 40px;
+    margin: 10px;
     outline-style: solid;
     outline-width: 2px;
     outline-color: #D3D6EE;
