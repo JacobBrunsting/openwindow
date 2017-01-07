@@ -27,11 +27,15 @@ angular.module('openwindow').controller('commentsctrl', [
 
             getPost($scope.post.id, function(post) {
                          $scope.post = {
-                             id:            post._id,
-                             title:         post.title,
-                             body:          post.body,
-                             comment_count: post.comments.length,
-                             secondsLeft:   post.secondsLeft,
+                             id:               post._id,
+                             title:            post.title,
+                             body:             post.body,
+                             upvoted:          false,
+                             downvoted:        false,
+                             timePostedMills:  post.postTime,
+                             comment_count:    post.comments.length,
+                             secondsToShowFor: post.secondsToShowFor,
+                             time_str:         ""
                          }
                         $scope.comments = post.comments;
                     });

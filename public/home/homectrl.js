@@ -11,14 +11,15 @@ angular.module('openwindow').controller('homectrl', [
                          for (postId in posts) {
                              var post = posts[postId];
                              var formattedPost = {
-                                 id:            post._id,
-                                 title:         post.title,
-                                 body:          post.body,
-                                 upvoted:       false,
-                                 downvoted:     false,
-                                 comment_count: post.comments.length,
-                                 secondsLeft:  post.secondsLeft,
-                                 time_str:      ""
+                                 id:               post._id,
+                                 title:            post.title,
+                                 body:             post.body,
+                                 upvoted:          false,
+                                 downvoted:        false,
+                                 timePostedMills:  post.postTime,
+                                 comment_count:    post.comments.length,
+                                 secondsToShowFor: post.secondsToShowFor,
+                                 time_str:         ""
                              }
                              $scope.posts.push(formattedPost);
                          }

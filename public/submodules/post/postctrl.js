@@ -44,24 +44,24 @@ angular.module('openwindow').controller('postctrl', [
                 });
             }
             $scope.updatePostTimeStr = function() {
-                var time = $scope.post.secondsLeft;
-                if (time < 3540) {
-                    $scope.post.time_str = Math.ceil(time / 60) + " min";
-                } else if (time < 21600) {
-                    $scope.post.time_str = Math.floor(time / 3600) + " hr";
+                var timeRemaining = $scope.getSecondsRemaining();
+                if (timeRemaining < 3540) {
+                    $scope.post.time_str = Math.ceil(timeRemaining / 60) + " min";
+                } else if (timeRemaining < 21600) {
+                    $scope.post.time_str = Math.floor(timeRemaining / 3600) + " hr";
                 } else {
-                    $scope.post.time_str = Math.floor(time / 21600) + " day";
+                    $scope.post.time_str = Math.floor(timeRemaining / 21600) + " day";
                 }
             }
-            $scope.$watch("post.secondsLeft", function(newval, oldval) {
+            $scope.$watch("post.secondsToShowFor", function(newval, oldval) {
                 $scope.updatePostTimeStr();
             });
             $scope.updatePostVote = function(vote, callback) {
                 var call = "/api/" + getVoteCall(vote);
                 $http.post(call, {id:$scope.post.id, oldVote:$scope.getPostStatus($scope.post)})
                      .success(function(response) {
-                         if (response.secondsLeft) {
-                            $scope.post.secondsLeft = response.secondsLeft;
+                         if (response.secondsToShowFor) {
+                            $scope.post.secondsToShowFor = response.secondsToShowFor;
                          }
                          callback(true);
                      })
@@ -84,6 +84,10 @@ angular.module('openwindow').controller('postctrl', [
                     return "downvote";
                 }
                 return "";
+            }
+            $scope.getSecondsRemaining = function() {
+                var millsSincePosting = Date.now() - $scope.post.timePostedMills;
+                return $scope.post.secondsToShowFor - (millsSincePosting / 1000);
             }
         }
 ]);

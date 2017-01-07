@@ -19,8 +19,8 @@ var SitePostSchema = mongoose.Schema({
     title: {type: String, required:true}, 
     body: {type: String, required:true},  
     posterId: {type: Number, default: 0},
-    postTime: {type: Date, default: Date.now},
-    secondsLeft: {type: Number, default: 0},
+    postTime: {type: Number, default: 0},
+    secondsToShowFor: {type: Number, default: 0},
     comments: {type: [String]},
 }, {collection: collectionName}); // structure of a post
 
@@ -39,7 +39,7 @@ app.get("/api/post", getPost);
 // request body must match SitePostSchema (i.e. have title and body strings)
 function addNewSitePost(request, response) {
     var sitePost = request.body;
-    sitePost.secondsLeft = 1000;
+    sitePost.secondsToShowFor = 1000;
     sitePostModel.create(sitePost)
                  .then(function(request) {response.status(200).send()},
                        function(error) {response.status(500).send()});
@@ -67,7 +67,7 @@ function upvotePost(request, response) {
     } else {
         amountToInc = UPVOTE_INC;
     }
-    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft:amountToInc}}, 
+    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsToShowFor:amountToInc}}, 
                                     {new:true},
                                    function(err, data) {
                                        if (err) {
@@ -89,7 +89,7 @@ function downvotePost(request, response) {
     } else {
         amountToInc = DOWNVOTE_INC;
     }
-    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsLeft:amountToInc}}, 
+    sitePostModel.findByIdAndUpdate({_id:id}, {$inc:{secondsToShowFor:amountToInc}}, 
                                     {new:true},
                                    function(err, data) {
                                        if (err) {
