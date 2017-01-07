@@ -1,7 +1,9 @@
 <html>
     <form ng-submit="createNewSitePost()">
-        <input type="text" ng-model="title" />
-        <input type="text" ng-model="body" />
-        <button type="submit">Post</button>
+        <div class="field_heading">Title</div>
+        <input class="title_input" type="text" ng-model="title" />
+        <div class="field_heading">Body</div>
+        <input class="body_input" type="text" ng-model="body" />
+        <button class="submit_button" type="submit">Post</button>
     </form>
 </html>
