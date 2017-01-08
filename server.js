@@ -39,6 +39,7 @@ app.post("/api/sitepost", addNewSitePost);
 app.post("/api/comment", comment);
 app.post("/api/settime", setTime);
 app.post("/api/deletecomment", deleteComment);
+app.post("/api/deletepost", deletePost);
 app.get("/api/siteposts", getAllSitePosts);
 app.get("/api/post", getPost);
 
@@ -161,6 +162,17 @@ function deleteComment(request, response) {
                                             response.json(data);
                                         }
                                     });
+}
+
+function deletePost(request, response) {
+    var id = request.body.id;
+    sitePostModel.find({_id:id}).remove(function(err, data) {
+                                            if (err || data == null) {
+                                                response.status(400).send();
+                                            } else {
+                                                response.json(data);
+                                            }
+                                        });
 }
 
 app.listen(3000);
