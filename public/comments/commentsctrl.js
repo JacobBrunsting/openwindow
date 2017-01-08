@@ -38,6 +38,7 @@ angular.module('openwindow').controller('commentsctrl', [
                              time_str:         ""
                          }
                         $scope.comments = post.comments;
+                        console.log("comments are: " + JSON.stringify(post.comments));
                     });
 
             $scope.addComment = function() {

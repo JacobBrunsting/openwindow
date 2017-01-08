@@ -15,13 +15,17 @@ var NONE = 0;
 var UPVOTE_INC = 80;
 var DOWNVOTE_INC = -150;
 
+var CommentSchema = mongoose.Schema({
+    body: {type: String, required:true},
+});
+
 var SitePostSchema = mongoose.Schema({
     title: {type: String, required:true}, 
     body: {type: String, required:true},  
     posterId: {type: Number, default: 0},
-    postTime: {type: Number, default: 0},
+    postTime: {type: Number, default: Date.now()},
     secondsToShowFor: {type: Number, default: 0},
-    comments: {type: [String]},
+    comments: {type: [CommentSchema]},
 }, {collection: collectionName}); // structure of a post
 
 var sitePostModel = mongoose.model("sitePostModel", SitePostSchema);
@@ -33,6 +37,8 @@ app.post("/api/upvote", upvotePost);
 app.post("/api/downvote", downvotePost);
 app.post("/api/sitepost", addNewSitePost);
 app.post("/api/comment", comment);
+app.post("/api/settime", setTime);
+app.post("/api/deletecomment", deleteComment);
 app.get("/api/siteposts", getAllSitePosts);
 app.get("/api/post", getPost);
 
@@ -114,16 +120,47 @@ function getPost(request, response) {
 
 function comment(request, response) {
     var id = request.body.id;
-    var comment = request.body.comment;
-    sitePostModel.findByIdAndUpdate({_id:id}, {$push:{comments:comment}},
-                                   {new:true},
-                                   function(err, data) {
-                                       if (err || data == null) {
-                                           response.status(400).send();
-                                       } else {
-                                           response.json(data.comments);
-                                       }
-                                   });
+    var commentBody = request.body.comment;
+    sitePostModel.findByIdAndUpdate({_id:id}, 
+                                    {$push:{comments:{body:commentBody}}},
+                                    {new:true},
+                                    function(err, data) {
+                                        if (err || data == null) {
+                                            response.status(400).send();
+                                        } else {
+                                            response.json(data.comments);
+                                        }
+                                    });
+}
+
+function setTime(request, response) {
+    var id = request.body.id;
+    var newSecondsToShowFor = request.body.newSecondsToShowFor;
+    sitePostModel.findByIdAndUpdate({_id:id}, 
+                                    {$set:{secondsToShowFor:newSecondsToShowFor}}, 
+                                    {new:true},
+                                    function(err, data) {
+                                        if (err || data == null) {
+                                            response.status(400).send();
+                                        } else {
+                                            response.json(data);
+                                        }
+                                    });
+}
+
+function deleteComment(request, response) {
+    var postId = request.body.postId;
+    var commentId = request.body.commentId;
+    sitePostModel.findByIdAndUpdate({_id:postId},
+                                    {$pull:{'comments':{'_id':ObjectId(commentId)}}},
+                                    {new:true},
+                                    function(err, data) {
+                                        if (err || data == null) {
+                                            response.status(400).send();
+                                        } else {
+                                            response.json(data);
+                                        }
+                                    });
 }
 
 app.listen(3000);

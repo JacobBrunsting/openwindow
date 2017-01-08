@@ -1,5 +1,5 @@
 <html>
-    <div class="post_container" ng-repeat="post in posts track by $index">
+    <div ng-repeat="post in posts track by $index">
         <div ng-include="'/submodules/post/post.html'">
         </div>
     </div>

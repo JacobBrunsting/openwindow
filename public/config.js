@@ -17,6 +17,11 @@ angular.module('openwindow').config([
             templateUrl: '/comments/comments.html',
             controller: 'commentsctrl'
         });
+        $stateProvider.state('dev', {
+            url: '/dev',
+            templateUrl: '/devpanel/devpanel.html',
+            controller: 'devpanelctrl'
+        });
         $urlRouterProvider.otherwise('home');
     }
 ]);

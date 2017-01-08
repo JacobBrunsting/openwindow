@@ -1,4 +1,4 @@
-<div ng-controller="postctrl">  
+<div class="post_container" ng-class="{'hidden': hidePost}" ng-controller="postctrl">  
     <div class="voting_section" ng-class="{'upvoted': post.upvoted, 'downvoted': post.downvoted}">
         <button class="upvote_btn" ng-click="upvote()">
             +
@@ -23,4 +23,4 @@
             comments ({{post.comment_count || 0}})
         </button>
     </div>
-</html>
+</div>

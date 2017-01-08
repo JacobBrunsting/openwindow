@@ -45,12 +45,20 @@ angular.module('openwindow').controller('postctrl', [
             }
             $scope.updatePostTimeStr = function() {
                 var timeRemaining = $scope.getSecondsRemaining();
-                if (timeRemaining < 3540) {
-                    $scope.post.time_str = Math.ceil(timeRemaining / 60) + " min";
-                } else if (timeRemaining < 21600) {
-                    $scope.post.time_str = Math.floor(timeRemaining / 3600) + " hr";
+                if (timeRemaining < 0) {
+                    $scope.hidePost = true;
+                    return;
                 } else {
-                    $scope.post.time_str = Math.floor(timeRemaining / 21600) + " day";
+                    $scope.hidePost = false;
+                }
+                if (timeRemaining < 60 * 60) {
+                    $scope.post.time_str = Math.ceil(timeRemaining / 60) + " min";
+                } else if (timeRemaining < 60 * 60 * 24) {
+                    $scope.post.time_str = Math.floor(timeRemaining / 3600) + " hr";
+                } else if (timeRemaining < 60 * 60 * 24 * 2) {
+                    $scope.post.time_str = "1 day";
+                } else {
+                    $scope.post.time_str = Math.floor(timeRemaining / 21600) + " days";
                 }
             }
             $scope.$watch("post.secondsToShowFor", function(newval, oldval) {
