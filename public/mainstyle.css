@@ -35,9 +35,12 @@ div.post_container:hover {
 }
 
 div.post {
-    word-break: break-all;
     margin-bottom: 30px;
     white-space: pre-line;
+}
+
+div.post:first-line {
+    line-height: 0px;
 }
 
 div.post .title {
@@ -126,6 +129,10 @@ div.comment_container {
     border-bottom-style: solid;
     padding: 10px;
     white-space: pre-line;
+}
+
+div.comment_container:first-line {
+    line-height: 0px;
 }
 
 div.comment_container:last-child {
