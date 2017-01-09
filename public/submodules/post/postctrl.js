@@ -99,4 +99,3 @@ angular.module('openwindow').controller('postctrl', [
             }
         }
 ]);
-

@@ -23,7 +23,7 @@ var SitePostSchema = mongoose.Schema({
     title: {type: String, required:true}, 
     body: {type: String, required:true},  
     posterId: {type: Number, default: 0},
-    postTime: {type: Number, default: Date.now()},
+    postTime: {type: Number, required:true},
     secondsToShowFor: {type: Number, default: 0},
     comments: {type: [CommentSchema]},
 }, {collection: collectionName}); // structure of a post
@@ -47,6 +47,7 @@ app.get("/api/post", getPost);
 function addNewSitePost(request, response) {
     var sitePost = request.body;
     sitePost.secondsToShowFor = 1000;
+    sitePost.postTime = Date.now();
     sitePostModel.create(sitePost)
                  .then(function(request) {response.status(200).send()},
                        function(error) {response.status(500).send()});

@@ -37,6 +37,7 @@ div.post_container:hover {
 div.post {
     word-break: break-all;
     margin-bottom: 30px;
+    white-space: pre-line;
 }
 
 div.post .title {
@@ -124,6 +125,7 @@ div.comment_container {
     border-width: 1px;
     border-bottom-style: solid;
     padding: 10px;
+    white-space: pre-line;
 }
 
 div.comment_container:last-child {
@@ -170,7 +172,7 @@ input.title_input {
     margin-bottom: 10px;
 }
 
-input.body_input {
+textarea.body_input {
     box-sizing: border-box;
     display: block;
     width: 100%;
@@ -179,7 +181,7 @@ input.body_input {
     margin-bottom: 10px;
 }
 
-input.comment_input {
+textarea.comment_input {
     display: block;
     width: 100%;
     background-color: #F4F5FC;
