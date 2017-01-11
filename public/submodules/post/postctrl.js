@@ -2,7 +2,8 @@ angular.module('openwindow').controller('postctrl', [
         '$scope',
         '$http',
         '$window',
-        function($scope, $http, $window) {
+        '$interval',
+        function($scope, $http, $window, $interval) {
             // must be consistent with their usages in server.js
             var UPVOTE = 2;
             var DOWNVOTE = 1;
@@ -45,7 +46,7 @@ angular.module('openwindow').controller('postctrl', [
             }
             $scope.updatePostTimeStr = function() {
                 var timeRemaining = $scope.getSecondsRemaining();
-                if (timeRemaining < 0) {
+                if (timeRemaining < 0 || timeRemaining == undefined) {
                     $scope.hidePost = true;
                     return;
                 } else {
@@ -64,6 +65,10 @@ angular.module('openwindow').controller('postctrl', [
             $scope.$watch("post.secondsToShowFor", function(newval, oldval) {
                 $scope.updatePostTimeStr();
             });
+            var POST_UPDATE_INTERVAL = 10000;
+            $interval(function() {
+               $scope.updatePostTimeStr(); 
+            }, POST_UPDATE_INTERVAL);
             $scope.updatePostVote = function(vote, callback) {
                 var call = "/api/" + getVoteCall(vote);
                 $http.post(call, {id:$scope.post.id, oldVote:$scope.getPostStatus($scope.post)})
@@ -94,6 +99,9 @@ angular.module('openwindow').controller('postctrl', [
                 return "";
             }
             $scope.getSecondsRemaining = function() {
+                if ($scope.post.secondsToShowFor == undefined) {
+                    return undefined;
+                }
                 var millsSincePosting = Date.now() - $scope.post.timePostedMills;
                 return $scope.post.secondsToShowFor - (millsSincePosting / 1000);
             }

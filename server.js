@@ -14,7 +14,11 @@ var SECONDS_BETWEEN_CLEANUPS = 200;
 setInterval(function() {
     sitePostModel.find({}).$where(function() {
         return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;   
-    }).remove();
+    }).remove(function(err, data) {
+        if (err) {
+            console.log(err);
+        }
+    });
 }, 1000 * SECONDS_BETWEEN_CLEANUPS);
 
 // API
@@ -186,6 +190,32 @@ function deletePost(request, response) {
                                                 response.json(data);
                                             }
                                         });
+}
+
+// Cached requests
+
+app.get("/api/poststimeleft", getPostsSecondsToShowFor);
+
+var postsSecondsToShowForCache = {};
+var cacheTime = 0;
+var CACHE_MAX_SECONDS = 10;
+
+function getPostsSecondsToShowFor(request, response) {
+   if (Date.now() - cacheTime < CACHE_MAX_SECONDS) {
+       return postsSecondsToShowForCache;
+   }
+   sitePostModel.find()
+                .then(
+                     function(posts) {
+                         postsSecondsToShowForCache = {};
+                         for (var i = 0; i < posts.length; ++i) {
+                             postsSecondsToShowForCache[posts[i]._id] = posts[i].secondsToShowFor;
+                         }
+                         response.json(postsSecondsToShowForCache);
+                     },
+                     function (error) {
+                         response.json(error);
+                     });
 }
 
 app.listen(3000);

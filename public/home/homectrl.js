@@ -2,7 +2,8 @@ angular.module('openwindow').controller('homectrl', [
         '$scope',
         '$http',
         '$window',
-        function($scope, $http, $window) {
+        'post_updater',
+        function($scope, $http, $window, post_updater) {
             getAllSitePosts = function() {
                 $scope.page = "home";
                 $http.get("/api/siteposts")
@@ -23,8 +24,9 @@ angular.module('openwindow').controller('homectrl', [
                              }
                              $scope.posts.push(formattedPost);
                          }
+                         var UPDATE_INTERVAL = 10000;
+                         post_updater.startUpdatingPosts($scope.posts, UPDATE_INTERVAL);
                      });
-                
             }
             getAllSitePosts();
             $scope.addPost = function() {
