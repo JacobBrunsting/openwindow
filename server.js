@@ -7,6 +7,18 @@ var collectionName = 'SitePostDatabase';
 mongoose.Promise = require('bluebird');
 mongoose.connect('mongodb://localhost/openwindowdatabase');
 
+// Post Cleanup
+
+var SECONDS_BETWEEN_CLEANUPS = 200;
+
+setInterval(function() {
+    sitePostModel.find({}).$where(function() {
+        return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;   
+    }).remove();
+}, 1000 * SECONDS_BETWEEN_CLEANUPS);
+
+// API
+
 // TODO: All files should use these same constants, and the constants should
 // be in their own file
 var UPVOTE = 2;
