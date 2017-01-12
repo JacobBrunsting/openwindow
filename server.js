@@ -202,7 +202,7 @@ var CACHE_MAX_SECONDS = 10;
 
 function getPostsSecondsToShowFor(request, response) {
    if (Date.now() - cacheTime < CACHE_MAX_SECONDS) {
-       return postsSecondsToShowForCache;
+       response.json(postsSecondsToShowForCache);
    }
    sitePostModel.find()
                 .then(
