@@ -3,7 +3,8 @@ var app = express();
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var ObjectId = require('mongodb').ObjectId;
-var collectionName = 'SitePostDatabase';
+var sitePostCollectionName = 'SitePostDatabase';
+var serverInfoCollectionName = 'ServerInfoDatabase';
 mongoose.Promise = require('bluebird');
 mongoose.connect('mongodb://localhost/openwindowdatabase');
 
@@ -35,16 +36,27 @@ var CommentSchema = mongoose.Schema({
     body: {type: String, required:true},
 });
 
-var SitePostSchema = mongoose.Schema({
-    title: {type: String, required:true}, 
-    body: {type: String, required:true},  
-    posterId: {type: Number, default: 0},
-    postTime: {type: Number, required:true},
-    secondsToShowFor: {type: Number, default: 0},
-    comments: {type: [CommentSchema]},
-}, {collection: collectionName}); // structure of a post
+var sitePostSchema = mongoose.Schema({
+    title:            {type:String, required:true}, 
+    body:             {type:String, required:true},  
+    posterId:         {type:Number, default:0},
+    postTime:         {type:Number, required:true},
+    secondsToShowFor: {type:Number, default:0},
+    comments:         {type:[CommentSchema]},
+    longitude:        {type:Number, required:true},
+    latitude:         {type:Number, requried:true}
+}, {collection:sitePostCollectionName}); // structure of a post
 
-var sitePostModel = mongoose.model("sitePostModel", SitePostSchema);
+var serverInfoSchema = mongoose.Schema({
+    maxPostLongitude: {type:Number, required:true},
+    minPostLongitude: {type:Number, required:true},
+    maxPostLatitude:  {type:Number, required:true},
+    minPostLatitude:  {type:Number, required:true}
+}, {collection:serverInfoCollectionName});
+
+var sitePostModel = mongoose.model("sitePostModel", sitePostSchema);
+
+var serverInfoModel = mongoose.model("serverInfoModel", serverInfoSchema);
 
 app.use(bodyParser.json()); // lots of other parsers you can use!
 app.use(express.static(__dirname + '/public'));
@@ -58,8 +70,9 @@ app.post("/api/deletecomment", deleteComment);
 app.post("/api/deletepost", deletePost);
 app.get("/api/siteposts", getAllSitePosts);
 app.get("/api/post", getPost);
+app.get("/api/postswithinrange", getPostsWithinRange);
 
-// request body must match SitePostSchema (i.e. have title and body strings)
+// request body must match sitePostSchema (i.e. have title and body strings)
 function addNewSitePost(request, response) {
     var sitePost = request.body;
     sitePost.secondsToShowFor = 1000;
@@ -190,6 +203,25 @@ function deletePost(request, response) {
                                                 response.json(data);
                                             }
                                         });
+}
+
+function getPostsWithinRange(request, response) {
+    var longitude = request.query.longitude;
+    var latitude = request.query.latitude;
+    var range = request.query.range;
+    var rangeSqrd = range * range;
+    sitePostModel.find({}).$where(function() {
+        var longitudeDiff = longitude - this.longitude;
+        var latitudeDiff = latitude - this.latitude;
+        return longitudeDiff * longitudeDiff + latitudeDiff * latitudeDiff < rangeSqrd;
+    })
+                 .then(
+                     function(posts) {
+                         response.json(posts);
+                     },
+                     function (error) {
+                         response.json(error);
+                     });
 }
 
 // Cached requests
