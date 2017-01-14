@@ -22,7 +22,7 @@ var UPVOTE_INC = 80;
 var DOWNVOTE_INC = -150;
 var CACHE_MAX_SECONDS = 10;
 var SECONDS_BETWEEN_CLEANUPS = 200;
-var SERVER_PORT = 3000;
+var SERVER_PORT = 8080;
 
 // =============== Models ================
 
