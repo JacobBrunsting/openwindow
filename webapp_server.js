@@ -1,6 +1,7 @@
 // =========== Configuration ============
 
 var express = require('express');
+var fs = require('fs');
 var app = express();
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
@@ -83,12 +84,6 @@ function addNewSitePost(req, res) {
     var sitePost = req.body;
     sitePost.secondsToShowFor = 1000;
     sitePost.postTime = Date.now();
-    if (sitePost.longitude == undefined) {
-        sitePost.longitude = 0;
-    }
-    if (sitePost.latitude == undefined) {
-        sitePost.latitude = 0;
-    }
     sitePostModel.create(sitePost)
                  .then(function(req) {res.status(200).send()},
                        function(error)   {res.status(500).send()});
@@ -276,4 +271,23 @@ function getPostsSecondsToShowFor(req, res) {
      );
 }
 
+
+
+// ============ HTTPS Config ============
+
+// stolen from https://www.taylorpetrick.com/blog/post/https-nodejs-letsencrypt
+/*
+var http = require('http');
+var https = require('https');
+
+http.createServer(function(req, res) {
+    res.writeHead(301, {"Location": "https://" + req.headers['host'] + req.url});
+    res.end();
+}).listen(8080);
+
+https.createServer({
+    key: fs.readFileSync("https_certs/key.pem"),
+    cert: fs.readFileSync("https_certs/cert.pem")
+}, app).listen(SERVER_PORT);
+*/
 app.listen(SERVER_PORT);
