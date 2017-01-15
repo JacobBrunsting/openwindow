@@ -2,7 +2,8 @@ angular.module('openwindow').controller('newpostctrl', [
         '$scope',
         '$window',
         '$http',
-        function($scope, $window, $http) {
+        'geolocation',
+        function($scope, $window, $http, geolocation) {
             var posterLocation;
             
             // TODO: Look into alternative geolocation services to add 
@@ -12,16 +13,20 @@ angular.module('openwindow').controller('newpostctrl', [
                 return;
             }
 
-            navigator.geolocation.getCurrentPosition(function(position) {
-                posterLocation = position;
-                console.log("successfully got position with longitude " + position.longitude);
-            });
+            geolocation.get(
+                function(position) {
+                    posterLocation = position;
+                    console.log("successfully got position with longitude " + position.longitude);
+                },
+                function(error) {
+                    console.log(error);    
+                });
 
             $scope.createNewSitePost = function() {
                 console.log("creatinng new site post, location is " + JSON.stringify(posterLocation));
                 if (posterLocation == undefined) {
                     console.log("poster location was undefined, getting position");
-                    navigator.geolocation.getCurrentPosition(
+                    geolocation.get(
                         $scope.submitPostWithThisLocation, 
                         function(err) {
                         // TODO: Add error checking stuff here
