@@ -4,10 +4,19 @@
             <form ng-submit="deletePost(post)"> 
                 <button type="submit">delete</button>
             </form>
-            Post id:<br>
-            {{post.id}}<br>
-            Time Remaining:<br>
-            {{post.timeLeft}}<br>
+            <table>
+                <tr>
+                    <td>Post id:</td>
+                    <td>{{post.id}}</td>
+                </tr>
+                <tr>
+                    <td>Time Remaining:</td>
+                    <td>{{post.timeLeft}}</td>
+                </tr>
+                <tr>
+                    <td>Longitude, Latitude:</td>
+                    <td>{{post.longitude}}, {{post.latitude}}</td>
+            </table>
             Set time remaining:
             <form ng-submit="setTimeRemaining(post, secondsToShowFor)">
                     <input type="number" ng-model="secondsToShowFor" />

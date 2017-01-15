@@ -1,4 +1,3 @@
-
 // =========== Configuration ============
 
 var express = require('express');
@@ -80,30 +79,36 @@ app.get("/api/poststimeleft", getPostsSecondsToShowFor);
 
 // ========= API Implementation =========
 
-function addNewSitePost(request, response) {
-    var sitePost = request.body;
+function addNewSitePost(req, res) {
+    var sitePost = req.body;
     sitePost.secondsToShowFor = 1000;
     sitePost.postTime = Date.now();
+    if (sitePost.longitude == undefined) {
+        sitePost.longitude = 0;
+    }
+    if (sitePost.latitude == undefined) {
+        sitePost.latitude = 0;
+    }
     sitePostModel.create(sitePost)
-                 .then(function(request) {response.status(200).send()},
-                       function(error)   {response.status(500).send()});
+                 .then(function(req) {res.status(200).send()},
+                       function(error)   {res.status(500).send()});
 }
 
-function getAllSitePosts(request, response) {
+function getAllSitePosts(req, res) {
     sitePostModel.find()
                  .then(
         function(posts) {
-            response.json(posts);
+            res.json(posts);
         },
         function (error) {
-            response.json(error);
+            res.json(error);
         }
     );
 }
 
-function upvotePost(request, response) {
-    var id = request.body.id;
-    var oldVote = request.body.oldVote;
+function upvotePost(req, res) {
+    var id = req.body.id;
+    var oldVote = req.body.oldVote;
     var amountToInc;
     if (oldVote == UPVOTE) {
         amountToInc = -UPVOTE_INC;
@@ -118,17 +123,17 @@ function upvotePost(request, response) {
         {new:true},
         function(err, data) {
             if (err) {
-                response.status(400).send();
+                res.status(400).send();
             } else {
-                response.json(data);
+                res.json(data);
             }
         }
     );
 }
 
-function downvotePost(request, response) {
-    var id = request.body.id;
-    var oldVote = request.body.oldVote;
+function downvotePost(req, res) {
+    var id = req.body.id;
+    var oldVote = req.body.oldVote;
     var amountToInc;
     if (oldVote == DOWNVOTE) {
         amountToInc = -DOWNVOTE_INC;
@@ -143,96 +148,96 @@ function downvotePost(request, response) {
         {new:true},
         function(err, data) {
             if (err) {
-                response.status(400).send();
+                res.status(400).send();
             } else {
-                response.json(data);
+                res.json(data);
             }
         }
     );
 }
 
-function getPost(request, response) {
-    var id = request.query.id;
+function getPost(req, res) {
+    var id = req.query.id;
     sitePostModel.findOne(
         {_id:ObjectId(id)},
         function(err, data) {
             if (err || data == null) {
-                response.status(400).send();
+                res.status(400).send();
             } else {
-                response.json(data);
+                res.json(data);
             }
         }
     );
 }
 
-function comment(request, response) {
-    var id = request.body.id;
-    var commentBody = request.body.comment;
+function comment(req, res) {
+    var id = req.body.id;
+    var commentBody = req.body.comment;
     sitePostModel.findByIdAndUpdate(
         {_id:id}, 
         {$push:{comments:{body:commentBody}}},
         {new:true},
         function(err, data) {
             if (err || data == null) {
-                response.status(400).send();
+                res.status(400).send();
             } else {
-                response.json(data.comments);
+                res.json(data.comments);
             }
         }
     );
 }
 
-function setTime(request, response) {
-    var id = request.body.id;
-    var newSecondsToShowFor = request.body.newSecondsToShowFor;
+function setTime(req, res) {
+    var id = req.body.id;
+    var newSecondsToShowFor = req.body.newSecondsToShowFor;
     sitePostModel.findByIdAndUpdate(
         {_id:id}, 
         {$set:{secondsToShowFor:newSecondsToShowFor}}, 
         {new:true},
         function(err, data) {
             if (err || data == null) {
-                response.status(400).send();
+                res.status(400).send();
             } else {
-                response.json(data);
+                res.json(data);
             }
         }
     );
 }
 
-function deleteComment(request, response) {
-    var postId = request.body.postId;
-    var commentId = request.body.commentId;
+function deleteComment(req, res) {
+    var postId = req.body.postId;
+    var commentId = req.body.commentId;
     sitePostModel.findByIdAndUpdate(
         {_id:postId},
         {$pull:{'comments':{'_id':ObjectId(commentId)}}},
         {new:true},
         function(err, data) {
             if (err || data == null) {
-                response.status(400).send();
+                res.status(400).send();
             } else {
-                response.json(data);
+                res.json(data);
             }
         }
     );
 }
 
-function deletePost(request, response) {
-    var id = request.body.id;
+function deletePost(req, res) {
+    var id = req.body.id;
     sitePostModel.find({_id:id}).remove(
         function(err, data) {
             if (err || data == null) {
-                response.status(400).send();
+                res.status(400).send();
             } else {
-                response.json(data);
+                res.json(data);
             }
         }
     );
 }
 
-function getPostsWithinRange(request, response) {
-    var longitude = request.query.longitude;
-    var latitude = request.query.latitude;
-    var range = request.query.range;
+function getPostsWithinRange(req, res) {
+    var longitude = req.query.longitude;
+    var latitude = req.query.latitude;
+    var range = req.query.range;
     var rangeSqrd = range * range;
     sitePostModel.find({}).$where(function() {
                 var longDiff = longitude - this.longitude;
@@ -242,19 +247,19 @@ function getPostsWithinRange(request, response) {
         )
                  .then(
         function(posts) {
-            response.json(posts);
+            res.json(posts);
         },
         function (error) {
-            response.json(error);
+            res.json(error);
         }
     );
 }
 
 var cacheTime = 0;
 var postsSecondsToShowForCache = {};
-function getPostsSecondsToShowFor(request, response) {
+function getPostsSecondsToShowFor(req, res) {
    if (Date.now() - cacheTime < CACHE_MAX_SECONDS) {
-       response.json(postsSecondsToShowForCache);
+       res.json(postsSecondsToShowForCache);
    }
    sitePostModel.find()
                 .then(
@@ -263,10 +268,10 @@ function getPostsSecondsToShowFor(request, response) {
              for (var i = 0; i < posts.length; ++i) {
                  postsSecondsToShowForCache[posts[i]._id] = posts[i].secondsToShowFor;
              }
-             response.json(postsSecondsToShowForCache);
+             res.json(postsSecondsToShowForCache);
          },
          function (error) {
-             response.json(error);
+             res.json(error);
          }
      );
 }

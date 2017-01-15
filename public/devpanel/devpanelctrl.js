@@ -21,6 +21,8 @@ angular.module('openwindow').controller('devpanelctrl', [
                                  secondsToShowFor: post.secondsToShowFor,
                                  time_str:         "",
                                  comments:         post.comments,
+                                 longitude:        post.longitude,
+                                 latitude:         post.latitude
                              }
                              formattedPost.timeLeft = getTimeLeft(formattedPost);
                              $scope.posts.push(formattedPost);
