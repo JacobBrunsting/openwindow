@@ -6,8 +6,7 @@ var app = express();
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var ObjectId = require('mongodb').ObjectId;
-var sitePostCollectionName = 'SitePostDatabase';
-var serverInfoCollectionName = 'ServerInfoDatabase';
+var trafficDirector = require('./public/traffic_director/traffic_director.js')(app);
 mongoose.Promise = require('bluebird');
 mongoose.connect('mongodb://localhost/openwindowdatabase');
 app.use(bodyParser.json());
@@ -23,6 +22,7 @@ var DOWNVOTE_INC = -150;
 var CACHE_MAX_SECONDS = 10;
 var SECONDS_BETWEEN_CLEANUPS = 200;
 var SERVER_PORT = 8080;
+var SITE_POST_COLLECTION_NAME = 'SitePostDatabase';
 
 // =============== Models ================
 
@@ -39,18 +39,9 @@ var sitePostSchema = mongoose.Schema({
     comments:         {type:[commentSchema]},
     longitude:        {type:Number, required:true},
     latitude:         {type:Number, requried:true}
-}, {collection:sitePostCollectionName}); // structure of a post
-
-var serverInfoSchema = mongoose.Schema({
-    maxPostLongitude: {type:Number, required:true},
-    minPostLongitude: {type:Number, required:true},
-    maxPostLatitude:  {type:Number, required:true},
-    minPostLatitude:  {type:Number, required:true}
-}, {collection:serverInfoCollectionName});
+}, {collection:SITE_POST_COLLECTION_NAME}); // structure of a post
 
 var sitePostModel = mongoose.model("sitePostModel", sitePostSchema);
-
-var serverInfoModel = mongoose.model("serverInfoModel", serverInfoSchema);
 
 // ========== Old Post Cleanup ==========
 
@@ -65,7 +56,7 @@ setInterval(function() {
 }, 1000 * SECONDS_BETWEEN_CLEANUPS);
 
 // =========== API Endpoints ============
-
+// TODO: All of these requests should go through the traffic_router
 app.post("/api/upvote", upvotePost);
 app.post("/api/downvote", downvotePost);
 app.post("/api/sitepost", addNewSitePost);

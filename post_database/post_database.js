@@ -1,3 +1,6 @@
+// eventually this will just act as the interface for the post database for 
+// a specific geographic region
+
 // =========== Configuration ============
 
 var express = require('express');
