@@ -1,10 +1,17 @@
+var request = require('request');
+var util = require('util');
 module.exports = function(app) {
-    redirectRequest = function(path, req, res, targLocation) {
-        // This function should be called by every location-based call in the
-        // webapp.js file, and should redirect the call to the correct database
+    return {
+        redirectRequest: function(req, res, targLocation) {
+            // TODO: Replace 'localhost' with target server based on location
+            var path = req.baseUrl;
+            request.post('localhost:27017/#/' + path, function(err, reqRes) {
+                if (err) {
+                    res.json(err);
+                } else {
+                    res.json(reqRes);
+                }
+            });
+        }
     }
-
-    app.post('/api/router/test', function(req, res) {
-        console.log("test");
-    });
 };

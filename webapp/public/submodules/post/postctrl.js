@@ -3,7 +3,8 @@ angular.module('openwindow').controller('postctrl', [
         '$http',
         '$window',
         '$interval',
-        function($scope, $http, $window, $interval) {
+        'geolocation',
+        function($scope, $http, $window, $interval, geolocation) {
             // must be consistent with their usages in server.js
             var UPVOTE = 2;
             var DOWNVOTE = 1;
@@ -16,7 +17,8 @@ angular.module('openwindow').controller('postctrl', [
                 $scope.vote(DOWNVOTE);
             }
             $scope.comments = function() {
-               $window.location.href = '#/comments?postId=' + $scope.post.id;
+                var urlWithPostId = '#/comments?postId=' + $scope.post.id;
+                $window.location.href = geolocation.addLocationToURL(urlWithPostId, $scope.location);
             }
             $scope.vote = function(vote) {
                 var oldVote = NONE;
@@ -71,7 +73,7 @@ angular.module('openwindow').controller('postctrl', [
             }, POST_UPDATE_INTERVAL);
             $scope.updatePostVote = function(vote, callback) {
                 var call = "/api/" + getVoteCall(vote);
-                $http.post(call, {id:$scope.post.id, oldVote:$scope.getPostStatus($scope.post)})
+                $http.post(call, {id:$scope.post.id, oldVote:$scope.getPostStatus($scope.post)}, {params:$scope.location})
                      .success(function(response) {
                          if (response.secondsToShowFor) {
                             $scope.post.secondsToShowFor = response.secondsToShowFor;

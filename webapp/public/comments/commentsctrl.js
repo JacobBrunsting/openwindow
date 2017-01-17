@@ -2,12 +2,11 @@ angular.module('openwindow').controller('commentsctrl', [
         '$scope',
         '$http',
         '$window',
-        '$location',
-        function($scope, $http, $window, $location) {
+        function($scope, $http, $window) {
             $scope.page = "comments";
-            
+            $scope.location = getLocationFromWindow(window);
             $scope.post = {
-                id:$location.search().postId, 
+                id:$window.location.search().postId, 
                 title:"", 
                 body:"", 
                 comment_count:0, 
@@ -18,7 +17,8 @@ angular.module('openwindow').controller('commentsctrl', [
             $scope.comments = [];
 
             getPost = function(id, callback) {
-                $http.get("/api/post", {params:{id:id}})
+                $http.get("/api/post", 
+                          {params:angular.extend({id:id}, $scope.location)})
                     .success(
                     function(response) {
                         callback(response);
@@ -51,7 +51,8 @@ angular.module('openwindow').controller('commentsctrl', [
                 }
                 $http.post(
                     "/api/comment", 
-                    {id:$scope.post.id, comment:$scope.body_box})
+                    {id:$scope.post.id, comment:$scope.body_box},
+                    {params:$scope.location})
                     .success(
                     function(response) {
                         $scope.comments = response; 

@@ -1,6 +1,3 @@
-// eventually this will just act as the interface for the post database for 
-// a specific geographic region
-
 // =========== Configuration ============
 
 var express = require('express');
@@ -25,7 +22,7 @@ var UPVOTE_INC = 80;
 var DOWNVOTE_INC = -150;
 var CACHE_MAX_SECONDS = 10;
 var SECONDS_BETWEEN_CLEANUPS = 200;
-var SERVER_PORT = 8080;
+var SERVER_PORT = 27017;
 
 // =============== Models ================
 
@@ -274,23 +271,4 @@ function getPostsSecondsToShowFor(req, res) {
      );
 }
 
-
-
-// ============ HTTPS Config ============
-
-// stolen from https://www.taylorpetrick.com/blog/post/https-nodejs-letsencrypt
-/*
-var http = require('http');
-var https = require('https');
-
-http.createServer(function(req, res) {
-    res.writeHead(301, {"Location": "https://" + req.headers['host'] + req.url});
-    res.end();
-}).listen(8080);
-
-https.createServer({
-    key: fs.readFileSync("https_certs/key.pem"),
-    cert: fs.readFileSync("https_certs/cert.pem")
-}, app).listen(SERVER_PORT);
-*/
 app.listen(SERVER_PORT);
