@@ -21,6 +21,7 @@ angular.module('openwindow').controller('homectrl', [
                 $scope.page = "home";
                 $http.get("/api/siteposts", {params:$scope.location})
                     .success(function(posts) {
+                        console.log("post list is " + JSON.stringify(posts));
                         $scope.posts = [];
                         for (postId in posts) {
                             var post = posts[postId];

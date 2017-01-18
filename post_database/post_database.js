@@ -1,5 +1,6 @@
 // =========== Configuration ============
 
+var util = require('util');
 var express = require('express');
 var fs = require('fs');
 var app = express();
@@ -22,7 +23,7 @@ var UPVOTE_INC = 80;
 var DOWNVOTE_INC = -150;
 var CACHE_MAX_SECONDS = 10;
 var SECONDS_BETWEEN_CLEANUPS = 200;
-var SERVER_PORT = 27017;
+var SERVER_PORT = 3000;
 
 // =============== Models ================
 
@@ -82,20 +83,29 @@ app.get("/api/poststimeleft", getPostsSecondsToShowFor);
 
 function addNewSitePost(req, res) {
     var sitePost = req.body;
+    console.log("site post recieved is " + JSON.stringify(sitePost));
     sitePost.secondsToShowFor = 1000;
     sitePost.postTime = Date.now();
     sitePostModel.create(sitePost)
-                 .then(function(req) {res.status(200).send()},
-                       function(error)   {res.status(500).send()});
+                 .then(function(req) {
+                           res.status(200).send();
+                       },
+                       function(error)   {
+                           console.log("adding site post error is " + error); 
+                           res.status(500).send();
+                       });
 }
 
 function getAllSitePosts(req, res) {
+    console.log("recieved call for getAllSitePosts");
     sitePostModel.find()
                  .then(
         function(posts) {
+            console.log("posts are " + posts);
             res.json(posts);
         },
         function (error) {
+            console.log("error is " + error);
             res.json(error);
         }
     );
@@ -253,6 +263,7 @@ function getPostsWithinRange(req, res) {
 var cacheTime = 0;
 var postsSecondsToShowForCache = {};
 function getPostsSecondsToShowFor(req, res) {
+    console.log("recieved request postsSecondsToShowFor");
    if (Date.now() - cacheTime < CACHE_MAX_SECONDS) {
        res.json(postsSecondsToShowForCache);
    }
