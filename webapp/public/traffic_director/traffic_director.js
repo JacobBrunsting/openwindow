@@ -11,8 +11,10 @@ module.exports = function(app) {
                     if (err) {
                         console.log("error was " + err);
                         res.json(err);
+                    } else if (reqRes == undefined) {
+                        console.log("undefined response");
                     } else {
-                        res.json(JSON.parse(reqRes.body));
+                        res.json(reqRes);
                     }
                 });
             } else if (req.method == 'POST') {
@@ -22,8 +24,9 @@ module.exports = function(app) {
                     if (err) {
                         console.log("error was " + err);
                         res.json(err);
+                    } else if (reqRes == undefined) {
+                        console.log("undefined response");
                     } else {
-                        console.log("made request response: " + JSON.stringify(reqRes));
                         res.json(reqRes);
                     }
                 });

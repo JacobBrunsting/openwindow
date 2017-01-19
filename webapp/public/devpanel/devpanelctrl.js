@@ -6,7 +6,8 @@ angular.module('openwindow').controller('devpanelctrl', [
             getAllSitePosts = function() {
                 $scope.page = "dev";
                 $http.get("/api/siteposts")
-                     .success(function(posts) {
+                     .success(function(response) {
+                         var posts = JSON.parse(response.body);
                          $scope.posts = [];
                          for (postId in posts) {
                              var post = posts[postId];
@@ -34,7 +35,7 @@ angular.module('openwindow').controller('devpanelctrl', [
                 $http.post("/api/settime", 
                           {id:post.id, newSecondsToShowFor:getSecondsToShowForFromTimeLeft(post, newTimeLeft)})
                      .success(function(response) {
-                         post.timeLeft = getTimeLeft(response);
+                         post.timeLeft = getTimeLeft(response.body);
                      })
                      .error(function(error) {
                      });

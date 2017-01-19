@@ -1,17 +1,18 @@
 angular.module('openwindow').controller('commentsctrl', [
         '$scope',
         '$http',
-        '$window',
-        function($scope, $http, $window) {
+        '$location',
+        'geolocation',
+        function($scope, $http, $location, geolocation) {
             $scope.page = "comments";
-            $scope.location = getLocationFromWindow(window);
+            $scope.location = geolocation.getLocationFromLocationService($location);
             $scope.post = {
-                id:$window.location.search().postId, 
-                title:"", 
-                body:"", 
-                comment_count:0, 
-                seconds_left:0, 
-                time_str:""
+                id:            $location.search().postId, 
+                title:         "", 
+                body:          "", 
+                comment_count: 0, 
+                seconds_left:  0, 
+                time_str:      ""
             };
             
             $scope.comments = [];
@@ -21,7 +22,7 @@ angular.module('openwindow').controller('commentsctrl', [
                           {params:angular.extend({id:id}, $scope.location)})
                     .success(
                     function(response) {
-                        callback(response);
+                        callback(JSON.parse(response.body));
                     })
                     .error(function(error) {
                     }
@@ -55,7 +56,7 @@ angular.module('openwindow').controller('commentsctrl', [
                     {params:$scope.location})
                     .success(
                     function(response) {
-                        $scope.comments = response; 
+                        $scope.comments = response.body; 
                     })
                     .error(function(error) {
                     }

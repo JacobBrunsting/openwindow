@@ -75,8 +75,9 @@ angular.module('openwindow').controller('postctrl', [
                 var call = "/api/" + getVoteCall(vote);
                 $http.post(call, {id:$scope.post.id, oldVote:$scope.getPostStatus($scope.post)}, {params:$scope.location})
                      .success(function(response) {
-                         if (response.secondsToShowFor) {
-                            $scope.post.secondsToShowFor = response.secondsToShowFor;
+                         var post = response.body;
+                         if (post.secondsToShowFor) {
+                            $scope.post.secondsToShowFor = post.secondsToShowFor;
                          }
                          callback(true);
                      })
