@@ -22,7 +22,7 @@ angular.module('openwindow').controller('commentsctrl', [
                           {params:angular.extend({id:id}, $scope.location)})
                     .success(
                     function(response) {
-                        callback(JSON.parse(response.body));
+                        callback(response.body);
                     })
                     .error(function(error) {
                     }

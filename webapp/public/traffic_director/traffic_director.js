@@ -7,7 +7,9 @@ module.exports = function(app) {
             var path = req.originalUrl;
             console.log("redirecting request " + path);
             if (req.method == 'GET') {
-                request.get('http://localhost:3000' + path, function(err, reqRes) {
+                request.get('http://localhost:3000' + path, 
+                             {json: req.body}, 
+                             function(err, reqRes) {
                     if (err) {
                         console.log("error was " + err);
                         res.json(err);

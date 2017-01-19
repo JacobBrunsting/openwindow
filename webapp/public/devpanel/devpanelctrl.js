@@ -7,7 +7,7 @@ angular.module('openwindow').controller('devpanelctrl', [
                 $scope.page = "dev";
                 $http.get("/api/siteposts")
                      .success(function(response) {
-                         var posts = JSON.parse(response.body);
+                         var posts = response.body;
                          $scope.posts = [];
                          for (postId in posts) {
                              var post = posts[postId];
