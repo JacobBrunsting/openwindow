@@ -9,7 +9,6 @@ angular.module('openwindow').controller('homectrl', [
                 $scope.location = location;
                 getAllSitePosts();
                 $scope.addPost = function() {
-                    
                     $location.url(geolocation.addLocationToURL('/new', $scope.location));
                 }
             }

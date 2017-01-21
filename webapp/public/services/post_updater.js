@@ -4,7 +4,7 @@ angular.module('openwindow').service('post_updater', ['$interval', '$http', func
             $http.get("/api/poststimeleft").success(function(response) {
                 for (var i = 0; i < posts.length; ++i) {
                     var original = posts[i].secondsToShowFor;
-                    posts[i].secondsToShowFor = response[posts[i].id];
+                    posts[i].secondsToShowFor = response.body[posts[i].id];
                 }
             })
         }, updateInterval);
