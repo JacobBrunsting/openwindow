@@ -39,4 +39,17 @@
             ______________________
         </div>
     </div>
+    <form ng-submit="addServerInfo(minLongitude, maxLongitude, minLatitude, maxLatitude)">
+            Min Longitude
+            <input type="number" ng-model="minLongitude" />
+            Max longitude
+            <input type="number" ng-model="maxLongitude" />
+            <br>
+            Min Latitude
+            <input type="number" ng-model="minLatitude" />
+            Max latitude
+            <input type="number" ng-model="maxLatitude" />
+            <br>
+            <button type="submit">Post</button>
+    </form>
 </html>

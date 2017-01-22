@@ -2,7 +2,6 @@
 
 var util = require('util');
 var express = require('express');
-var fs = require('fs');
 var app = express();
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
@@ -13,6 +12,8 @@ mongoose.Promise = require('bluebird');
 mongoose.connect('mongodb://localhost/openwindowdatabase');
 app.use(bodyParser.json());
 app.use(express.static(__dirname + '/public'));
+
+// var ipAddr = requre('os').networkInterfaces();  
 
 // ============= Constants ==============
 
@@ -43,6 +44,7 @@ var sitePostSchema = mongoose.Schema({
 }, {collection:sitePostCollectionName}); // structure of a post
 
 var serverInfoSchema = mongoose.Schema({
+    baseAddress:      {type:String, required:true},
     maxPostLongitude: {type:Number, required:true},
     minPostLongitude: {type:Number, required:true},
     maxPostLatitude:  {type:Number, required:true},
@@ -83,7 +85,6 @@ app.get("/api/poststimeleft", getPostsSecondsToShowFor);
 
 function addNewSitePost(req, res) {
     var sitePost = req.body;
-    console.log("site post recieved is " + JSON.stringify(sitePost));
     sitePost.secondsToShowFor = 1000;
     sitePost.postTime = Date.now();
     sitePostModel.create(sitePost)
@@ -91,21 +92,19 @@ function addNewSitePost(req, res) {
                            res.status(200).send();
                        },
                        function(error)   {
-                           console.log("adding site post error is " + error); 
+                           console.log(error); 
                            res.status(500).send();
                        });
 }
 
 function getAllSitePosts(req, res) {
-    console.log("recieved call for getAllSitePosts");
     sitePostModel.find()
                  .then(
         function(posts) {
-            console.log("posts are " + posts);
             res.json(posts);
         },
         function (error) {
-            console.log("error is " + error);
+            console.log(error);
             res.json(error);
         }
     );
@@ -263,7 +262,6 @@ function getPostsWithinRange(req, res) {
 var cacheTime = 0;
 var postsSecondsToShowForCache = {};
 function getPostsSecondsToShowFor(req, res) {
-    console.log("recieved request postsSecondsToShowFor");
    if (Date.now() - cacheTime < CACHE_MAX_SECONDS) {
        res.json(postsSecondsToShowForCache);
    }

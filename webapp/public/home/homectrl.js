@@ -4,7 +4,8 @@ angular.module('openwindow').controller('homectrl', [
         '$location',
         'post_updater',
         'geolocation',
-        function($scope, $http, $location, post_updater, geolocation) {
+        'INT_CONSTANTS',
+        function($scope, $http, $location, post_updater, geolocation, INT_CONSTANTS) {
             function setupPage(location) {
                 $scope.location = location;
                 getAllSitePosts();
@@ -18,7 +19,9 @@ angular.module('openwindow').controller('homectrl', [
             geolocation.get(setupPage, onLocationRetrievalFailure);
             function getAllSitePosts() {
                 $scope.page = "home";
-                $http.get("/api/siteposts", {params:$scope.location})
+                var params = $scope.location;
+                params.radius = INT_CONSTANTS.POST_RADIUS;
+                $http.get("/api/siteposts", {params:params})
                     .success(function(response) {
                         var posts = response.body;
                         $scope.posts = [];

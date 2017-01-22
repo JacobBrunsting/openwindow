@@ -4,8 +4,10 @@ angular.module('openwindow').controller('postctrl', [
         '$window',
         '$interval',
         'geolocation',
-        function($scope, $http, $window, $interval, geolocation) {
+        'INT_CONSTANTS',
+        function($scope, $http, $window, $interval, geolocation, INT_CONSTANTS) {
             // must be consistent with their usages in server.js
+            // TODO: Put in INT_CONSTANTS
             var UPVOTE = 2;
             var DOWNVOTE = 1;
             var NONE = 0;
@@ -73,7 +75,9 @@ angular.module('openwindow').controller('postctrl', [
             }, POST_UPDATE_INTERVAL);
             $scope.updatePostVote = function(vote, callback) {
                 var call = "/api/" + getVoteCall(vote);
-                $http.post(call, {id:$scope.post.id, oldVote:$scope.getPostStatus($scope.post)}, {params:$scope.location})
+                var params = $scope.location;
+                params.radius = INT_CONSTANTS.POST_RADIUS;
+                $http.post(call, {id:$scope.post.id, oldVote:$scope.getPostStatus($scope.post)}, {params:params})
                      .success(function(response) {
                          var post = response.body;
                          if (post.secondsToShowFor) {

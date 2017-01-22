@@ -74,6 +74,27 @@ angular.module('openwindow').controller('devpanelctrl', [
                      .error(function(error) {
                      });
             }
+            $scope.addServerInfo = function(minLongitude, maxLongitude, minLatitude, maxLatitude) {
+                var serverInfo = {
+                    baseAddress: "127.0.0.1:8080",
+                    minLongitude: minLongitude,
+                    maxLongitude: maxLongitude,
+                    minLatitude: minLatitude,
+                    maxLatitude: maxLatitude,
+                };
+
+                $scope.minLongitude = "";
+                $scope.maxLongitude = "";
+                $scope.minLatitude = "";
+                $scope.maxLatitude = "";
+
+                $http.post("/director/addserverinfo", serverInfo)
+                     .success(function(response) {
+                     })
+                     .error(function(err) {
+                         console.log(err);
+                     });
+            }
         }
 ]);
 

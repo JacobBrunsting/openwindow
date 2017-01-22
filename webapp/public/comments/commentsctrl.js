@@ -3,7 +3,8 @@ angular.module('openwindow').controller('commentsctrl', [
         '$http',
         '$location',
         'geolocation',
-        function($scope, $http, $location, geolocation) {
+        'INT_CONSTANTS',
+        function($scope, $http, $location, geolocation, INT_CONSTANTS) {
             $scope.page = "comments";
             $scope.location = geolocation.getLocationFromLocationService($location);
             $scope.post = {
@@ -18,8 +19,11 @@ angular.module('openwindow').controller('commentsctrl', [
             $scope.comments = [];
 
             getPost = function(id, callback) {
+                var params = $scope.location;
+                params.id = id;
+                params.radius = INT_CONSTANTS.POST_RADIUS;
                 $http.get("/api/post", 
-                          {params:angular.extend({id:id}, $scope.location)})
+                          {params:params})
                     .success(
                     function(response) {
                         callback(response.body);
@@ -50,10 +54,11 @@ angular.module('openwindow').controller('commentsctrl', [
                 if ($scope.body_box == "") {
                     return;
                 }
+                var params = $scope.location;
+                params.radius = INT_CONSTANTS.POST_RADIUS;
                 $http.post(
                     "/api/comment", 
-                    {id:$scope.post.id, comment:$scope.body_box},
-                    {params:$scope.location})
+                    {id:$scope.post.id, comment:$scope.body_box},{params:params})
                     .success(
                     function(response) {
                         $scope.comments = response.body; 
