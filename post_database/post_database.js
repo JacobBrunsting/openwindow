@@ -12,8 +12,7 @@ mongoose.Promise = require('bluebird');
 mongoose.connect('mongodb://localhost/openwindowdatabase');
 app.use(bodyParser.json());
 app.use(express.static(__dirname + '/public'));
-
-// var ipAddr = requre('os').networkInterfaces();  
+var ipAddr = require('ip').address(); 
 
 // ============= Constants ==============
 
@@ -33,22 +32,24 @@ var commentSchema = mongoose.Schema({
 });
 
 var sitePostSchema = mongoose.Schema({
-    title:            {type:String, required:true}, 
-    body:             {type:String, required:true},  
-    posterId:         {type:Number, default:0},
-    postTime:         {type:Number, required:true},
-    secondsToShowFor: {type:Number, default:0},
-    comments:         {type:[commentSchema]},
-    longitude:        {type:Number, required:true},
-    latitude:         {type:Number, requried:true}
+    title:              {type:String, required:true}, 
+    body:               {type:String, required:true},  
+    posterId:           {type:Number, default:0},
+    postTime:           {type:Number, required:true},
+    secondsToShowFor:   {type:Number, default:0},
+    comments:           {type:[commentSchema]},
+    longitude:          {type:Number, required:true},
+    latitude:           {type:Number, requried:true},
+    mainDatabaseAddr:   {type:String, requried:true},
+    backupDatabaseAddr: {type:String, requried:true},
 }, {collection:sitePostCollectionName}); // structure of a post
 
 var serverInfoSchema = mongoose.Schema({
-    baseAddress:      {type:String, required:true},
-    maxPostLongitude: {type:Number, required:true},
-    minPostLongitude: {type:Number, required:true},
-    maxPostLatitude:  {type:Number, required:true},
-    minPostLatitude:  {type:Number, required:true}
+    baseAddress:        {type:String, required:true},
+    maxPostLongitude:   {type:Number, required:true},
+    minPostLongitude:   {type:Number, required:true},
+    maxPostLatitude:    {type:Number, required:true},
+    minPostLatitude:    {type:Number, required:true}
 }, {collection:serverInfoCollectionName});
 
 var sitePostModel = mongoose.model("sitePostModel", sitePostSchema);
@@ -87,6 +88,8 @@ function addNewSitePost(req, res) {
     var sitePost = req.body;
     sitePost.secondsToShowFor = 1000;
     sitePost.postTime = Date.now();
+    sitePost.mainDatabaseAddr = ipAddr;
+    sitePost.backupDatabaseAddr = ipAddr; // TODO: Setup backup logic
     sitePostModel.create(sitePost)
                  .then(function(req) {
                            res.status(200).send();

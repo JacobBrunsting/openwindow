@@ -4,8 +4,9 @@ angular.module('openwindow').controller('homectrl', [
         '$location',
         'post_updater',
         'geolocation',
+        'post_creator',
         'INT_CONSTANTS',
-        function($scope, $http, $location, post_updater, geolocation, INT_CONSTANTS) {
+        function($scope, $http, $location, post_updater, geolocation, post_creator, INT_CONSTANTS) {
             function setupPage(location) {
                 $scope.location = location;
                 getAllSitePosts();
@@ -26,19 +27,7 @@ angular.module('openwindow').controller('homectrl', [
                         var posts = response.body;
                         $scope.posts = [];
                         for (postId in posts) {
-                            var post = posts[postId];
-                            var formattedPost = {
-                                id:               post._id,
-                                title:            post.title,
-                                body:             post.body,
-                                upvoted:          false,
-                                downvoted:        false,
-                                timePostedMills:  post.postTime,
-                                comment_count:    post.comments.length,
-                                secondsToShowFor: post.secondsToShowFor,
-                                time_str:         ""
-                            }
-                            $scope.posts.push(formattedPost);
+                            $scope.posts[postId] = post_creator.getFormattedPost(posts[postId]);
                         }
                         var UPDATE_INTERVAL = 10000;
                         post_updater.startUpdatingPosts($scope.posts, UPDATE_INTERVAL);

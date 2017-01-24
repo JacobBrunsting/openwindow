@@ -12,15 +12,15 @@
     </div>
     <div class="post">
         <div class="title">
-            {{post.title}}
+            {{post.getTitle()}}
         </div>
         <div class="body">
-            {{post.body}}
+            {{post.getBody()}}
         </div>
     </div>
     <div class="comments" ng-class="{'hidden': page=='comments'}">
         <button class="comments_btn" ng-click="comments()">
-            comments ({{post.comment_count || 0}})
+            comments ({{post.getComments().length || 0}})
         </button>
     </div>
 </div>

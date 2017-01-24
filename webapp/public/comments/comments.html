@@ -3,7 +3,7 @@
     </div>
     <div class="comments_container">
         <div class="comment_container" ng-repeat="comment in comments track by $index">
-                {{comment.body}}
+                {{comment.getBody()}}
         </div>
     </div>
     <form class="comment_form" ng-submit="addComment()">

@@ -4,46 +4,43 @@ angular.module('openwindow').controller('postctrl', [
         '$window',
         '$interval',
         'geolocation',
+        'post_creator',
         'INT_CONSTANTS',
-        function($scope, $http, $window, $interval, geolocation, INT_CONSTANTS) {
-            // must be consistent with their usages in server.js
-            // TODO: Put in INT_CONSTANTS
-            var UPVOTE = 2;
-            var DOWNVOTE = 1;
-            var NONE = 0;
-
+        function($scope, $http, $window, $interval, geolocation, post_creator, INT_CONSTANTS) {
             $scope.upvote = function() {
-                $scope.vote(UPVOTE);
+                $scope.vote(INT_CONSTANTS.UPVOTE);
             }
             $scope.downvote = function() {
-                $scope.vote(DOWNVOTE);
+                $scope.vote(INT_CONSTANTS.DOWNVOTE);
             }
             $scope.comments = function() {
                 var urlWithPostId = '#/comments?postId=' + $scope.post.id;
                 $window.location.href = geolocation.addLocationToURL(urlWithPostId, $scope.location);
             }
             $scope.vote = function(vote) {
-                var oldVote = NONE;
-                if ($scope.post.upvoted) {
-                    oldVote = UPVOTE;
-                } else if ($scope.post.downvoted) {
-                    oldVote = DOWNVOTE;
+                var oldVote = INT_CONSTANTS.NONE;
+                if ($scope.post.isUpvoted()) {
+                    oldVote = INT_CONSTANTS.UPVOTE;
+                } else if ($scope.post.isDownvoted()) {
+                    oldVote = INT_CONSTANTS.DOWNVOTE;
                 }
                 $scope.updatePostVote(vote, function(success) {
                     if (success) {
-                        if (vote == UPVOTE && oldVote == UPVOTE) {
-                            $scope.post.upvoted = false;
-                        } else if (vote == DOWNVOTE && oldVote == DOWNVOTE) {
-                            $scope.post.downvoted = false;
-                        } else if (vote == UPVOTE) {
-                            $scope.post.upvoted = true;
-                            $scope.post.downvoted = false;
-                        } else if (vote == DOWNVOTE) {
-                            $scope.post.upvoted = false;
-                            $scope.post.downvoted = true;
+                        if (vote == INT_CONSTANTS.UPVOTE && oldVote == INT_CONSTANTS.UPVOTE) {
+                            $scope.post.setIsUpvoted(false);
+                        } else if (vote == INT_CONSTANTS.DOWNVOTE && oldVote == INT_CONSTANTS.DOWNVOTE) {
+                            $scope.post.setIsDownvoted(false);
+                        } else if (vote == INT_CONSTANTS.UPVOTE) {
+                            $scope.post.setIsUpvoted(true);
+                            $scope.post.setIsDownvoted(false);
+                        } else if (vote == INT_CONSTANTS.DOWNVOTE) {
+                            $scope.post.setIsUpvoted(false);
+                            $scope.post.setIsDownvoted(true);
                         } else {
-                            $scope.post.upvoted = false;
-                            $scope.post.downvoted = false;
+                            $scope.post.setIsUpvoted(false);
+                            $scope.post.setIsDownvoted(false);
+
+                            console.log("set to upvtoed, isupvoted is " + $scope.post.isUpvoted());
                         }
                     }
                 });
@@ -79,10 +76,8 @@ angular.module('openwindow').controller('postctrl', [
                 params.radius = INT_CONSTANTS.POST_RADIUS;
                 $http.post(call, {id:$scope.post.id, oldVote:$scope.getPostStatus($scope.post)}, {params:params})
                      .success(function(response) {
-                         var post = response.body;
-                         if (post.secondsToShowFor) {
-                            $scope.post.secondsToShowFor = post.secondsToShowFor;
-                         }
+                         var post = post_creator.getFormattedPost(response.body);
+                         $scope.post.setSecondsToShowFor(post.getSecondsToShowFor());
                          callback(true);
                      })
                      .error(function(error) {
@@ -90,27 +85,27 @@ angular.module('openwindow').controller('postctrl', [
                      });
             }
             $scope.getPostStatus = function() {
-                if ($scope.post.upvoted) {
-                    return UPVOTE;
-                } else if ($scope.post.downvoted) {
-                    return DOWNVOTE;
+                if ($scope.post.isUpvoted()) {
+                    return INT_CONSTANTS.UPVOTE;
+                } else if ($scope.post.isDownvoted()) {
+                    return INT_CONSTANTS.DOWNVOTE;
                 }
-                return NONE;
+                return INT_CONSTANTS.NONE;
             }
             getVoteCall = function(status) {
-                if (status == UPVOTE) {
+                if (status == INT_CONSTANTS.UPVOTE) {
                     return "upvote";
-                } else if (status == DOWNVOTE) {
+                } else if (status == INT_CONSTANTS.DOWNVOTE) {
                     return "downvote";
                 }
                 return "";
             }
             $scope.getSecondsRemaining = function() {
-                if ($scope.post.secondsToShowFor == undefined) {
+                if ($scope.post == undefined) {
                     return undefined;
                 }
-                var millsSincePosting = Date.now() - $scope.post.timePostedMills;
-                return $scope.post.secondsToShowFor - (millsSincePosting / 1000);
+                var millsSincePosting = Date.now() - $scope.post.getPostTime();
+                return $scope.post.getSecondsToShowFor() - (millsSincePosting / 1000);
             }
         }
 ]);

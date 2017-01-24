@@ -2,7 +2,8 @@ angular.module('openwindow').controller('devpanelctrl', [
         '$scope',
         '$http',
         '$window',
-        function($scope, $http, $window) {
+        'post_creator',
+        function($scope, $http, $window, post_creator) {
             getAllSitePosts = function() {
                 $scope.page = "dev";
                 $http.get("/api/siteposts")
@@ -10,27 +11,13 @@ angular.module('openwindow').controller('devpanelctrl', [
                          var posts = response.body;
                          $scope.posts = [];
                          for (postId in posts) {
-                             var post = posts[postId];
-                             var formattedPost = {
-                                 id:               post._id,
-                                 title:            post.title,
-                                 body:             post.body,
-                                 upvoted:          false,
-                                 downvoted:        false,
-                                 postTime:  post.postTime,
-                                 comment_count:    post.comments.length,
-                                 secondsToShowFor: post.secondsToShowFor,
-                                 time_str:         "",
-                                 comments:         post.comments,
-                                 longitude:        post.longitude,
-                                 latitude:         post.latitude
-                             }
-                             formattedPost.timeLeft = getTimeLeft(formattedPost);
-                             $scope.posts.push(formattedPost);
+                             $scope.posts[postId] = post_creator.getFormattedPost(posts[postId]);
                          }
                      });
                 
             }
+
+            // TODO: Check git to see where this was called before
             $scope.setTimeRemaining = function(post, newTimeLeft) {
                 $http.post("/api/settime", 
                           {id:post.id, newSecondsToShowFor:getSecondsToShowForFromTimeLeft(post, newTimeLeft)})
@@ -43,7 +30,7 @@ angular.module('openwindow').controller('devpanelctrl', [
             }
             getAllSitePosts();
             getTimeLeft = function(post) {
-                return Math.round(((post.postTime - Date.now()) / 1000) + post.secondsToShowFor);
+                return Math.round(((post.getPostTime() - Date.now()) / 1000) + post.getSecondsToShowFor());
             }
             getSecondsToShowForFromTimeLeft = function(post, timeLeft) {
                 return timeLeft - Math.round((post.postTime - Date.now()) / 1000);
@@ -52,7 +39,7 @@ angular.module('openwindow').controller('devpanelctrl', [
                 $http.post("/api/deletecomment", 
                            {postId:post.id, commentId:comment._id})
                      .success(function(response) {
-                         post.comments = response.comments;
+                         post.setComments(post_creator.getFormattedCommentList(response.body));
                      })
                      .error(function(error) {
                      });
@@ -63,7 +50,7 @@ angular.module('openwindow').controller('devpanelctrl', [
                      .success(function(response) {
                          var postIndex = -1;
                          for (; postIndex < $scope.posts.length; ++postIndex) {
-                             if ($scope.posts[++postIndex]._id == post._id) {
+                             if ($scope.posts[++postIndex].getId() == post.getId()) {
                                  break;
                              }
                          }

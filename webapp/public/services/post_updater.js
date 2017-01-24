@@ -8,12 +8,12 @@ angular.module('openwindow').service('post_updater', [
             $http.get("/api/poststimeleft", {params:{radius:INT_CONSTANTS.POST_RADIUS}})
                  .success(function(response) {
                 for (var i = 0; i < posts.length; ++i) {
-                    var original = posts[i].secondsToShowFor;
+                    var original = posts[i].getSecondsToShowFor();
                     var newTime = response.body[posts[i].id];
                     if (newTime == undefined) {
                         newTime = -1;
                     }
-                    posts[i].secondsToShowFor = newTime;
+                    posts[i].setSecondsToShowFor(newTime);
                 }
             })
         }, updateInterval);

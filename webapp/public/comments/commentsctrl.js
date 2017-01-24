@@ -3,20 +3,13 @@ angular.module('openwindow').controller('commentsctrl', [
         '$http',
         '$location',
         'geolocation',
+        'post_creator',
         'INT_CONSTANTS',
-        function($scope, $http, $location, geolocation, INT_CONSTANTS) {
+        function($scope, $http, $location, geolocation, post_creator, INT_CONSTANTS) {
             $scope.page = "comments";
             $scope.location = geolocation.getLocationFromLocationService($location);
-            $scope.post = {
-                id:            $location.search().postId, 
-                title:         "", 
-                body:          "", 
-                comment_count: 0, 
-                seconds_left:  0, 
-                time_str:      ""
-            };
-            
-            $scope.comments = [];
+            $scope.post = post_creator.createPost("", "", "", false, false, "", "", "", "", "", ""); 
+            $scope.comments = {};
 
             getPost = function(id, callback) {
                 var params = $scope.location;
@@ -33,20 +26,11 @@ angular.module('openwindow').controller('commentsctrl', [
                 );
             }
 
-            getPost($scope.post.id, 
+            // TODO: The add comment function should only be created after the post is retrieved
+            getPost($location.search().postId,
                 function(post) {
-                    $scope.post = {
-                        id:               post._id,
-                        title:            post.title,
-                        body:             post.body,
-                        upvoted:          false,
-                        downvoted:        false,
-                        timePostedMills:  post.postTime,
-                        comment_count:    post.comments.length,
-                        secondsToShowFor: post.secondsToShowFor,
-                        time_str:         ""
-                    }
-                    $scope.comments = post.comments;
+                    $scope.post = post_creator.getFormattedPost(post);
+                    $scope.comments = $scope.post.getComments();
                 }
             );
 
@@ -58,10 +42,10 @@ angular.module('openwindow').controller('commentsctrl', [
                 params.radius = INT_CONSTANTS.POST_RADIUS;
                 $http.post(
                     "/api/comment", 
-                    {id:$scope.post.id, comment:$scope.body_box},{params:params})
+                    {id:$scope.post.getId(), comment:$scope.body_box},{params:params})
                     .success(
                     function(response) {
-                        $scope.comments = response.body; 
+                        $scope.comments = post_creator.getFormattedCommentList(response.body);
                     })
                     .error(function(error) {
                     }

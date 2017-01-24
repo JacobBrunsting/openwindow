@@ -8,7 +8,6 @@ angular.module('openwindow').service('geolocation', [function() {
     }
 
     this.addLocationToURL = function(url, location) {
-        console.log("adding location to url " + url);
         if (url.indexOf('?') == -1) {
             url += '?';
         } else {
