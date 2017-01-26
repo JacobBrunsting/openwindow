@@ -15,22 +15,6 @@ var trafficDirector = require('./public/traffic_director/traffic_director')(app,
 
 var PORT = 8080;
 
-app.use('/api/getpostfromserver', function(req, res) {
-    console.log("query is " + JSON.stringify(req.query));
-    var postId = req.query.id;
-    var serverAddress = req.query.serverAddress;
-    request("http://" + serverAddress + "/api/post?id=" + postId,
-                {json: req.body}, 
-                function(err, reqRes, body) {
-                    if (err) {
-                        res.status(500);
-                        res.json(err);
-                    } else {
-                        res.json(reqRes);
-                    }
-                });
-});
-
 app.use('/api/*', function(req, res) {
     var radius = 0;
     if (req.query.radius != undefined) {

@@ -70,6 +70,14 @@ setInterval(function() {
 
 // =========== API Endpoints ============
 
+// allow access to external database servers directly from the frontend
+app.all('*', function(req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    next();
+});
+
 app.post("/api/upvote", upvotePost);
 app.post("/api/downvote", downvotePost);
 app.post("/api/sitepost", addNewSitePost);

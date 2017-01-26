@@ -42,8 +42,6 @@ angular.module('openwindow').controller('postctrl', [
                         } else {
                             $scope.post.setIsUpvoted(false);
                             $scope.post.setIsDownvoted(false);
-
-                            console.log("set to upvtoed, isupvoted is " + $scope.post.isUpvoted());
                         }
                     }
                 });
@@ -63,7 +61,6 @@ angular.module('openwindow').controller('postctrl', [
                 } else if (timeRemaining < 60 * 60 * 24 * 2) {
                     $scope.post.time_str = "1 day";
                 } else {
-                    console.log("post is " + JSON.stringify($scope.post));
                     $scope.post.time_str = Math.floor(timeRemaining / 21600) + " days";
                 }
             }
