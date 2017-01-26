@@ -88,7 +88,7 @@ function addNewSitePost(req, res) {
     var sitePost = req.body;
     sitePost.secondsToShowFor = 1000;
     sitePost.postTime = Date.now();
-    sitePost.mainDatabaseAddr = ipAddr;
+    sitePost.mainDatabaseAddr = ipAddr + ":" + SERVER_PORT;
     sitePost.backupDatabaseAddr = ipAddr; // TODO: Setup backup logic
     sitePostModel.create(sitePost)
                  .then(function(req) {
@@ -164,13 +164,17 @@ function downvotePost(req, res) {
 }
 
 function getPost(req, res) {
+    console.log("getting post");
     var id = req.query.id;
     sitePostModel.findOne(
         {_id:ObjectId(id)},
         function(err, data) {
             if (err || data == null) {
+                console.log("error is " + JSON.stringify(err));
+                console.log("data is " + JSON.stringify(data));
                 res.status(400).send();
             } else {
+                console.log("data is " + JSON.stringify(data));
                 res.json(data);
             }
         }
@@ -283,4 +287,4 @@ function getPostsSecondsToShowFor(req, res) {
      );
 }
 
-app.listen(SERVER_PORT);
+app.listen(SERVER_PORT, "0.0.0.0");

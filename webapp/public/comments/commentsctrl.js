@@ -6,16 +6,19 @@ angular.module('openwindow').controller('commentsctrl', [
         'post_creator',
         'INT_CONSTANTS',
         function($scope, $http, $location, geolocation, post_creator, INT_CONSTANTS) {
+            var postId = $location.search().postId;
+            var postServerAddress = $location.search().postServerAddress;
+
             $scope.page = "comments";
             $scope.location = geolocation.getLocationFromLocationService($location);
             $scope.post = post_creator.createPost("", "", "", false, false, "", "", "", "", "", ""); 
             $scope.comments = {};
 
-            getPost = function(id, callback) {
+            getPost = function(id, serverAddress, callback) {
                 var params = $scope.location;
                 params.id = id;
-                params.radius = INT_CONSTANTS.POST_RADIUS;
-                $http.get("/api/post", 
+                params.serverAddress = serverAddress;
+                $http.get("/api/getpostfromserver", 
                           {params:params})
                     .success(
                     function(response) {
@@ -27,10 +30,12 @@ angular.module('openwindow').controller('commentsctrl', [
             }
 
             // TODO: The add comment function should only be created after the post is retrieved
-            getPost($location.search().postId,
+            getPost(postId,
+                    postServerAddress,
                 function(post) {
                     $scope.post = post_creator.getFormattedPost(post);
                     $scope.comments = $scope.post.getComments();
+                    console.log("post is " + JSON.stringify($scope.post));
                 }
             );
 

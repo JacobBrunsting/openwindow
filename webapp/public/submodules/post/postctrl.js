@@ -14,7 +14,10 @@ angular.module('openwindow').controller('postctrl', [
                 $scope.vote(INT_CONSTANTS.DOWNVOTE);
             }
             $scope.comments = function() {
-                var urlWithPostId = '#/comments?postId=' + $scope.post.id;
+                var urlWithPostId = '#/comments?postId='
+                                    + $scope.post.getId()
+                                    + '&postServerAddress='
+                                    + $scope.post.getMainDatabaseAddr();
                 $window.location.href = geolocation.addLocationToURL(urlWithPostId, $scope.location);
             }
             $scope.vote = function(vote) {
@@ -60,10 +63,11 @@ angular.module('openwindow').controller('postctrl', [
                 } else if (timeRemaining < 60 * 60 * 24 * 2) {
                     $scope.post.time_str = "1 day";
                 } else {
+                    console.log("post is " + JSON.stringify($scope.post));
                     $scope.post.time_str = Math.floor(timeRemaining / 21600) + " days";
                 }
             }
-            $scope.$watch("post.secondsToShowFor", function(newval, oldval) {
+            $scope.$watch("post.getSecondsToShowFor()", function(newval, oldval) {
                 $scope.updatePostTimeStr();
             });
             var POST_UPDATE_INTERVAL = 10000;

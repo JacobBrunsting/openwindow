@@ -10,6 +10,8 @@ angular.module('openwindow').service('post_creator', [function() {
         post.postTime = postTime;
         post.secondsToShowFor = secondsToShowFor;
         post.comments = comments;
+        post.mainDatabaseAddr = mainDatabaseAddr;
+        post.backupDatabaseAddr = backupDatabaseAddr;
 
         post.getId = function()                  { return post.id; }
         post.getTitle = function()               { return post.title; }
@@ -20,12 +22,15 @@ angular.module('openwindow').service('post_creator', [function() {
         post.getPostTime = function()            { return post.postTime; }
         post.getSecondsToShowFor = function()    { return post.secondsToShowFor; }
         post.getComments = function()            { return post.comments; }
+        post.getMainDatabaseAddr = function()    { return post.mainDatabaseAddr; }
+        post.getBackupDatabaseAddr = function()  { return post.backupDatabaseAddr; }
 
         post.setIsUpvoted = function(val)        { post.upvoted = val; }
         post.setIsDownvoted = function(val)      { post.downvoted = val; }
         post.setPostTime = function(val)         { post.postTime = val; }
         post.setSecondsToShowFor = function(val) { post.secondsToShowFor = val; }
         post.setComments = function(val)         { post.comments = val; }
+
         return post;
     }
 
