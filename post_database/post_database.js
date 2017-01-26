@@ -191,10 +191,10 @@ function getPost(req, res) {
 
 function comment(req, res) {
     var id = req.body.id;
-    var commentBody = req.body.comment;
+    var comment = req.body.comment;
     sitePostModel.findByIdAndUpdate(
         {_id:id}, 
-        {$push:{comments:{body:commentBody}}},
+        {$push:{comments:comment}},
         {new:true},
         function(err, data) {
             if (err || data == null) {
