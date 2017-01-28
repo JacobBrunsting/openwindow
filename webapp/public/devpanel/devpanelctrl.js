@@ -63,11 +63,11 @@ angular.module('openwindow').controller('devpanelctrl', [
             }
             $scope.addServerInfo = function(minLongitude, maxLongitude, minLatitude, maxLatitude) {
                 var serverInfo = {
-                    baseAddress: "127.0.0.1:8080",
-                    minLongitude: minLongitude,
-                    maxLongitude: maxLongitude,
-                    minLatitude: minLatitude,
-                    maxLatitude: maxLatitude,
+                    baseAddress: "127.0.0.1:3000",
+                    maxLng:      maxLongitude,
+                    minLng:      minLongitude,
+                    maxLat:      maxLatitude,
+                    minLat:      minLatitude
                 };
 
                 $scope.minLongitude = "";

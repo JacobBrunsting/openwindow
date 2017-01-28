@@ -7,10 +7,10 @@ var SERVER_INFO_COLLECTION_NAME = "ServerInfoDatabase";
 module.exports = function(app, mongoose) {
     var serverInfoSchema = mongoose.Schema({
         baseAddress:  {type:String, required:true},
-        maxLongitude: {type:Number, required:true},
-        minLongitude: {type:Number, required:true},
-        maxLatitude:  {type:Number, required:true},
-        minLatitude:  {type:Number, required:true}
+        maxLat:       {type:Number, required:true},
+        minLat:       {type:Number, required:true},
+        maxLng:       {type:Number, required:true},
+        minLng:       {type:Number, required:true}
     }, {collection:SERVER_INFO_COLLECTION_NAME});
 
     var serverInfoModel = mongoose.model("ServerInfoModel", serverInfoSchema); 
@@ -22,6 +22,19 @@ module.exports = function(app, mongoose) {
                coord.getLongitude() >= bottomLeftCoord.getLongitude() &&
                coord.getLatitude() <= topRightCoord.getLatitude() &&
                coord.getLatitude() >= bottomLeftCoord.getLatitude();
+    }
+
+    function getCoord(latitude, longitude) {
+        var coord = Object;
+        coord.latitude = latitude;
+        coord.longitude = longitude;
+        coord.getLatitude = function() {
+            return this.latitude;
+        }
+        coord.getLongitude = function() {
+            return this.longitude;
+        }
+        return coord;
     }
 
     // gets distance to closest outer edge of square, assuming the coordinate
@@ -60,75 +73,52 @@ module.exports = function(app, mongoose) {
         }
         return curMinDist;
     }
-
-    function getCoord(latitude, longitude) {
-        var coord = Object;
-        coord.latitude = latitude;
-        coord.longitude = longitude;
-        coord.getLatitude = function() {
-            return this.latitude;
-        }
-        coord.getLongitude = function() {
-            return this.longitude;
-        }
-        return coord;
-    }
-
+    
     return {
         redirectRequest: function(req, res, targLocation, locationRadius) {
-            serverInfoSchema.find()
-                            .where(function() {
-                                       var topRightCoord = getCoord(this.maxLatitude, this.maxLongitude);
-                                       var bottomLeftCoord = getCoord(this.minLatitude, this.minLongitude);
-                                       if (coordInsideSquare()) {
-                                           return true;
-                                       }
-                                       if (getDistToSquare(targLocation, topRightCoord, bottoLeftCoord) <= locationRadius) {
-                                           return true;
-                                       }
-                                       return false;
-                                   })
-                            .then(function(reqRes) {
+            // find all servers where targLocation is not more than locationRadius
+            // outside of the server longitude/latitude range
+            // this will get more servers than neccesary in some cases, but that
+            // won't cause any problems, just might cause a few extra requests
+            var minValidMaxLat = targLocation.latitude - locationRadius;
+            var maxValidMinLat = targLocation.latitude + locationRadius;
+            var minValidMaxLng = targLocation.longitude - locationRadius;
+            var maxValidMinLng = targLocation.longitude + locationRadius;
+            var mergedRspBody = {};
+            serverInfoModel.find({$and:[
+                                        {maxLat: {$gte:minValidMaxLat}},
+                                        {minLat: {$lte:maxValidMinLat}},
+                                        {maxLng: {$gte:minValidMaxLng}},
+                                        {minLng: {$lte:maxValidMinLng}}
+                                       ]})
+                            .then(function(servers) {
+                                      var numCallsRemaining = servers.length;
+                                      servers.forEach(function(server) {
+                                          var addr = server.baseAddress; 
+                                          var path = req.originalUrl;
+                                          var url = "http://" + addr + path;
+                                          request(url, {json: req.body},
+                                                  function(err, reqRes) {
+                                                      numCallsRemaining -= 1;
+                                                      if (err) {
+                                                          console.log("error was " + err);
+                                                      } else {
+                                                          console.log("Merged response is " + JSON.stringify(mergedRspBody));
+                                                          // This only does a shallow merge, and isn't supported by
+                                                          // older versions of IE, so you should look into changing
+                                                          // potentially
+                                                          Object.assign(mergedRspBody, reqRes.body);
+                                                      }
+                                                      if (numCallsRemaining == 0) {
+                                                          res.json({statusCode:200, body:mergedRspBody});
+                                                      }
+                                                  });
+                                      });
                                   },
                                   function(err) {
+                                      console.log("error was " + err);
                                   });
-        },
-
-
-
-                /*
-            // TODO: Replace 'localhost' with target server based on location
-            console.log("radius is " + locationRadius);
-            var path = req.originalUrl;
-            console.log("redirecting request " + path);
-            if (req.method == 'GET') {
-                request.get('http://localhost:3000' + path, 
-                             {json: req.body}, 
-                             function(err, reqRes) {
-                    if (err) {
-                        console.log("error was " + err);
-                        res.status(500).send();
-                    } else if (reqRes == undefined) {
-                        console.log("undefined response");
-                    } else {
-                        res.json(reqRes);
-                    }
-                });
-            } else if (req.method == 'POST') {
-                request.post('http://localhost:3000' + path, 
-                             {json: req.body}, 
-                             function(err, reqRes) {
-                    if (err) {
-                        console.log("error was " + err);
-                        res.status(500).send();
-                    } else if (reqRes == undefined) {
-                        console.log("undefined response");
-                    } else {
-                        res.json(reqRes);
-                    }
-                });
-            }*/
-        },
+        }, 
         addServerInfo: function(req, res) {
             var serverInfo = req.body;
             serverInfoModel.create(serverInfo)
@@ -151,5 +141,5 @@ module.exports = function(app, mongoose) {
                                       }
                                   });
         }
-                                 
+    }                             
 };

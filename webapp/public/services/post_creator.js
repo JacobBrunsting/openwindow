@@ -1,4 +1,8 @@
 angular.module('openwindow').service('post_creator', [function() {
+    this.createPostForServer = function(title, body, latitude, longitude) {
+        return {title:title, body:body, loc:{coordinate:{lat:latitude, lng:longitude}}};
+    }
+
     this.createPost = function(id, title, body, upvoted, downvoted, posterId, 
                                postTime, secondsToShowFor, comments,
                                mainDatabaseAddr, backupDatabaseAddr) {

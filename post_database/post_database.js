@@ -31,36 +31,35 @@ var commentSchema = mongoose.Schema({
     body: {type: String, required:true},
 });
 
+var coordinateSchema = mongoose.Schema({
+    lat:{type:Number},
+    lng:{type:Number}
+});
+
+var locationSchema = mongoose.Schema({
+    type: {type:String, default:"Point"},
+    coordinate:  {type:coordinateSchema},
+});
+
 var sitePostSchema = mongoose.Schema({
     title:              {type:String, required:true}, 
     body:               {type:String, required:true},  
     posterId:           {type:Number, default:0},
     postTime:           {type:Number, required:true},
     secondsToShowFor:   {type:Number, default:0},
-    comments:           {type:[commentSchema]},
-    longitude:          {type:Number, required:true},
-    latitude:           {type:Number, requried:true},
-    mainDatabaseAddr:   {type:String, requried:true},
-    backupDatabaseAddr: {type:String, requried:true},
+    comments:           {type:[commentSchema], default:[]},
+    loc:                {type:locationSchema, required:true},
+    mainDatabaseAddr:   {type:String, required:true},
+    backupDatabaseAddr: {type:String, required:true},
 }, {collection:sitePostCollectionName}); // structure of a post
 
-var serverInfoSchema = mongoose.Schema({
-    baseAddress:        {type:String, required:true},
-    maxPostLongitude:   {type:Number, required:true},
-    minPostLongitude:   {type:Number, required:true},
-    maxPostLatitude:    {type:Number, required:true},
-    minPostLatitude:    {type:Number, required:true}
-}, {collection:serverInfoCollectionName});
-
 var sitePostModel = mongoose.model("sitePostModel", sitePostSchema);
-
-var serverInfoModel = mongoose.model("serverInfoModel", serverInfoSchema);
 
 // ========== Old Post Cleanup ==========
 
 setInterval(function() {
     sitePostModel.find({}).$where(function() {
-        return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;   
+        return this.secondsToShowFor < (Date.now() - this.postTime) / 1000; 
     }).remove(function(err, data) {
         if (err) {
             console.log(err);
