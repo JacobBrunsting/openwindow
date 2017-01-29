@@ -30,7 +30,7 @@ angular.module('openwindow').controller('homectrl', [
                             $scope.posts[postId] = post_creator.getFormattedPost(posts[postId]);
                         }
                         var UPDATE_INTERVAL = 10000;
-                        post_updater.startUpdatingPosts($scope.posts, UPDATE_INTERVAL);
+                        post_updater.startUpdatingPosts($scope.posts, $scope.location, UPDATE_INTERVAL);
                     }
                 );
             }
