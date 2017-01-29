@@ -74,6 +74,23 @@ module.exports = function(app, mongoose) {
         return curMinDist;
     }
 
+    function findLargestServerSpace() {
+        // one array for longitude, where each entry is a number representing
+        // some number of longitude degrees
+        // a similar array for latitude
+        // A 2d array, with the same 'width' as the length of the longitude
+        // array, and the same 'height' as the latitude array
+        // 2d array will start out as a 1x1 array, where the only entry in
+        // the longitude array is 360, and the only one in the latitude array
+        // is 180
+        // As you get servers, you divide up the 2d array into cells, where 
+        // each cell either is fully covered by a server, or is not at all
+        // the 1d arrays record how large these cells are
+        // Once you have retrieved all the servers and populated the array,
+        // you find the largest empty spot to put the server
+        // You probably want a server that covers all uncovered postions
+    }
+
     function generateServerInfo(baseAddress) {
         serverInfoModel.find({})
                        .then(function(servers) {
@@ -85,11 +102,28 @@ module.exports = function(app, mongoose) {
     }
     
     return {
-        redirectRequest: function(req, res, targLocation, locationRadius) {
-            var minValidMaxLat = Number(targLocation.latitude) - Number(locationRadius);
-            var maxValidMinLat = Number(targLocation.latitude) + Number(locationRadius);
-            var minValidMaxLng = Number(targLocation.longitude) - Number(locationRadius);
-            var maxValidMinLng = Number(targLocation.longitude) + Number(locationRadius);
+        redirectRequest: function(req, res, targLoc, targRad) {
+            var lat = Number(targLoc.latitude);
+            var lng = Number(targLoc.longitude);
+            var oneLatDegInMeters = Math.cos(lat * Math.PI / 180) * 111000;
+            var oneLngDegInMeters = Math.cos(lng * Math.PI / 180) * 111000;
+
+            if (oneLatDegInMeters > 0) {
+                var locationRadInLatDeg = Number(targRad) / oneLatDegInMeters;
+                var minValidMaxLat = lat - locationRadInLatDeg;
+                var maxValidMinLat = lat + locationRadInLatDeg;
+            } else {
+                var minValidMaxLat = -90;
+                var maxValidMinLat = 90;
+            }
+            if (oneLngDegInMeters > 0) {
+                var locationRadInLngDeg = Number(targRad) / oneLngDegInMeters;
+                var minValidMaxLng = lng - locationRadInLngDeg;
+                var maxValidMinLng = lng + locationRadInLngDeg;
+            } else {
+                var minValidMaxLat = -180;
+                var maxValidMinLng = 180;
+            }
             // we add latitude immediately, but not longitude, because 
             // longitude wraps around from -180 to 180
             var query = {$and:[

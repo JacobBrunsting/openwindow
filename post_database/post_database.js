@@ -32,14 +32,9 @@ var commentSchema = mongoose.Schema({
     body: {type: String, required:true},
 });
 
-var coordinateSchema = mongoose.Schema({
-    lat:{type:Number},
-    lng:{type:Number}
-});
-
-var locationSchema = mongoose.Schema({
-    type: {type:String, default:"Point"},
-    coordinate:  {type:coordinateSchema},
+var coordinatesSchema = mongoose.Schema({
+    type:       {type:String, default:"Point"},
+    coordinates:{type:[Number], required:true}
 });
 
 var sitePostSchema = mongoose.Schema({
@@ -49,10 +44,12 @@ var sitePostSchema = mongoose.Schema({
     postTime:           {type:Number, required:true},
     secondsToShowFor:   {type:Number, default:0},
     comments:           {type:[commentSchema], default:[]},
-    loc:                {type:locationSchema, required:true},
+    loc:                {type:coordinatesSchema, required:true},
     mainDatabaseAddr:   {type:String, required:true},
     backupDatabaseAddr: {type:String, required:true},
 }, {collection:sitePostCollectionName}); // structure of a post
+
+sitePostSchema.index({loc:'2dsphere'});
 
 var sitePostModel = mongoose.model("sitePostModel", sitePostSchema);
 
@@ -109,7 +106,18 @@ function addNewSitePost(req, res) {
 }
 
 function getAllSitePosts(req, res) {
+    var lng = req.query.longitude;
+    var lat = req.query.latitude;
+    var rad = req.query.radius;
     sitePostModel.find()
+                 .where('loc')
+                 .near({
+                     center: {
+                         type: 'Point',
+                         coordinates: [lng, lat]
+                     },
+                     maxDistance: 50000
+                 })
                  .then(
         function(posts) {
             res.json(posts);
