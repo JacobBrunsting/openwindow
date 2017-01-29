@@ -73,47 +73,79 @@ module.exports = function(app, mongoose) {
         }
         return curMinDist;
     }
+
+    function generateServerInfo(baseAddress) {
+        serverInfoModel.find({})
+                       .then(function(servers) {
+                                 
+                             },
+                             function(err) {
+                                 console.log("traffic_director.js:redirectRequest:" + err);
+                             });
+    }
     
     return {
         redirectRequest: function(req, res, targLocation, locationRadius) {
-            var minValidMaxLat = targLocation.latitude - locationRadius;
-            var maxValidMinLat = targLocation.latitude + locationRadius;
-            var minValidMaxLng = targLocation.longitude - locationRadius;
-            var maxValidMinLng = targLocation.longitude + locationRadius;
+            var minValidMaxLat = Number(targLocation.latitude) - Number(locationRadius);
+            var maxValidMinLat = Number(targLocation.latitude) + Number(locationRadius);
+            var minValidMaxLng = Number(targLocation.longitude) - Number(locationRadius);
+            var maxValidMinLng = Number(targLocation.longitude) + Number(locationRadius);
+            // we add latitude immediately, but not longitude, because 
+            // longitude wraps around from -180 to 180
+            var query = {$and:[
+                                   {maxLat: {$gte:minValidMaxLat}},
+                                   {minLat: {$lte:maxValidMinLat}}
+                              ]};
+            if (minValidMaxLng < -180) {
+                query.$and.push({
+                    $or:[
+                        {maxLng:{$gte:-180}},
+                        {maxLng:{$gte:minValidMaxLng + 180}}
+                    ]
+                });
+            } else {
+                query.$and.push({maxLng:{$gte:minValidMaxLng}});
+            }
+            if (maxValidMinLng > 180) {
+                query.$and.push({
+                    $or:[
+                        {minLng:{$lte:180}},
+                        {minLng:{$lte:maxValidMinLng - 360}}
+                    ]
+                });
+            } else {
+                query.$and.push({minLng:{$lte:maxValidMinLng}});
+            }
             var mergedRspBody = {};
-            serverInfoModel.find({$and:[
-                                        {maxLat: {$gte:minValidMaxLat}},
-                                        {minLat: {$lte:maxValidMinLat}},
-                                        {maxLng: {$gte:minValidMaxLng}},
-                                        {minLng: {$lte:maxValidMinLng}}
-                                       ]})
-                            .then(function(servers) {
-                                      var numCallsRemaining = servers.length;
-                                      servers.forEach(function(server) {
-                                          var addr = server.baseAddress; 
-                                          var path = req.originalUrl;
-                                          var url = "http://" + addr + path;
-                                          var requestParams = {
-                                              url:url,
-                                              method:req.method,
-                                              body:req.body,
-                                              json:true
-                                          }
-                                          request(requestParams,
-                                                  function(err, reqRes) {
-                                                      numCallsRemaining -= 1;
-                                                      if (err) {
-                                                          console.log("traffic_director.js:redirectRequest:" + err);
-                                                      } else {
-                                                          // This only does a shallow merge, and isn't supported by
-                                                          // older versions of IE, so you should look into changing
-                                                          // potentially
-                                                          Object.assign(mergedRspBody, reqRes.body);
-                                                      }
-                                                      if (numCallsRemaining == 0) {
-                                                          res.json({statusCode:200, body:mergedRspBody});
-                                                      }
-                                                  });
+            console.log("query is " + JSON.stringify(query));
+            serverInfoModel.find(query)
+                           .then(function(servers) {
+                                     var numCallsRemaining = servers.length;
+                                     servers.forEach(function(server) {
+                                         var addr = server.baseAddress; 
+                                         var path = req.originalUrl;
+                                         var url = "http://" + addr + path;
+                                         var requestParams = {
+                                             url:url,
+                                             method:req.method,
+                                             body:req.body,
+                                             json:true
+                                         }
+                                         request(requestParams,
+                                                 function(err, reqRes) {
+                                                     numCallsRemaining -= 1;
+                                                     if (err) {
+                                                         console.log("traffic_director.js:redirectRequest:" + err);
+                                                     } else {
+                                                         // This only does a shallow merge, and isn't supported by
+                                                         // older versions of IE, so you should look into changing
+                                                         // potentially
+                                                         Object.assign(mergedRspBody, reqRes.body);
+                                                     }
+                                                     if (numCallsRemaining == 0) {
+                                                         res.json({statusCode:200, body:mergedRspBody});
+                                                     }
+                                                 });
                                       });
                                   },
                                   function(err) {

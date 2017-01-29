@@ -24,6 +24,7 @@ app.use('/api/*', function (req, res) {
     trafficDirector.redirectRequest(req, res, loc, radius);
 });
 app.use("/director/addserverinfo", function (req, res) {
+    console.log("adding server with base addr " + req.body.baseAddress);
     trafficDirector.addServerInfo(req, res);
 });
 app.listen(PORT, "0.0.0.0");

@@ -4,7 +4,7 @@ angular.module('openwindow').service('geolocation', [function() {
         // uncomment once https certified (getCurrentPosition only works with
         // https)
         // navigator.geolocation.getCurrentPosition(onSuccess, onError);
-        onSuccess({longitude:0, latitude:0});
+        onSuccess({longitude:179, latitude:40});
     }
 
     this.addLocationToURL = function(url, location) {

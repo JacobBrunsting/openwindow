@@ -1,6 +1,7 @@
 // =========== Configuration ============
 
 var util = require('util');
+var request = require('request');
 var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
@@ -295,3 +296,14 @@ function getPostsSecondsToShowFor(req, res) {
 }
 
 app.listen(SERVER_PORT, "0.0.0.0");
+
+// ========= Add Server to List =========
+// TEMP ONLY - Replace 'localhost:8080' with the actual website name later
+var baseAddress = ipAddr + ":" + SERVER_PORT;
+request.post('http://localhost:8080/director/addserverinfo', {baseAddress:baseAddress},
+             function(err, res) {
+                 if (err) {
+                     console.log("Error connecting to server network");
+                     console.log(err);
+                 }
+             });
