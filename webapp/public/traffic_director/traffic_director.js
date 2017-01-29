@@ -76,10 +76,6 @@ module.exports = function(app, mongoose) {
     
     return {
         redirectRequest: function(req, res, targLocation, locationRadius) {
-            // find all servers where targLocation is not more than locationRadius
-            // outside of the server longitude/latitude range
-            // this will get more servers than neccesary in some cases, but that
-            // won't cause any problems, just might cause a few extra requests
             var minValidMaxLat = targLocation.latitude - locationRadius;
             var maxValidMinLat = targLocation.latitude + locationRadius;
             var minValidMaxLng = targLocation.longitude - locationRadius;
@@ -97,13 +93,18 @@ module.exports = function(app, mongoose) {
                                           var addr = server.baseAddress; 
                                           var path = req.originalUrl;
                                           var url = "http://" + addr + path;
-                                          request(url, {json: req.body},
+                                          var requestParams = {
+                                              url:url,
+                                              method:req.method,
+                                              body:req.body,
+                                              json:true
+                                          }
+                                          request(requestParams,
                                                   function(err, reqRes) {
                                                       numCallsRemaining -= 1;
                                                       if (err) {
-                                                          console.log("error was " + err);
+                                                          console.log("traffic_director.js:redirectRequest:" + err);
                                                       } else {
-                                                          console.log("Merged response is " + JSON.stringify(mergedRspBody));
                                                           // This only does a shallow merge, and isn't supported by
                                                           // older versions of IE, so you should look into changing
                                                           // potentially
@@ -116,7 +117,7 @@ module.exports = function(app, mongoose) {
                                       });
                                   },
                                   function(err) {
-                                      console.log("error was " + err);
+                                      console.log("traffic_director.js:redirectRequest:" + err);
                                   });
         }, 
         addServerInfo: function(req, res) {

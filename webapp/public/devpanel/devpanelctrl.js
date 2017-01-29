@@ -61,6 +61,7 @@ angular.module('openwindow').controller('devpanelctrl', [
                      .error(function(error) {
                      });
             }
+            // temp, for testing only
             $scope.addServerInfo = function(minLongitude, maxLongitude, minLatitude, maxLatitude) {
                 var serverInfo = {
                     baseAddress: "127.0.0.1:3000",
