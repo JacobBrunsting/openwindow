@@ -160,7 +160,7 @@ function sendRequestToServers(req, res, servers) {
                 console.log("traffic_director.js:redirectRequest:" + err);
             } else {
                 // This only does a shallow merge, and isn't supported by
-                // older versions of IE, so you should look into changing
+                // older versions of IE, so you should look varo changing
                 // potentially
                 Object.assign(mergedRspBody, reqRes.body);
             }
@@ -176,20 +176,7 @@ function sendRequestToServers(req, res, servers) {
 // aren't added very often, so I'm not too worried about it
 function setupServerLocation(newServer, otherServers) {
     const FILL_VAL = 1;
-    // one array for longitude, where each entry is a number representing
-    // some number of longitude degrees
-    // a similar array for latitude
-    // A 2d array, with the same 'width' as the length of the longitude
-    // array, and the same 'height' as the latitude array
-    // 2d array will start out as a 1x1 array, where the only entry in
-    // the longitude array is 360, and the only one in the latitude array
-    // is 180
-    // As you get servers, you divide up the 2d array into cells, where 
-    // each cell either is fully covered by a server, or is not at all
-    // the 1d arrays record how large these cells are
-    // Once you have retrieved all the servers and populated the array,
-    // you find the largest empty spot to put the server
-    // You probably want a server that covers all uncovered postions
+    const CHECKED_VAL = 2;
     
     var blockWidths = [];  // width of a chunk of the world in degrees longitude
     var blockHeights = []; // height of a chunk of the world in degrees latitude
@@ -228,33 +215,116 @@ function setupServerLocation(newServer, otherServers) {
     
     function splitVerticallyAtSum(targSum) {
         if (splitArrAtSum(blockHeights, targSum)) {
-            for (var i = 0; i < blockVals.length; ++i) {
-                blockVals.splice(splitIndex, 0, blockVals[splitIndex]);
-            }
+            blockVals.splice(splitIndex, 0, blockVals[splitIndex]);
         }
     }
     
     function fillRange(minWidthSum, maxWidthSum, minHeightSum, maxHeightSum, fillVal) {
         var maxHeightSumLeft = maxHeightSum;
         var totalHeightFill = maxHeightSum - minHeightSum;
-        for (var r = 0; r < blockVals.length; ++r) {
+        for (var c = 0; c < blockVals.length; ++c) {
             if (maxHeightSumLeft < 0) {
                 // if we have passed the maximum height, continue
                 break;
             } else if (maxHeightSumLeft <= totalHeightFill) {
                 var maxWidthSumLeft = maxWidthSum;
                 var totalWidthFill = maxWidthSum - minWidthSum;
-                for (var c = 0; c < blockVals[lng].length; ++c) {
+                for (var r = 0; r < blockVals[0].length; ++r) {
                     if (maxWidthSumLeft < 0) {
                         break;
                     } else if (maxWidthSumLeft <= totalWidthFill) {
-                        blockVals[h][c] = FILL_VAL;
+                        blockVals[c][r] = FILL_VAL;
                     }
                     maxWidthSumLeft -= blockWidths[c];
                 }
             }
             h -= blockHeights[h];
         }
+    }
+   
+    function bottomPerimeterContainsVal(targVal, r1, c1, r2, c2) {
+        for (var c = c1; c <= c2) {
+            if (blockVals[c][r2] == FILL_VAL) {
+                return true;
+            }
+        }
+        for (var r = r1; r <= r2) {
+            if (blockVals[c2][r] == FILL_VAL) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function calculateSquareArea(targVal, r1, c1, r2, c2) {
+        var width = 0;
+        for (var c = c1; c <= c2; ++c) {
+            width += blockWidths[c];
+        }
+        var height = 0;
+        for (var r = r1; r <= r2; ++r) {
+            height += blockHeights[r];
+        }
+        return width * height;
+    }
+
+    // returns {area, row, col, width, height}
+    function getLargestRectangleInfoFromCoord(row, col) {
+        var currentLargestArea = 0;
+        var largestRectangleInfo = {};
+        for (var r = row; r < blockVals.length; ++r) {
+            for (var c = col; c < blockVals[0].length; ++c) {
+                for (var w = 0; c + w < blockVals.length; ++w) {
+                    for (var h = 0; r + h < blockVals[0].length; ++h) {
+                        var area = calculateSquareArea(); 
+                        if (area > currentLargestArea &&
+                            !bottomPerimeterContainsVal(FILL_VAL, r, c, r + w, c + h)) {
+                            
+                           largestRectangleInfo = {area:area, row:r, col:c, width:w, height:h}; 
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // returns {minLng, maxLng, minLat, maxLat}
+    function getLargestArea() {
+        var currentLargestAreaParams = {};
+        var currentLargestArea = 0;
+        for (var r = 0; r < blockVals.length; ++r) {
+            for (var c = 0; c < blockVals[0].length; ++c) {
+                if (blockVals[c][r] != FILL_VAL) {
+                    var rectangleInfo = getLargestRectangleInfoFromCoord(r, c);
+                    if (rectangleInfo.area > currentLargestArea) {
+                        currentLargestAreaParams = rectangleInfo;
+                    }
+                }
+            }
+        }
+        var minLat = -90;
+        for (var r = 0; r <= currentLargestAreaParams.row; ++r) {
+           minLat += blockHeights[r];
+        }
+        var maxLat = minLat;
+        for (var r = currentLargestAreaParams.row;
+             r <= currentLargestAreaParams.row + currentLargestAreaParams.height;
+             ++r) {
+
+            maxLat += blockHeights[r];
+        }
+        var minLng = -180;
+        for (var c = 0; c <= currentLargestAreaParams.col; ++c) {
+           minLng += blockWidths[c];
+        }
+        var maxLng = minLng;
+        for (var c = currentLargestAreaParams.col;
+             c <= currentLargestAreaParams.col + currentLargestAreaParams.width;
+             ++c) {
+
+            maxLng += blockWidths[c];
+        }
+        return {minLng, maxLng, minLat, maxLat};
     }
         
     servers.forEach(function(server) {
@@ -269,6 +339,7 @@ function setupServerLocation(newServer, otherServers) {
         // the largest filled section, and extract the longitude/latitude 
         // vals from that.
     });
+    Object.assign(server, getLargestArea());
 }
 
 module.exports = function(app, mongoose) {
