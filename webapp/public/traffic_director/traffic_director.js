@@ -4,6 +4,8 @@ var geolib = require('geolib');
 
 var SERVER_INFO_COLLECTION_NAME = "ServerInfoDatabase";
 
+// TODO: Use '===' and '!==' instead of '==' and '!='
+
 /**
  * Determines if a coordinate is inside of a square
  * coord ({longitude, latitude}):           The coordinate being inspected
@@ -48,7 +50,7 @@ function getDistToSquare(coord, topRightCoord, bottomLeftCoord) {
         }
         var distToLeftEdge = geolib.getDistance(coord, getCoord(coord.getLongitude(), bottomLeftCoord.getLatitude()));
         if (curMinDist == -1 || distToLeftEdge < curMinDist) {
-            curMinDist = distToLeftEdge;
+            curMinDist = distToLeftEdge/home/jacob;
         }
     }
     var distToTopRight = geolib.getDistance(coord, topRightCoord);
@@ -175,80 +177,96 @@ function sendRequestToServers(req, res, servers) {
 // no, it is most definitely not, but it's very rarely called, since servers 
 // aren't added very often, so I'm not too worried about it
 function setupServerLocation(newServer, otherServers) {
-    const FILL_VAL = 1;
-    const CHECKED_VAL = 2;
+    var FILL_VAL = 1;
+    var CHECKED_VAL = 2;
     
-    var blockWidths = [];  // width of a chunk of the world in degrees longitude
-    var blockHeights = []; // height of a chunk of the world in degrees latitude
-    var blockVals = [[]];  // 1 for a covered block, 0 for a uncovered one
+    var blockWidths = [360];  // width of a chunk of the world in degrees longitude
+    var blockHeights = [180]; // height of a chunk of the world in degrees latitude
+    var blockVals = [[0]];  // 1 for a covered block, 0 for a uncovered one
     
-    // returns true if the split occured, false if the array was already split
-    // at that sum
-    function splitArrAtSum(arr, targSum) {
-        var splitIndex = 0;
-        for (; splitIndex < blockWidths.length; ++splitIndex) {
-            targSum -= blockWidths[i];
+    function splitHorizontallyAtSum(targSum) {
+        console.log("looking for horizontal sum " + targSum);
+        for (var splitIndex = 0; splitIndex < blockHeights.length; ++splitIndex) {
+            targSum -= blockHeights[splitIndex];
             if (targSum <= 0) {
                 break;
             }
         }
-        if (targSum == 0) {
-            return false;
-        } else {
-            var oldWidth = blockWidths[splitIndex];
-            var newWidth = oldWidth = server.minLng;
-            var remainingWidth = oldWidth - newWidth;
-            blockWidths.splice(splitIndex, 0, newWidth);
-            blockWidths[splitIndex] = remainingWidth;
-
-            return true;
+        if (targSum != 0) {
+            var oldHeight = blockHeights[splitIndex];
+            var firstSectionHeight = Math.abs(targSum);
+            var secondSectionHeight = oldHeight - firstSectionHeight;
+            blockHeights[splitIndex] = firstSectionHeight;
+            blockHeights.splice(splitIndex, 0, secondSectionHeight);
+            blockVals.splice(splitIndex, 0, blockVals[splitIndex]);
         }
+        
+                  console.log(JSON.stringify(blockWidths));
+    for (r = 0; r < blockVals.length; ++r) {
+        console.log(blockHeights[r] + "," + JSON.stringify(blockVals[r]));
     }
-    
-    function splitHorizontallyAtSum(targSum) {
-        if (splitArrAtSum(blockWidths, targSum)) {
-            for (var i = 0; i < blockVals.length; ++i) {
-                blockVals[i].splice(splitIndex, 0, blockVals[i][splitIndex]);
-            }
-        }
     }
     
     function splitVerticallyAtSum(targSum) {
-        if (splitArrAtSum(blockHeights, targSum)) {
-            blockVals.splice(splitIndex, 0, blockVals[splitIndex]);
+        console.log("looking for vertical sum " + targSum);
+        for (var splitIndex = 0; splitIndex < blockWidths.length; ++splitIndex) {
+            if (targSum - blockWidths[splitIndex] <= 0) {
+                break;
+            }
+            targSum -= blockWidths[splitIndex];
         }
+        if (targSum !== 0) {
+            var oldWidth = blockWidths[splitIndex];
+            var newWidth = targSum;
+            var remainingWidth = oldWidth - newWidth;
+            // TODO: Cleanup this mess
+            if (remainingWidth === 0) {
+                console.log("already found that sum");
+                return;
+            }
+            blockWidths[splitIndex] = remainingWidth;
+            blockWidths.splice(splitIndex, 0, newWidth);
+            for (var i = 0; i < blockVals.length; ++i) {
+                console.log("inserting " + blockVals[i][splitIndex]);
+                blockVals[i].splice(splitIndex, 0, blockVals[i][splitIndex]);
+            }
+        }
+        
+          console.log(JSON.stringify(blockWidths));
+    for (r = 0; r < blockVals.length; ++r) {
+        console.log(blockHeights[r] + "," + JSON.stringify(blockVals[r]));
+    }
     }
     
     function fillRange(minWidthSum, maxWidthSum, minHeightSum, maxHeightSum, fillVal) {
         var maxHeightSumLeft = maxHeightSum;
         var totalHeightFill = maxHeightSum - minHeightSum;
-        for (var c = 0; c < blockVals.length; ++c) {
+        for (var r = 0; r < blockVals.length; ++r) {
             if (maxHeightSumLeft < 0) {
-                // if we have passed the maximum height, continue
                 break;
             } else if (maxHeightSumLeft <= totalHeightFill) {
                 var maxWidthSumLeft = maxWidthSum;
                 var totalWidthFill = maxWidthSum - minWidthSum;
-                for (var r = 0; r < blockVals[0].length; ++r) {
+                for (var c = 0; c < blockVals[0].length; ++c) {
                     if (maxWidthSumLeft < 0) {
                         break;
                     } else if (maxWidthSumLeft <= totalWidthFill) {
-                        blockVals[c][r] = FILL_VAL;
+                        blockVals[r][c] = FILL_VAL;
                     }
                     maxWidthSumLeft -= blockWidths[c];
                 }
             }
-            h -= blockHeights[h];
+            maxHeightSumLeft -= blockHeights[r];
         }
     }
    
     function bottomPerimeterContainsVal(targVal, r1, c1, r2, c2) {
-        for (var c = c1; c <= c2) {
+        for (var c = c1; c <= c2; ++c) {
             if (blockVals[c][r2] == FILL_VAL) {
                 return true;
             }
         }
-        for (var r = r1; r <= r2) {
+        for (var r = r1; r <= r2; ++r) {
             if (blockVals[c2][r] == FILL_VAL) {
                 return true;
             }
@@ -294,7 +312,7 @@ function setupServerLocation(newServer, otherServers) {
         var currentLargestArea = 0;
         for (var r = 0; r < blockVals.length; ++r) {
             for (var c = 0; c < blockVals[0].length; ++c) {
-                if (blockVals[c][r] != FILL_VAL) {
+                if (blockVals[c][r] !== FILL_VAL) {
                     var rectangleInfo = getLargestRectangleInfoFromCoord(r, c);
                     if (rectangleInfo.area > currentLargestArea) {
                         currentLargestAreaParams = rectangleInfo;
@@ -324,22 +342,22 @@ function setupServerLocation(newServer, otherServers) {
 
             maxLng += blockWidths[c];
         }
-        return {minLng, maxLng, minLat, maxLat};
+        return {minLng:minnmg, maxLng:maxLng, minLat:minLat, maxLat:maxLat};
     }
-        
-    servers.forEach(function(server) {
-        splitHorizontallyAtSum(server.minLng + 180);
-        splitHorizontallyAtSum(server.maxLng + 180);
-        splitVerticallyAtSum(server.minLat + 90);
-        splitVerticallyAtSum(server.maxLat + 90);
+    otherServers.forEach(function(server) {
+        splitVerticallyAtSum(server.minLng + 180);
+        splitVerticallyAtSum(server.maxLng + 180);
+        splitHorizontallyAtSum(server.minLat + 90);
+        splitHorizontallyAtSum(server.maxLat + 90);
         fillRange(server.minLng + 180, server.maxLng + 180, 
                   server.minLat + 90, server.maxLat + 90);
-        
-        // TODO: Here, you should search through the blockVals array to find
-        // the largest filled section, and extract the longitude/latitude 
-        // vals from that.
+
     });
-    Object.assign(server, getLargestArea());
+    console.log(JSON.stringify(blockWidths));
+    for (r = 0; r < blockVals.length; ++r) {
+        console.log(blockHeights[r] + "," + JSON.stringify(blockVals[r]));
+    }
+    Object.assign(newServer, getLargestArea());
 }
 
 module.exports = function(app, mongoose) {
@@ -378,7 +396,7 @@ module.exports = function(app, mongoose) {
             serverInfoModel
                 .find({})
                 .then(function(servers) {
-                    setupServerLocation(servers, newServer);
+                    setupServerLocation(newServer, servers);
                     serverInfoModel
                         .create(newServer)
                         .then(function(reqRes) {
