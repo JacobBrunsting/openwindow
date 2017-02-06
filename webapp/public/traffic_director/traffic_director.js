@@ -16,9 +16,9 @@ var SERVER_INFO_COLLECTION_NAME = "ServerInfoDatabase";
  */
 function coordInsideSquare(coord, topRightCoord, bottomLeftCoord) {
     return coord.getLongitude() <= topRightCoord.getLongitude() &&
-           coord.getLongitude() >= bottomLeftCoord.getLongitude() &&
-           coord.getLatitude() <= topRightCoord.getLatitude() &&
-           coord.getLatitude() >= bottomLeftCoord.getLatitude();
+            coord.getLongitude() >= bottomLeftCoord.getLongitude() &&
+            coord.getLatitude() <= topRightCoord.getLatitude() &&
+            coord.getLatitude() >= bottomLeftCoord.getLatitude();
 }
 
 /**
@@ -50,7 +50,7 @@ function getDistToSquare(coord, topRightCoord, bottomLeftCoord) {
         }
         var distToLeftEdge = geolib.getDistance(coord, getCoord(coord.getLongitude(), bottomLeftCoord.getLatitude()));
         if (curMinDist == -1 || distToLeftEdge < curMinDist) {
-            curMinDist = distToLeftEdge/home/jacob;
+            curMinDist = distToLeftEdge / home / jacob;
         }
     }
     var distToTopRight = geolib.getDistance(coord, topRightCoord);
@@ -74,10 +74,10 @@ function getCoord(latitude, longitude) {
     var coord = Object;
     coord.latitude = latitude;
     coord.longitude = longitude;
-    coord.getLatitude = function() {
+    coord.getLatitude = function () {
         return this.latitude;
     }
-    coord.getLongitude = function() {
+    coord.getLongitude = function () {
         return this.longitude;
     }
     return coord;
@@ -115,23 +115,23 @@ function getServerSearchQuery(targLoc, targRad) {
     }
     // we add latitude to the query immediately, but not longitude, because
     // longitude wraps around from -180 to 180
-    var query = {$and:[{maxLat: {$gte:minValidMaxLat}},
-                       {minLat: {$lte:maxValidMinLat}}]};
+    var query = {$and: [{maxLat: {$gte: minValidMaxLat}},
+            {minLat: {$lte: maxValidMinLat}}]};
     if (minValidMaxLng < -180) {
         query.$and.push({
-            $or:[{maxLng:{$gte:-180}},
-                 {maxLng:{$gte:minValidMaxLng + 180}}]
+            $or: [{maxLng: {$gte: -180}},
+                {maxLng: {$gte: minValidMaxLng + 180}}]
         });
     } else {
-        query.$and.push({maxLng:{$gte:minValidMaxLng}});
+        query.$and.push({maxLng: {$gte: minValidMaxLng}});
     }
     if (maxValidMinLng > 180) {
         query.$and.push({
-            $or:[{minLng:{$lte:180}},
-                 {minLng:{$lte:maxValidMinLng - 360}}]
+            $or: [{minLng: {$lte: 180}},
+                {minLng: {$lte: maxValidMinLng - 360}}]
         });
     } else {
-        query.$and.push({minLng:{$lte:maxValidMinLng}});
+        query.$and.push({minLng: {$lte: maxValidMinLng}});
     }
     return query;
 }
@@ -146,17 +146,17 @@ function getServerSearchQuery(targLoc, targRad) {
 function sendRequestToServers(req, res, servers) {
     var numCallsRemaining = servers.length;
     var mergedRspBody = {};
-    servers.forEach(function(server) {
+    servers.forEach(function (server) {
         var addr = server.baseAddress;
         var path = req.originalUrl;
         var url = "http://" + addr + path;
         var requestParams = {
-            url:url,
-            method:req.method,
-            body:req.body,
-            json:true
+            url: url,
+            method: req.method,
+            body: req.body,
+            json: true
         }
-        request(requestParams, function(err, reqRes) {
+        request(requestParams, function (err, reqRes) {
             numCallsRemaining -= 1;
             if (err) {
                 console.log("traffic_director.js:redirectRequest:" + err);
@@ -167,7 +167,7 @@ function sendRequestToServers(req, res, servers) {
                 Object.assign(mergedRspBody, reqRes.body);
             }
             if (numCallsRemaining == 0) {
-                res.json({statusCode:200, body:mergedRspBody});
+                res.json({statusCode: 200, body: mergedRspBody});
             }
         });
     });
@@ -178,250 +178,224 @@ function sendRequestToServers(req, res, servers) {
 // aren't added very often, so I'm not too worried about it
 function setupServerLocation(newServer, otherServers) {
     var FILL_VAL = 1;
-    var CHECKED_VAL = 2;
-    
-    var blockWidths = [360];  // width of a chunk of the world in degrees longitude
-    var blockHeights = [180]; // height of a chunk of the world in degrees latitude
-    var blockVals = [[0]];  // 1 for a covered block, 0 for a uncovered one
-    
-    function splitHorizontallyAtSum(targSum) {
-        console.log("looking for horizontal sum " + targSum);
-        for (var splitIndex = 0; splitIndex < blockHeights.length; ++splitIndex) {
-            targSum -= blockHeights[splitIndex];
-            if (targSum <= 0) {
+    var EMPTY_VAL = 0;
+
+    var blockLngs = [-180, 180];  // width of a chunk of the world in degrees longitude
+    var blockLats = [-90, 90]; // height of a chunk of the world in degrees latitude
+    var blockVals = [[EMPTY_VAL]];  // 1 for a covered block, 0 for a uncovered one
+    // first index lat, next is lng
+
+    // returns the index of insertion, or -1 if it was not inserted
+    function insertEntryInOrderNoDuplicates(arr, val) {
+        for (var splitIndex = 0; splitIndex < arr.length; ++splitIndex) {
+            if (arr[splitIndex] >= val) {
                 break;
             }
         }
-        if (targSum != 0) {
-            var oldHeight = blockHeights[splitIndex];
-            var firstSectionHeight = Math.abs(targSum);
-            var secondSectionHeight = oldHeight - firstSectionHeight;
-            blockHeights[splitIndex] = firstSectionHeight;
-            blockHeights.splice(splitIndex, 0, secondSectionHeight);
-            blockVals.splice(splitIndex, 0, blockVals[splitIndex]);
+        if (arr[splitIndex] === val) {
+            return -1;
+        } else {
+            arr.splice(splitIndex, 0, val);
+            return splitIndex;
         }
-        
-                  console.log(JSON.stringify(blockWidths));
-    for (r = 0; r < blockVals.length; ++r) {
-        console.log(blockHeights[r] + "," + JSON.stringify(blockVals[r]));
     }
-    }
-    
-    function splitVerticallyAtSum(targSum) {
-        console.log("looking for vertical sum " + targSum);
-        for (var splitIndex = 0; splitIndex < blockWidths.length; ++splitIndex) {
-            if (targSum - blockWidths[splitIndex] <= 0) {
-                break;
-            }
-            targSum -= blockWidths[splitIndex];
+
+    function splitAtLatitude(latitude) {
+        var insertionIndex = insertEntryInOrderNoDuplicates(blockLats, latitude);
+        if (insertionIndex !== -1) {
+            // the '.slice()' ensures we get a copy of the array, not a reference to it
+            blockVals.splice(insertionIndex, 0, blockVals[insertionIndex - 1].slice());
         }
-        if (targSum !== 0) {
-            var oldWidth = blockWidths[splitIndex];
-            var newWidth = targSum;
-            var remainingWidth = oldWidth - newWidth;
-            // TODO: Cleanup this mess
-            if (remainingWidth === 0) {
-                console.log("already found that sum");
-                return;
-            }
-            blockWidths[splitIndex] = remainingWidth;
-            blockWidths.splice(splitIndex, 0, newWidth);
+    }
+
+    function splitAtLongitude(longitude) {
+        var insertionIndex = insertEntryInOrderNoDuplicates(blockLngs, longitude);
+        if (insertionIndex !== -1) {
             for (var i = 0; i < blockVals.length; ++i) {
-                console.log("inserting " + blockVals[i][splitIndex]);
-                blockVals[i].splice(splitIndex, 0, blockVals[i][splitIndex]);
+                blockVals[i].splice(insertionIndex, 0, blockVals[i][insertionIndex - 1]);
+            }
+        }
+    }
+
+    function fillRange(minLng, maxLng, minLat, maxLat, fillVal) {
+        var minLatIndex = -1;
+        var maxLatIndex = -1;
+        for (var i = 0; i < blockLats.length; ++i) {
+            if (minLatIndex === -1 && minLat <= blockLats[i]) {
+                minLatIndex = i;
+            } else if (maxLatIndex === -1 && maxLat <= blockLats[i]) {
+                maxLatIndex = i - 1;
             }
         }
         
-          console.log(JSON.stringify(blockWidths));
-    for (r = 0; r < blockVals.length; ++r) {
-        console.log(blockHeights[r] + "," + JSON.stringify(blockVals[r]));
-    }
-    }
-    
-    function fillRange(minWidthSum, maxWidthSum, minHeightSum, maxHeightSum, fillVal) {
-        var maxHeightSumLeft = maxHeightSum;
-        var totalHeightFill = maxHeightSum - minHeightSum;
-        for (var r = 0; r < blockVals.length; ++r) {
-            if (maxHeightSumLeft < 0) {
-                break;
-            } else if (maxHeightSumLeft <= totalHeightFill) {
-                var maxWidthSumLeft = maxWidthSum;
-                var totalWidthFill = maxWidthSum - minWidthSum;
-                for (var c = 0; c < blockVals[0].length; ++c) {
-                    if (maxWidthSumLeft < 0) {
-                        break;
-                    } else if (maxWidthSumLeft <= totalWidthFill) {
-                        blockVals[r][c] = FILL_VAL;
-                    }
-                    maxWidthSumLeft -= blockWidths[c];
-                }
+        var minLngIndex = -1;
+        var maxLngIndex = -1;
+        for (var i = 0; i < blockLngs.length; ++i) {
+            if (minLngIndex === -1 && minLng <= blockLngs[i]) {
+                minLngIndex = i;
+            } else if (maxLngIndex === -1 && maxLng <= blockLngs[i]) {
+                maxLngIndex = i - 1;
             }
-            maxHeightSumLeft -= blockHeights[r];
         }
+       for (var lat = minLatIndex; lat <= maxLatIndex; ++lat) {
+           for (var lng = minLngIndex; lng <= maxLngIndex; ++lng) {
+               blockVals[lat][lng] = fillVal;
+           }
+       }
     }
-   
+
     function bottomPerimeterContainsVal(targVal, r1, c1, r2, c2) {
         for (var c = c1; c <= c2; ++c) {
-            if (blockVals[c][r2] == FILL_VAL) {
+            if (blockVals[r2][c] === targVal) {
                 return true;
             }
         }
         for (var r = r1; r <= r2; ++r) {
-            if (blockVals[c2][r] == FILL_VAL) {
+            if (blockVals[r][c2] === targVal) {
                 return true;
             }
         }
         return false;
     }
 
-    function calculateSquareArea(targVal, r1, c1, r2, c2) {
-        var width = 0;
-        for (var c = c1; c <= c2; ++c) {
-            width += blockWidths[c];
-        }
-        var height = 0;
-        for (var r = r1; r <= r2; ++r) {
-            height += blockHeights[r];
-        }
-        return width * height;
+// TODO: Clean up this mess, stop using 'r' and 'c', us 'lng' and 'lat'
+    function calculateSquareArea(r1, c1, r2, c2) {
+        return (blockLngs[c2 + 1] - blockLngs[c1]) * (blockLats[r2 + 1] - blockLats[r1]);
     }
 
     // returns {area, row, col, width, height}
     function getLargestRectangleInfoFromCoord(row, col) {
-        var currentLargestArea = 0;
-        var largestRectangleInfo = {};
-        for (var r = row; r < blockVals.length; ++r) {
-            for (var c = col; c < blockVals[0].length; ++c) {
-                for (var w = 0; c + w < blockVals.length; ++w) {
-                    for (var h = 0; r + h < blockVals[0].length; ++h) {
-                        var area = calculateSquareArea(); 
-                        if (area > currentLargestArea &&
-                            !bottomPerimeterContainsVal(FILL_VAL, r, c, r + w, c + h)) {
-                            
-                           largestRectangleInfo = {area:area, row:r, col:c, width:w, height:h}; 
-                        }
-                    }
+        var largestRectangleInfo = {
+            area:   0,
+            minLng: 0,
+            maxLng: 0,
+            minLat: 0,
+            maxLat: 0
+        };
+        for (var h = 0; row + h < blockVals.length; ++h) {
+            for (var w = 0; col + w < blockVals[0].length; ++w) {
+                var area = calculateSquareArea(row, col, row + h, col + w);
+                if (bottomPerimeterContainsVal(FILL_VAL, row, col, row + h, col + w)) {
+                    break;
+                }
+                if (area > largestRectangleInfo.area) {
+                    largestRectangleInfo = {
+                        area:   area, 
+                        minLng: blockLngs[col], 
+                        maxLng: blockLngs[col + w + 1],
+                        minLat: blockLats[row],
+                        maxLat: blockLats[row + h + 1]
+                    };
                 }
             }
         }
+        return largestRectangleInfo;
     }
 
     // returns {minLng, maxLng, minLat, maxLat}
     function getLargestArea() {
-        var currentLargestAreaParams = {};
-        var currentLargestArea = 0;
+        var currentLargestAreaParams = {
+            area:   0,
+            minLng: 0,
+            maxLng: 0,
+            minLat: 0,
+            maxLat: 0
+        };
         for (var r = 0; r < blockVals.length; ++r) {
             for (var c = 0; c < blockVals[0].length; ++c) {
                 if (blockVals[c][r] !== FILL_VAL) {
                     var rectangleInfo = getLargestRectangleInfoFromCoord(r, c);
-                    if (rectangleInfo.area > currentLargestArea) {
+                    if (rectangleInfo.area > currentLargestAreaParams.area) {
                         currentLargestAreaParams = rectangleInfo;
                     }
                 }
             }
         }
-        var minLat = -90;
-        for (var r = 0; r <= currentLargestAreaParams.row; ++r) {
-           minLat += blockHeights[r];
-        }
-        var maxLat = minLat;
-        for (var r = currentLargestAreaParams.row;
-             r <= currentLargestAreaParams.row + currentLargestAreaParams.height;
-             ++r) {
-
-            maxLat += blockHeights[r];
-        }
-        var minLng = -180;
-        for (var c = 0; c <= currentLargestAreaParams.col; ++c) {
-           minLng += blockWidths[c];
-        }
-        var maxLng = minLng;
-        for (var c = currentLargestAreaParams.col;
-             c <= currentLargestAreaParams.col + currentLargestAreaParams.width;
-             ++c) {
-
-            maxLng += blockWidths[c];
-        }
-        return {minLng:minnmg, maxLng:maxLng, minLat:minLat, maxLat:maxLat};
+        return currentLargestAreaParams;
     }
-    otherServers.forEach(function(server) {
-        splitVerticallyAtSum(server.minLng + 180);
-        splitVerticallyAtSum(server.maxLng + 180);
-        splitHorizontallyAtSum(server.minLat + 90);
-        splitHorizontallyAtSum(server.maxLat + 90);
-        fillRange(server.minLng + 180, server.maxLng + 180, 
-                  server.minLat + 90, server.maxLat + 90);
-
+    
+    otherServers.forEach(function (server) {
+        splitAtLatitude(server.minLat);
+        splitAtLatitude(server.maxLat);
+        splitAtLongitude(server.minLng);
+        splitAtLongitude(server.maxLng);
+        fillRange(server.minLng, server.maxLng,
+                server.minLat, server.maxLat, FILL_VAL);
     });
-    console.log(JSON.stringify(blockWidths));
-    for (r = 0; r < blockVals.length; ++r) {
-        console.log(blockHeights[r] + "," + JSON.stringify(blockVals[r]));
+    console.log(JSON.stringify(blockLngs));
+    for (var r = 0; r < blockVals.length; ++r) {
+        console.log(blockLats[r] + ":" + JSON.stringify(blockVals[r]));
     }
+    console.log(blockLats[blockLats.length - 1]);
+    
     Object.assign(newServer, getLargestArea());
+    console.log("new server is " + JSON.stringify(newServer));
 }
 
-module.exports = function(app, mongoose) {
+module.exports = function (app, mongoose) {
     var serverInfoSchema = mongoose.Schema({
-        baseAddress:  {type:String, required:true},
-        maxLat:       {type:Number, required:true},
-        minLat:       {type:Number, required:true},
-        maxLng:       {type:Number, required:true},
-        minLng:       {type:Number, required:true}
-    }, {collection:SERVER_INFO_COLLECTION_NAME});
+        baseAddress: {type: String, required: true},
+        maxLat: {type: Number, required: true},
+        minLat: {type: Number, required: true},
+        maxLng: {type: Number, required: true},
+        minLng: {type: Number, required: true}
+    }, {collection: SERVER_INFO_COLLECTION_NAME});
 
-    var serverInfoModel = mongoose.model("ServerInfoModel", serverInfoSchema); 
-    
+    var serverInfoModel = mongoose.model("ServerInfoModel", serverInfoSchema);
+
     return {
-        redirectRequest: function(req, res, targLoc, targRad) {
+        redirectRequest: function (req, res, targLoc, targRad) {
             var query = getServerSearchQuery(targLoc, targRad);
             console.log("query is " + JSON.stringify(query));
             serverInfoModel
-                .find(query)
-                .then(function(servers) {
-                    if (servers.length == 0) {
-                        // TOOD: Route to extra server used 
-                        // for all unassigned lng/lat's.
-                        // Also you will need some logic
-                        // to route the neccessary requests
-                        // to this server
-                     }
-                     sendRequestToServers(req, res, servers);
-                },
-                function(err) {
-                    console.log("traffic_director.js:redirectRequest:" + err);
-                });
-        }, 
-        addServerInfo: function(req, res) {
-            var newServer = req.body;
-            serverInfoModel
-                .find({})
-                .then(function(servers) {
-                    setupServerLocation(newServer, servers);
-                    serverInfoModel
-                        .create(newServer)
-                        .then(function(reqRes) {
-                             res.json(reqRes);
-                         },
-                         function(err) {
-                             console.log(err);
-                             res.status(500).send();
-                         });
-                },
-                function(err) {
-                    console.log("traffic_director.js:redirectRequest:" + err);
-                });
+                    .find(query)
+                    .then(function (servers) {
+                        if (servers.length == 0) {
+                            // TOOD: Route to extra server used 
+                            // for all unassigned lng/lat's.
+                            // Also you will need some logic
+                            // to route the neccessary requests
+                            // to this server
+                        }
+                        sendRequestToServers(req, res, servers);
+                    },
+                            function (err) {
+                                console.log("traffic_director.js:redirectRequest:" + err);
+                            });
         },
-        removeServerInfo: function(req, res) {
+        addServerInfo: function (req, res) {
+            var newServer = req.body;
+            console.log("request body is:");
+            console.log(JSON.stringify(req.body));
+            serverInfoModel
+                    .find({})
+                    .then(function (servers) {
+                        setupServerLocation(newServer, servers);
+                        serverInfoModel
+                                .create(newServer)
+                                .then(function (reqRes) {
+                                    res.json(reqRes);
+                                },
+                                        function (err) {
+                                            console.log(err);
+                                            res.status(500).send();
+                                        });
+                    },
+                            function (err) {
+                                console.log("traffic_director.js:redirectRequest:" + err);
+                            });
+        },
+        removeServerInfo: function (req, res) {
             var baseAddress = req.baseAddress;
             serverInfoMode
-                .find({baseAddress:baseAddress})
-                .remove(function(err, data) {
-                    if (err || data == null) {
-                        res.status(400).send();
-                    } else {
-                        res.json(data);
-                    }
-                });
+                    .find({baseAddress: baseAddress})
+                    .remove(function (err, data) {
+                        if (err || data == null) {
+                            res.status(400).send();
+                        } else {
+                            res.json(data);
+                        }
+                    });
         }
-    }                             
+    }
 };

@@ -308,7 +308,7 @@ app.listen(SERVER_PORT, "0.0.0.0");
 // ========= Add Server to List =========
 // TEMP ONLY - Replace 'localhost:8080' with the actual website name later
 var baseAddress = ipAddr + ":" + SERVER_PORT;
-request.post('http://localhost:8080/director/addserverinfo', {baseAddress:baseAddress},
+request.post('http://localhost:8080/director/addserverinfo', {json:{baseAddress:baseAddress}},
              function(err, res) {
                  if (err) {
                      console.log("Error connecting to server network");
