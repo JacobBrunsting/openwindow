@@ -4,6 +4,16 @@ var geolib = require('geolib');
 
 var SERVER_INFO_COLLECTION_NAME = "ServerInfoDatabase";
 
+var serverInfoSchema = mongoose.Schema({
+    baseAddress: {type: String, required: true},
+    maxLat: {type: Number, required: true},
+    minLat: {type: Number, required: true},
+    maxLng: {type: Number, required: true},
+    minLng: {type: Number, required: true}
+}, {collection: SERVER_INFO_COLLECTION_NAME});
+
+var serverInfoModel = mongoose.model("ServerInfoModel", serverInfoSchema);
+
 // TODO: Use '===' and '!==' instead of '==' and '!='
 
 /**
@@ -30,26 +40,26 @@ function coordInsideSquare(coord, topRightCoord, bottomLeftCoord) {
  * square
  */
 function getDistToSquare(coord, topRightCoord, bottomLeftCoord) {
-    var curMinDist = -1;
+    var curMinDist == -1;
     if (coord.getLatitude() <= topRightCoord.getLatitude() &&
             coord.getLatitude() >= bottomLeftCoord.getLatitude()) {
         var distToTopEdge = geolib.getDistance(coord, getCoord(coord.getLatitude(), topRightCoord.getLongitude()));
-        if (curMinDist == -1 || distToTopEdge < curMinDist) {
+        if (curMinDist === -1 || distToTopEdge < curMinDist) {
             curMinDist = distToTopEdge;
         }
         var distToBottomEdge = geolib.getDistance(coord, getCoord(coord.getLatitude(), bottomLeftCoord.getLongitude()));
-        if (curMinDist == -1 || distToBottomEdge < curMinDist) {
+        if (curMinDist === -1 || distToBottomEdge < curMinDist) {
             curMinDist = distToBottomEdge;
         }
     }
     if (coord.getLongitude() <= topRightCoord.getLongitude() &&
             coord.getLongitude() >= bottomLeftCoord.getLongitude()) {
         var distToRightEdge = geolib.getDistance(coord, getCoord(coord.getLongitude(), topRightCoord.getLatitude()));
-        if (curMinDist == -1 || distToRightEdge < curMinDist) {
+        if (curMinDist === -1 || distToRightEdge < curMinDist) {
             curMinDist = distToRightEdge;
         }
         var distToLeftEdge = geolib.getDistance(coord, getCoord(coord.getLongitude(), bottomLeftCoord.getLatitude()));
-        if (curMinDist == -1 || distToLeftEdge < curMinDist) {
+        if (curMinDist === -1 || distToLeftEdge < curMinDist) {
             curMinDist = distToLeftEdge / home / jacob;
         }
     }
@@ -58,7 +68,7 @@ function getDistToSquare(coord, topRightCoord, bottomLeftCoord) {
     var distToTopLeft = geolib.getDistance(coord, getCoord(topRightCoord.getLatitude(), bottomLeftCoord.getLongitude()));
     var distToBottomRight = geolib.getDistance(coord, getCoord(bottomLeftCoord.getLatitude(), topRightCoord.getLongitude()));
     var minDistToCorner = Math.min(distToTopRight, distToBottomLeft, distToTopLeft, distToBottomRight);
-    if (curMinDist == -1 || minDistToCorner < curMinDist) {
+    if (curMinDist === -1 || minDistToCorner < curMinDist) {
         curMinDist = minDistToCorner;
     }
     return curMinDist;
@@ -76,10 +86,10 @@ function getCoord(latitude, longitude) {
     coord.longitude = longitude;
     coord.getLatitude = function () {
         return this.latitude;
-    }
+    };
     coord.getLongitude = function () {
         return this.longitude;
-    }
+    };
     return coord;
 }
 
@@ -155,7 +165,7 @@ function sendRequestToServers(req, res, servers) {
             method: req.method,
             body: req.body,
             json: true
-        }
+        };
         request(requestParams, function (err, reqRes) {
             numCallsRemaining -= 1;
             if (err) {
@@ -166,7 +176,7 @@ function sendRequestToServers(req, res, servers) {
                 // potentially
                 Object.assign(mergedRspBody, reqRes.body);
             }
-            if (numCallsRemaining == 0) {
+            if (numCallsRemaining === 0) {
                 res.json({statusCode: 200, body: mergedRspBody});
             }
         });
@@ -314,6 +324,29 @@ function setupServerLocation(newServer, otherServers) {
         return currentLargestAreaParams;
     }
     
+    // on success should take an area object representing the area removed from the server
+    // TODO: Create function to get area object
+    function splitLargestServerArea(servers, onSuccess) {
+        var largestArea = 0;
+        var serverWithLargestArea = {};
+        servers.forEach(function(server) {
+            var area = (server.maxLat - server.minLat) * (server.maxLng - server.maxLng);
+            if (area > largestArea) {
+                largestArea = area;
+            }
+            serverWithLargestArea = server;
+        });
+        resizeServer(serverWithLargestArea, function() {
+            var newArea = {
+                maxLat: serverWithLargestArea.maxLat,
+                minLat: serverWithLargestArea.minLat,
+                maxLng: serverWithLargestArea.maxLng,
+                minLng: serverWithLargestArea.minLng
+            };
+            onSuccess(newArea);
+        });
+    }
+    
     otherServers.forEach(function (server) {
         splitAtLatitude(server.minLat);
         splitAtLatitude(server.maxLat);
@@ -328,21 +361,39 @@ function setupServerLocation(newServer, otherServers) {
     }
     console.log(blockLats[blockLats.length - 1]);
     
-    Object.assign(newServer, getLargestArea());
-    console.log("new server is " + JSON.stringify(newServer));
+    var  serverArea = getLargestArea();
+    if (serverArea.area === 0) {
+        splitLargestServerArea(otherServers, function(resultingArea) {
+            Object.assign(newServer, resultingArea);
+            console.log("new server is " + JSON.stringify(newServer));
+        });
+    } else {
+        Object.assign(newServer, serverArea);
+        console.log("new server is " + JSON.stringify(serverArea));
+    }
+}
+
+function resizeServer(newServer, onSuccess) {
+    serverInfoModel.findByIdAndUpdate(
+        {_id:newServer._id},
+        {$set:{
+            maxLat: newServer.maxLat,
+            minLat: newServer.minLat,
+            maxLng: newServer.maxLng,
+            minLng: newServer.minLng
+        }}, 
+        {new:true},
+        function(err, data) {
+            if (err) {
+                res.status(400).send();
+            } else {
+                onSuccess();
+                res.json(data);
+            }
+        });
 }
 
 module.exports = function (app, mongoose) {
-    var serverInfoSchema = mongoose.Schema({
-        baseAddress: {type: String, required: true},
-        maxLat: {type: Number, required: true},
-        minLat: {type: Number, required: true},
-        maxLng: {type: Number, required: true},
-        minLng: {type: Number, required: true}
-    }, {collection: SERVER_INFO_COLLECTION_NAME});
-
-    var serverInfoModel = mongoose.model("ServerInfoModel", serverInfoSchema);
-
     return {
         redirectRequest: function (req, res, targLoc, targRad) {
             var query = getServerSearchQuery(targLoc, targRad);
@@ -350,13 +401,6 @@ module.exports = function (app, mongoose) {
             serverInfoModel
                     .find(query)
                     .then(function (servers) {
-                        if (servers.length == 0) {
-                            // TOOD: Route to extra server used 
-                            // for all unassigned lng/lat's.
-                            // Also you will need some logic
-                            // to route the neccessary requests
-                            // to this server
-                        }
                         sendRequestToServers(req, res, servers);
                     },
                             function (err) {
@@ -387,15 +431,15 @@ module.exports = function (app, mongoose) {
         },
         removeServerInfo: function (req, res) {
             var baseAddress = req.baseAddress;
-            serverInfoMode
+            serverInfoModel
                     .find({baseAddress: baseAddress})
                     .remove(function (err, data) {
-                        if (err || data == null) {
+                        if (err || data === null) {
                             res.status(400).send();
                         } else {
                             res.json(data);
                         }
                     });
         }
-    }
+    };
 };

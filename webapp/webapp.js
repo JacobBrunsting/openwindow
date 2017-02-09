@@ -17,7 +17,7 @@ var trafficDirector = require('./public/traffic_director/traffic_director')(app,
 var PORT = 8080;
 app.use('/api/*', function (req, res) {
     var radius = 0;
-    if (req.query.radius != undefined) {
+    if (req.query.radius !== undefined) {
         radius = req.query.radius;
     }
     var loc = {longitude:req.query.longitude, latitude:req.query.latitude};

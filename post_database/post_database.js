@@ -46,7 +46,7 @@ var sitePostSchema = mongoose.Schema({
     comments:           {type:[commentSchema], default:[]},
     loc:                {type:coordinatesSchema, required:true},
     mainDatabaseAddr:   {type:String, required:true},
-    backupDatabaseAddr: {type:String, required:true},
+    backupDatabaseAddr: {type:String, required:true}
 }, {collection:sitePostCollectionName}); // structure of a post
 
 sitePostSchema.index({loc:'2dsphere'});
@@ -133,9 +133,9 @@ function upvotePost(req, res) {
     var id = req.body.id;
     var oldVote = req.body.oldVote;
     var amountToInc;
-    if (oldVote == UPVOTE) {
+    if (oldVote === UPVOTE) {
         amountToInc = -UPVOTE_INC;
-    } else if (oldVote == DOWNVOTE) {
+    } else if (oldVote === DOWNVOTE) {
         amountToInc = -DOWNVOTE_INC + UPVOTE_INC;
     } else {
         amountToInc = UPVOTE_INC;
@@ -158,9 +158,9 @@ function downvotePost(req, res) {
     var id = req.body.id;
     var oldVote = req.body.oldVote;
     var amountToInc;
-    if (oldVote == DOWNVOTE) {
+    if (oldVote === DOWNVOTE) {
         amountToInc = -DOWNVOTE_INC;
-    } else if (oldVote == UPVOTE) {
+    } else if (oldVote === UPVOTE) {
         amountToInc = -UPVOTE_INC + DOWNVOTE_INC;
     } else {
         amountToInc = DOWNVOTE_INC;
@@ -185,7 +185,7 @@ function getPost(req, res) {
     sitePostModel.findOne(
         {_id:ObjectId(id)},
         function(err, data) {
-            if (err || data == null) {
+            if (err || data === null) {
                 console.log("error is " + JSON.stringify(err));
                 console.log("data is " + JSON.stringify(data));
                 res.status(400).send();
@@ -205,7 +205,7 @@ function comment(req, res) {
         {$push:{comments:comment}},
         {new:true},
         function(err, data) {
-            if (err || data == null) {
+            if (err || data === null) {
                 res.status(400).send();
             } else {
                 res.json(data.comments);
@@ -222,7 +222,7 @@ function setTime(req, res) {
         {$set:{secondsToShowFor:newSecondsToShowFor}}, 
         {new:true},
         function(err, data) {
-            if (err || data == null) {
+            if (err || data === null) {
                 res.status(400).send();
             } else {
                 res.json(data);
@@ -239,7 +239,7 @@ function deleteComment(req, res) {
         {$pull:{'comments':{'_id':ObjectId(commentId)}}},
         {new:true},
         function(err, data) {
-            if (err || data == null) {
+            if (err || data === null) {
                 res.status(400).send();
             } else {
                 res.json(data);
@@ -252,7 +252,7 @@ function deletePost(req, res) {
     var id = req.body.id;
     sitePostModel.find({_id:id}).remove(
         function(err, data) {
-            if (err || data == null) {
+            if (err || data === null) {
                 res.status(400).send();
             } else {
                 res.json(data);
@@ -262,13 +262,11 @@ function deletePost(req, res) {
 }
 
 function getPostsWithinRange(req, res) {
-    var longitude = req.query.longitude;
-    var latitude = req.query.latitude;
     var range = req.query.range;
     var rangeSqrd = range * range;
     sitePostModel.find({}).$where(function() {
-                var longDiff = longitude - this.longitude;
-                var latDiff = latitude - this.latitude;
+                var longDiff = req.query.longitude - this.longitude;
+                var latDiff = req.query.latitude - this.latitude;
                 return longDiff * longDiff + latDiff * latDiff < rangeSqrd;
             }
         )
@@ -282,6 +280,7 @@ function getPostsWithinRange(req, res) {
     );
 }
 
+// TODO: Does this actually do stuff?
 var cacheTime = 0;
 var postsSecondsToShowForCache = {};
 function getPostsSecondsToShowFor(req, res) {
