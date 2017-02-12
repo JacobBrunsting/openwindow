@@ -1,35 +1,63 @@
-// =========== Configuration ============
 
-var util = require('util');
-var request = require('request');
-var express = require('express');
-var app = express();
+// ============== Imports ===============
+
 var bodyParser = require('body-parser');
-var mongoose = require('mongoose');
-var ObjectId = require('mongodb').ObjectId;
-var sitePostCollectionName = 'SitePostDatabase';
-var serverInfoCollectionName = 'ServerInfoDatabase';
-mongoose.Promise = require('bluebird');
-mongoose.connect('mongodb://localhost/openwindowdatabase');
-app.use(bodyParser.json());
-app.use(express.static(__dirname + '/public'));
+var config = require('./config');
+var express = require('express');
 var ipAddr = require('ip').address(); 
+var mongoose = require('mongoose');
+var request = require('request');
+var util = require('util');
+
+// ============== Settings ==============
+
+var PORT_KEY = "port";
+var BOUND_IP_KEY = "boundIp";
+var MONGO_DB_ADDRESS_KEY = "mongoDbAddress";
+var SECONDS_BETWEEN_CLEANUP_KEY = "secondsBetweenCleanup";
+var CACHE_EXPIRY_TIME_KEY = "cacheExpiryTime";
+var UPVOTE_INC_KEY = "upvoteInc";
+var DOWNVOTE_INC_KEY = "downvoteInc";
+var INITIAL_SECONDS_TO_SHOW_FOR = "initialSecondsToShowFor";
+var SITE_POST_COLLECTION_KEY = "sitePostsCollection";
+
+var settings = {};
+settings[PORT_KEY] = 8080;
+settings[BOUND_IP_KEY] = '0.0.0.0';
+settings[MONGO_DB_ADDRESS_KEY] = 'mongodb://localhost/openwindowdatabase';
+settings[SECONDS_BETWEEN_CLEANUP_KEY] = 200;
+settings[CACHE_EXPIRY_TIME_KEY] = 20;
+settings[UPVOTE_INC_KEY] = 80;
+settings[DOWNVOTE_INC_KEY] = -150;
+settings[INITIAL_SECONDS_TO_SHOW_FOR] = 1000;
+settings[SITE_POST_COLLECTION_KEY] = 'SitePosts';
+
+for (var key in settings) {
+    if (config[key]) {
+        settings[key] = config[key];
+    } else {
+        console.log(key + " not set in config file, defaulting to " + settings[key]);
+    }
+}
 
 // ============= Constants ==============
 
 var UPVOTE = 2;
 var DOWNVOTE = 1;
 var NONE = 0;
-var UPVOTE_INC = 80;
-var DOWNVOTE_INC = -150;
-var CACHE_MAX_SECONDS = 10;
-var SECONDS_BETWEEN_CLEANUPS = 200;
-var SERVER_PORT = 3000;
+
+// ================ Setup ================
+
+mongoose.Promise = require('bluebird');
+mongoose.connect(settings[MONGO_DB_ADDRESS_KEY]);
+var app = express();
+app.use(bodyParser.json());
+app.use(express.static('./public'));
 
 // =============== Models ================
 
 var commentSchema = mongoose.Schema({
-    body: {type: String, required:true},
+    body: {type: String, required:true}
 });
 
 var coordinatesSchema = mongoose.Schema({
@@ -47,7 +75,7 @@ var sitePostSchema = mongoose.Schema({
     loc:                {type:coordinatesSchema, required:true},
     mainDatabaseAddr:   {type:String, required:true},
     backupDatabaseAddr: {type:String, required:true}
-}, {collection:sitePostCollectionName}); // structure of a post
+}, {collection:settings[SITE_POST_COLLECTION_KEY]}); // structure of a post
 
 sitePostSchema.index({loc:'2dsphere'});
 
@@ -63,7 +91,7 @@ setInterval(function() {
             console.log(err);
         }
     });
-}, 1000 * SECONDS_BETWEEN_CLEANUPS);
+}, 1000 * settings[SECONDS_BETWEEN_CLEANUP_KEY]);
 
 // =========== API Endpoints ============
 
@@ -91,9 +119,9 @@ app.get("/api/poststimeleft", getPostsSecondsToShowFor);
 
 function addNewSitePost(req, res) {
     var sitePost = req.body;
-    sitePost.secondsToShowFor = 1000;
+    sitePost.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
     sitePost.postTime = Date.now();
-    sitePost.mainDatabaseAddr = ipAddr + ":" + SERVER_PORT;
+    sitePost.mainDatabaseAddr = ipAddr + ":" + settings[PORT_KEY];
     sitePost.backupDatabaseAddr = ipAddr; // TODO: Setup backup logic
     sitePostModel.create(sitePost)
                  .then(function(req) {
@@ -116,7 +144,7 @@ function getAllSitePosts(req, res) {
                          type: 'Point',
                          coordinates: [lng, lat]
                      },
-                     maxDistance: 50000
+                     maxDistance: rad
                  })
                  .then(
         function(posts) {
@@ -134,11 +162,11 @@ function upvotePost(req, res) {
     var oldVote = req.body.oldVote;
     var amountToInc;
     if (oldVote === UPVOTE) {
-        amountToInc = -UPVOTE_INC;
+        amountToInc = -settings[UPVOTE_INC_KEY];
     } else if (oldVote === DOWNVOTE) {
-        amountToInc = -DOWNVOTE_INC + UPVOTE_INC;
+        amountToInc = -settings[DOWNVOTE_INC_KEY] + settings[UPVOTE_INC_KEY];
     } else {
-        amountToInc = UPVOTE_INC;
+        amountToInc = settings[UPVOTE_INC_KEY];
     }
     sitePostModel.findByIdAndUpdate(
         {_id:id},
@@ -159,11 +187,11 @@ function downvotePost(req, res) {
     var oldVote = req.body.oldVote;
     var amountToInc;
     if (oldVote === DOWNVOTE) {
-        amountToInc = -DOWNVOTE_INC;
+        amountToInc = -settings[DOWNVOTE_INC_KEY];
     } else if (oldVote === UPVOTE) {
-        amountToInc = -UPVOTE_INC + DOWNVOTE_INC;
+        amountToInc = -settings[UPVOTE_INC_KEY] + settings[DOWNVOTE_INC_KEY];
     } else {
-        amountToInc = DOWNVOTE_INC;
+        amountToInc = settings[DOWNVOTE_INC_KEY];
     }
     sitePostModel.findByIdAndUpdate(
         {_id:id},
@@ -180,10 +208,9 @@ function downvotePost(req, res) {
 }
 
 function getPost(req, res) {
-    console.log("getting post");
     var id = req.query.id;
     sitePostModel.findOne(
-        {_id:ObjectId(id)},
+        {_id:id},
         function(err, data) {
             if (err || data === null) {
                 console.log("error is " + JSON.stringify(err));
@@ -236,7 +263,7 @@ function deleteComment(req, res) {
     var commentId = req.body.commentId;
     sitePostModel.findByIdAndUpdate(
         {_id:postId},
-        {$pull:{'comments':{'_id':ObjectId(commentId)}}},
+        {$pull:{'comments':{'_id':commentId}}},
         {new:true},
         function(err, data) {
             if (err || data === null) {
@@ -284,7 +311,7 @@ function getPostsWithinRange(req, res) {
 var cacheTime = 0;
 var postsSecondsToShowForCache = {};
 function getPostsSecondsToShowFor(req, res) {
-   if (Date.now() - cacheTime < CACHE_MAX_SECONDS) {
+   if (Date.now() - cacheTime < settings[CACHE_EXPIRY_TIME_KEY]) {
        res.json(postsSecondsToShowForCache);
    }
    sitePostModel.find()
@@ -302,11 +329,11 @@ function getPostsSecondsToShowFor(req, res) {
      );
 }
 
-app.listen(SERVER_PORT, "0.0.0.0");
+app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
 
 // ========= Add Server to List =========
 // TEMP ONLY - Replace 'localhost:8080' with the actual website name later
-var baseAddress = ipAddr + ":" + SERVER_PORT;
+var baseAddress = ipAddr + ":" + settings[PORT_KEY];
 request.post('http://localhost:8080/director/addserverinfo', {json:{baseAddress:baseAddress}},
              function(err, res) {
                  if (err) {

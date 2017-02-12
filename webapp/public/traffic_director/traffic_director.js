@@ -1,8 +1,25 @@
-var request = require('request');
-var util = require('util');
-var geolib = require('geolib');
 
-var SERVER_INFO_COLLECTION_NAME = "ServerInfoDatabase";
+// ============== Imports ===============
+
+var config = require('../../config');
+var geolib = require('geolib');
+var request = require('request');
+
+// ============== Settings ==============
+
+var serversInfoCollectionName = 'ServersInfo';
+var SERVERS_INFO_COLLECTION_KEY = 'serversInfoCollection';
+if (config[SERVERS_INFO_COLLECTION_KEY]) {
+    serversInfoCollectionName = config[SERVERS_INFO_COLLECTION_KEY];
+} else {
+    console.log(SERVERS_INFO_COLLECTION_KEY + " not set in config file, defaulting to " + serversInfoCollectionName);
+}
+
+// ============= Constants ==============
+
+var SERVER_INFO_MODEL_NAME = 'ServerInfo';
+
+// ============== Exports ===============
 
 module.exports = function (app, mongoose) {
     var serverInfoSchema = mongoose.Schema({
@@ -11,9 +28,9 @@ module.exports = function (app, mongoose) {
         minLat: {type: Number, required: true},
         maxLng: {type: Number, required: true},
         minLng: {type: Number, required: true}
-    }, {collection: SERVER_INFO_COLLECTION_NAME});
+    }, {collection: serversInfoCollectionName});
 
-    var serverInfoModel = mongoose.model("ServerInfoModel", serverInfoSchema);
+    var serverInfoModel = mongoose.model(SERVER_INFO_MODEL_NAME, serverInfoSchema);
 
     // TODO: Use '===' and '!==' instead of '==' and '!='
 
@@ -314,7 +331,7 @@ module.exports = function (app, mongoose) {
             };
             for (var r = 0; r < blockVals.length; ++r) {
                 for (var c = 0; c < blockVals[0].length; ++c) {
-                    if (blockVals[c][r] !== FILL_VAL) {
+                    if (blockVals[r][c] !== FILL_VAL) {
                         var rectangleInfo = getLargestRectangleInfoFromCoord(r, c);
                         if (rectangleInfo.area > currentLargestAreaParams.area) {
                             currentLargestAreaParams = rectangleInfo;
@@ -345,13 +362,21 @@ module.exports = function (app, mongoose) {
 
             if ((targServer.maxLat - targServer.minLat) > (targServer.maxLng - targServer.minLng)) {
                 var middleLat = (targServer.maxLat + targServer.minLat) / 2;
-                areaOfNewSpace.minLat = middleLat;
-                areaOfNewSpace.minLng = targServer.minLng;
-                targServer.maxLng = middleLat;
+                var areaOfNewSpace = {
+                    minLng:targServer.minLng,
+                    maxLng: targServer.maxLng,
+                    minLat:middleLat,
+                    maxLat:targServer.maxLat
+                };
+                targServer.maxLat = middleLat;
             } else {
                  var middleLng = (targServer.maxLng + targServer.minLng) / 2;
-                 areaOfNewSpace.minLng = middleLng;
-                 areaOfNewSpace.minLat = targServer.minLat;
+                var areaOfNewSpace = {
+                    minLng:middleLng,
+                    maxLng:targServer.maxLng,
+                    minLat:targServer.minLat,
+                    maxLat:targServer.maxLat
+                };
                  targServer.maxLng = middleLng;
             }
 
