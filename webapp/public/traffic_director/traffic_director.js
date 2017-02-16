@@ -22,12 +22,25 @@ var SERVER_INFO_MODEL_NAME = 'ServerInfo';
 // ============== Exports ===============
 
 module.exports = function (app, mongoose) {
+    // We have seperate longitudes for reading and writting because when we get
+    // a new server, we want to send posts from some geographical area to it.
+    // To avoid having to move over all the posts from the server currently 
+    // serving that area to the new server, we continue reading posts from the
+    // old server, and write new ones to the new server until all the posts from
+    // that area have been removed from the old server, meaning we can restrict
+    // the read distance further.
+    // TODO: Resize the 'read' area to match the current posts on the server
+    // periodically
     var serverInfoSchema = mongoose.Schema({
         baseAddress: {type: String, required: true},
-        maxLat: {type: Number, required: true},
-        minLat: {type: Number, required: true},
-        maxLng: {type: Number, required: true},
-        minLng: {type: Number, required: true}
+        maxLatWrite: {type: Number, required: true},
+        minLatWrite: {type: Number, required: true},
+        maxLngWrite: {type: Number, required: true},
+        minLngWrite: {type: Number, required: true},
+        maxLatRead: {type: Number, required: true},
+        minLatRead: {type: Number, required: true},
+        maxLngRead: {type: Number, required: true},
+        minLngRead: {type: Number, required: true}
     }, {collection: serversInfoCollectionName});
 
     var serverInfoModel = mongoose.model(SERVER_INFO_MODEL_NAME, serverInfoSchema);
@@ -143,23 +156,23 @@ module.exports = function (app, mongoose) {
         }
         // we add latitude to the query immediately, but not longitude, because
         // longitude wraps around from -180 to 180
-        var query = {$and: [{maxLat: {$gte: minValidMaxLat}},
-                {minLat: {$lte: maxValidMinLat}}]};
+        var query = {$and: [{maxLatRead: {$gte: minValidMaxLat}},
+                {minLatRead: {$lte: maxValidMinLat}}]};
         if (minValidMaxLng < -180) {
             query.$and.push({
-                $or: [{maxLng: {$gte: -180}},
-                    {maxLng: {$gte: minValidMaxLng + 180}}]
+                $or: [{maxLngRead: {$gte: -180}},
+                    {maxLngRead: {$gte: minValidMaxLng + 180}}]
             });
         } else {
-            query.$and.push({maxLng: {$gte: minValidMaxLng}});
+            query.$and.push({maxLngRead: {$gte: minValidMaxLng}});
         }
         if (maxValidMinLng > 180) {
             query.$and.push({
-                $or: [{minLng: {$lte: 180}},
-                    {minLng: {$lte: maxValidMinLng - 360}}]
+                $or: [{minLngRead: {$lte: 180}},
+                    {minLngRead: {$lte: maxValidMinLng - 360}}]
             });
         } else {
-            query.$and.push({minLng: {$lte: maxValidMinLng}});
+            query.$and.push({minLngRead: {$lte: maxValidMinLng}});
         }
         return query;
     }
@@ -291,7 +304,7 @@ module.exports = function (app, mongoose) {
             return (blockLngs[c2 + 1] - blockLngs[c1]) * (blockLats[r2 + 1] - blockLats[r1]);
         }
 
-        // returns {area, row, col, width, height}
+        // returns {minLng, maxLng, minLat, maxLat}
         function getLargestRectangleInfoFromCoord(row, col) {
             var largestRectangleInfo = {
                 area: 0,
@@ -348,7 +361,7 @@ module.exports = function (app, mongoose) {
             var largestArea = 0;
             var targServer = {};
             servers.forEach(function (server) {
-                var area = (server.maxLat - server.minLat) * (server.maxLng - server.maxLng);
+                var area = (server.maxLatWrite - server.minLatWrite) * (server.maxLngWrite - server.maxLngWrite);
                 if (area > largestArea) {
                     largestArea = area;
                 }
@@ -356,42 +369,45 @@ module.exports = function (app, mongoose) {
             });
 
             var areaOfNewSpace = {
-                maxLng: targServer.maxLng,
-                maxLat: targServer.maxLat
+                maxLngWrite: targServer.maxLngWrite,
+                maxLatWrite: targServer.maxLatWrite
             };
 
-            if ((targServer.maxLat - targServer.minLat) > (targServer.maxLng - targServer.minLng)) {
-                var middleLat = (targServer.maxLat + targServer.minLat) / 2;
+            if ((targServer.maxLatWrite - targServer.minLatWrite) > (targServer.maxLngWrite - targServer.minLngWrite)) {
+                var middleLat = (targServer.maxLatWrite + targServer.minLatWrite) / 2;
                 var areaOfNewSpace = {
-                    minLng:targServer.minLng,
-                    maxLng: targServer.maxLng,
-                    minLat:middleLat,
-                    maxLat:targServer.maxLat
+                    minLngWrite:targServer.minLngWrite,
+                    maxLngWrite:targServer.maxLngWrite,
+                    minLatWrite:middleLat,
+                    maxLatWrite:targServer.maxLatWrite
                 };
-                targServer.maxLat = middleLat;
+                targServer.maxLatWrite = middleLat;
             } else {
-                 var middleLng = (targServer.maxLng + targServer.minLng) / 2;
+                var middleLng = (targServer.maxLngWrite + targServer.minLngWrite) / 2;
                 var areaOfNewSpace = {
-                    minLng:middleLng,
-                    maxLng:targServer.maxLng,
-                    minLat:targServer.minLat,
-                    maxLat:targServer.maxLat
+                    minLngWrite:middleLng,
+                    maxLngWrite:targServer.maxLngWrite,
+                    minLatWrite:targServer.minLatWrite,
+                    maxLatWrite:targServer.maxLatWrite
                 };
-                 targServer.maxLng = middleLng;
+                targServer.maxLngWrite = middleLng;
             }
-
+            areaOfNewSpace.minLngRead = areaOfNewSpace.minLngWrite;
+            areaOfNewSpace.maxLngRead = areaOfNewSpace.maxLngWrite;
+            areaOfNewSpace.minLatRead = areaOfNewSpace.minLatWrite;
+            areaOfNewSpace.maxLatRead = areaOfNewSpace.maxLatWrite;
             resizeServer(targServer, function () {
                 onSuccess(areaOfNewSpace);
             });
         }
 
         otherServers.forEach(function (server) {
-            splitAtLatitude(server.minLat);
-            splitAtLatitude(server.maxLat);
-            splitAtLongitude(server.minLng);
-            splitAtLongitude(server.maxLng);
-            fillRange(server.minLng, server.maxLng,
-                    server.minLat, server.maxLat, FILL_VAL);
+            splitAtLatitude(server.minLatWrite);
+            splitAtLatitude(server.maxLatWrite);
+            splitAtLongitude(server.minLngWrite);
+            splitAtLongitude(server.maxLngWrite);
+            fillRange(server.minLngWrite, server.maxLngWrite,
+                    server.minLatWrite, server.maxLatWrite, FILL_VAL);
         });
         console.log(JSON.stringify(blockLngs));
         for (var r = 0; r < blockVals.length; ++r) {
@@ -406,7 +422,14 @@ module.exports = function (app, mongoose) {
                 onServerLocationUpdate(newServer);
             });
         } else {
-            Object.assign(newServer, serverArea);
+            newServer.maxLatWrite = serverArea.maxLat;
+            newServer.minLatWrite = serverArea.minLat;
+            newServer.maxLngWrite = serverArea.maxLng;
+            newServer.minLngWrite = serverArea.minLng;
+            newServer.maxLatRead = serverArea.maxLat;
+            newServer.minLatRead = serverArea.minLat;
+            newServer.maxLngRead = serverArea.maxLng;
+            newServer.minLngRead = serverArea.minLng;
             onServerLocationUpdate(newServer);
         }
     }
@@ -415,10 +438,14 @@ module.exports = function (app, mongoose) {
         serverInfoModel.findByIdAndUpdate(
                 {_id: newServer._id},
                 {$set: {
-                        maxLat: newServer.maxLat,
-                        minLat: newServer.minLat,
-                        maxLng: newServer.maxLng,
-                        minLng: newServer.minLng
+                        maxLatWrite: newServer.maxLatWrite,
+                        minLatWrite: newServer.minLatWrite,
+                        maxLngWrite: newServer.maxLngWrite,
+                        minLngWrite: newServer.minLngWrite,
+                        maxLatRead: newServer.maxLatRead,
+                        minLatRead: newServer.minLatRead,
+                        maxLngRead: newServer.maxLngRead,
+                        minLngRead: newServer.minLngRead
                     }},
                 {new : true},
                 function (err, data) {
@@ -449,28 +476,30 @@ module.exports = function (app, mongoose) {
         console.log("request body is:");
         console.log(JSON.stringify(req.body));
         serverInfoModel
-                .find({})
-                .then(
-                        function (servers) {
-                            setupServerLocation(newServer, servers, function (newServerWithLocation) {
-                                console.log("adding server " + JSON.stringify(newServerWithLocation));
-                                serverInfoModel
-                                        .create(newServerWithLocation)
-                                        .then(
-                                                function (reqRes) {
-                                                    res.json(reqRes);
-                                                },
-                                                function (err) {
-                                                    console.log("traffic_director.js:addServerInfo(1):" + err);
-                                                    res.status(500).send();
-                                                }
-                                        );
-                            });
-                        },
-                        function (err) {
-                            console.log("traffic_director.js:addServerInfo(2):" + err);
+            .find({})
+            .then(
+                function (servers) {
+                    setupServerLocation(newServer, servers, function (newServerWithLocation) {
+                        console.log("adding server " + JSON.stringify(newServerWithLocation));
+                        serverInfoModel
+                            .create(newServerWithLocation)
+                            .then(
+                                function (reqRes) {
+                                    // TODO: Setup backup stuff
+                                    res.json({backupAddr:"asdf"});
+                                },
+                                function (err) {
+                                    console.log("traffic_director.js:addServerInfo(1):" + err);
+                                    res.status(500).send();
+                                }
+                            );
                         }
-                );
+                    );
+                },
+                function (err) {
+                    console.log("traffic_director.js:addServerInfo(2):" + err);
+                }
+            );
     }
 
     function removeServerInfo(req, res) {

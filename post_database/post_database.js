@@ -19,7 +19,8 @@ var CACHE_EXPIRY_TIME_KEY = "cacheExpiryTime";
 var UPVOTE_INC_KEY = "upvoteInc";
 var DOWNVOTE_INC_KEY = "downvoteInc";
 var INITIAL_SECONDS_TO_SHOW_FOR = "initialSecondsToShowFor";
-var SITE_POST_COLLECTION_KEY = "sitePostsCollection";
+var SITE_POST_MODEL_KEY = "sitePostModelName";
+var BACKUP_POST_MODEL_KEY = "backupPostModelName";
 
 var settings = {};
 settings[PORT_KEY] = 8080;
@@ -30,7 +31,8 @@ settings[CACHE_EXPIRY_TIME_KEY] = 20;
 settings[UPVOTE_INC_KEY] = 80;
 settings[DOWNVOTE_INC_KEY] = -150;
 settings[INITIAL_SECONDS_TO_SHOW_FOR] = 1000;
-settings[SITE_POST_COLLECTION_KEY] = 'SitePosts';
+settings[SITE_POST_MODEL_KEY] = 'SitePost';
+settings[BACKUP_POST_MODEL_KEY] = 'BackupPost';
 
 for (var key in settings) {
     if (config[key]) {
@@ -53,6 +55,28 @@ mongoose.connect(settings[MONGO_DB_ADDRESS_KEY]);
 var app = express();
 app.use(bodyParser.json());
 app.use(express.static('./public'));
+var backupAddr;
+
+// ========= Add Server to List =========
+// TEMP ONLY - Replace 'localhost:8080' with the actual website name later
+var baseAddress = ipAddr + ":" + settings[PORT_KEY];
+request.post(
+    'http://localhost:8080/director/addserverinfo', 
+    {json:{baseAddress:baseAddress}},
+    function(err, res) {
+        if (err || !res.body.backupAddr) {
+            console.log("Error connecting to server network");
+            if (err) {
+                console.log(err);
+            } else {
+                console.log("Did not recieve backup database address");
+            }
+            process.exit(1);
+        } else {
+            backupAddr = res.backupAddr;
+        }
+    }
+);
 
 // =============== Models ================
 
@@ -65,7 +89,7 @@ var coordinatesSchema = mongoose.Schema({
     coordinates:{type:[Number], required:true}
 });
 
-var sitePostSchema = mongoose.Schema({
+var postSchema = mongoose.Schema({
     title:              {type:String, required:true}, 
     body:               {type:String, required:true},  
     posterId:           {type:Number, default:0},
@@ -75,11 +99,12 @@ var sitePostSchema = mongoose.Schema({
     loc:                {type:coordinatesSchema, required:true},
     mainDatabaseAddr:   {type:String, required:true},
     backupDatabaseAddr: {type:String, required:true}
-}, {collection:settings[SITE_POST_COLLECTION_KEY]}); // structure of a post
+});
 
-sitePostSchema.index({loc:'2dsphere'});
+postSchema.index({loc:'2dsphere'});
 
-var sitePostModel = mongoose.model("sitePostModel", sitePostSchema);
+var sitePostModel = mongoose.model(config[SITE_POST_MODEL_KEY], postSchema);
+var backupPostModel = mongoose.model(config[BACKUP_POST_MODEL_KEY], postSchema);
 
 // ========== Old Post Cleanup ==========
 
@@ -117,36 +142,44 @@ app.get("/api/poststimeleft", getPostsSecondsToShowFor);
 
 // ========= API Implementation =========
 
+function getCorrectModel(req) {
+    if (req.query.backup) {
+        return backupPostModel;
+    } else {
+        return sitePostModel;
+    }
+}
+
 function addNewSitePost(req, res) {
     var sitePost = req.body;
     sitePost.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
     sitePost.postTime = Date.now();
     sitePost.mainDatabaseAddr = ipAddr + ":" + settings[PORT_KEY];
-    sitePost.backupDatabaseAddr = ipAddr; // TODO: Setup backup logic
-    sitePostModel.create(sitePost)
-                 .then(function(req) {
-                           res.status(200).send();
-                       },
-                       function(error)   {
-                           console.log(error); 
-                           res.status(500).send();
-                       });
+    sitePost.backupDatabaseAddr = backupAddr;
+    getCorrectModel(req).create(sitePost)
+            .then(function(req) {
+                      res.status(200).send();
+                  },
+                  function(error)   {
+                      console.log(error); 
+                      res.status(500).send();
+                  });
 }
 
 function getAllSitePosts(req, res) {
     var lng = req.query.longitude;
     var lat = req.query.latitude;
     var rad = req.query.radius;
-    sitePostModel.find()
-                 .where('loc')
-                 .near({
-                     center: {
-                         type: 'Point',
-                         coordinates: [lng, lat]
-                     },
-                     maxDistance: rad
-                 })
-                 .then(
+    getCorrectModel(req).find()
+            .where('loc')
+            .near({
+                center: {
+                    type: 'Point',
+                    coordinates: [lng, lat]
+                },
+                maxDistance: rad
+            })
+            .then(
         function(posts) {
             res.json(posts);
         },
@@ -168,7 +201,7 @@ function upvotePost(req, res) {
     } else {
         amountToInc = settings[UPVOTE_INC_KEY];
     }
-    sitePostModel.findByIdAndUpdate(
+    getCorrectModel(req).findByIdAndUpdate(
         {_id:id},
         {$inc:{secondsToShowFor:amountToInc}}, 
         {new:true},
@@ -193,7 +226,7 @@ function downvotePost(req, res) {
     } else {
         amountToInc = settings[DOWNVOTE_INC_KEY];
     }
-    sitePostModel.findByIdAndUpdate(
+    getCorrectModel(req).findByIdAndUpdate(
         {_id:id},
         {$inc:{secondsToShowFor:amountToInc}}, 
         {new:true},
@@ -209,7 +242,7 @@ function downvotePost(req, res) {
 
 function getPost(req, res) {
     var id = req.query.id;
-    sitePostModel.findOne(
+    getCorrectModel(req).findOne(
         {_id:id},
         function(err, data) {
             if (err || data === null) {
@@ -227,7 +260,7 @@ function getPost(req, res) {
 function comment(req, res) {
     var id = req.body.id;
     var comment = req.body.comment;
-    sitePostModel.findByIdAndUpdate(
+    getCorrectModel(req).findByIdAndUpdate(
         {_id:id}, 
         {$push:{comments:comment}},
         {new:true},
@@ -244,7 +277,7 @@ function comment(req, res) {
 function setTime(req, res) {
     var id = req.body.id;
     var newSecondsToShowFor = req.body.newSecondsToShowFor;
-    sitePostModel.findByIdAndUpdate(
+    getCorrectModel(req).findByIdAndUpdate(
         {_id:id}, 
         {$set:{secondsToShowFor:newSecondsToShowFor}}, 
         {new:true},
@@ -261,7 +294,7 @@ function setTime(req, res) {
 function deleteComment(req, res) {
     var postId = req.body.postId;
     var commentId = req.body.commentId;
-    sitePostModel.findByIdAndUpdate(
+    getCorrectModel(req).findByIdAndUpdate(
         {_id:postId},
         {$pull:{'comments':{'_id':commentId}}},
         {new:true},
@@ -277,7 +310,7 @@ function deleteComment(req, res) {
 
 function deletePost(req, res) {
     var id = req.body.id;
-    sitePostModel.find({_id:id}).remove(
+    getCorrectModel(req).find({_id:id}).remove(
         function(err, data) {
             if (err || data === null) {
                 res.status(400).send();
@@ -291,7 +324,7 @@ function deletePost(req, res) {
 function getPostsWithinRange(req, res) {
     var range = req.query.range;
     var rangeSqrd = range * range;
-    sitePostModel.find({}).$where(function() {
+    getCorrectModel(req).find({}).$where(function() {
                 var longDiff = req.query.longitude - this.longitude;
                 var latDiff = req.query.latitude - this.latitude;
                 return longDiff * longDiff + latDiff * latDiff < rangeSqrd;
@@ -311,33 +344,22 @@ function getPostsWithinRange(req, res) {
 var cacheTime = 0;
 var postsSecondsToShowForCache = {};
 function getPostsSecondsToShowFor(req, res) {
-   if (Date.now() - cacheTime < settings[CACHE_EXPIRY_TIME_KEY]) {
-       res.json(postsSecondsToShowForCache);
-   }
-   sitePostModel.find()
-                .then(
-         function(posts) {
-             postsSecondsToShowForCache = {};
-             for (var i = 0; i < posts.length; ++i) {
-                 postsSecondsToShowForCache[posts[i]._id] = posts[i].secondsToShowFor;
-             }
-             res.json(postsSecondsToShowForCache);
-         },
-         function (error) {
-             res.json(error);
-         }
+    if (Date.now() - cacheTime < settings[CACHE_EXPIRY_TIME_KEY]) {
+        res.json(postsSecondsToShowForCache);
+    }
+    getCorrectModel(req).find()
+        .then(
+            function(posts) {
+                postsSecondsToShowForCache = {};
+                for (var i = 0; i < posts.length; ++i) {
+                    postsSecondsToShowForCache[posts[i]._id] = posts[i].secondsToShowFor;
+                }
+                res.json(postsSecondsToShowForCache);
+            },
+            function (error) {
+                res.json(error);
+            }
      );
 }
 
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
-
-// ========= Add Server to List =========
-// TEMP ONLY - Replace 'localhost:8080' with the actual website name later
-var baseAddress = ipAddr + ":" + settings[PORT_KEY];
-request.post('http://localhost:8080/director/addserverinfo', {json:{baseAddress:baseAddress}},
-             function(err, res) {
-                 if (err) {
-                     console.log("Error connecting to server network");
-                     console.log(err);
-                 }
-             });

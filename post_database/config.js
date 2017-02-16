@@ -8,9 +8,14 @@ module.exports = {
     // the path to the database used to store the posts
     mongoDbAddress: 'mongodb://localhost/openwindowdatabase',
     
-    // the collection to store the site posts
-    sitePostsCollection: 'SitePosts',
-        
+    // the name of the site post model, used to generate the name of the 
+    // collection
+    sitePostModelName: 'SitePost',
+
+    // the name of the backup post model, used to generate the name of the
+    // collection
+    backupPostModelName: 'BackupPost',
+
     // seconds between removing all expired posts
     secondsBetweenCleanup: 200,
     
