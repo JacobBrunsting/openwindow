@@ -227,3 +227,9 @@ form.comment_form {
 form.post_form {
     margin: 10px;
 }
+
+canvas.serverdisplay {
+    width: 1000px;
+    height: 500px;
+    background-color: white;
+}

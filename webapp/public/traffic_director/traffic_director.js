@@ -139,6 +139,7 @@ module.exports = function (app, mongoose) {
     // You may find yourself wondering if this function is efficient. The answer is
     // no, it is most definitely not, but it's very rarely called, since servers 
     // aren't added very often, so I'm not too worried about it
+    // TODO: Use promise instead of callback
     function setupServerLocation(newServer, otherServers, onServerLocationUpdate) {
         var FILL_VAL = 1;
         var EMPTY_VAL = 0;
@@ -304,9 +305,24 @@ module.exports = function (app, mongoose) {
                 });
     }
 
+    function getAllServerInfo(req, res) {
+        serverInfoModel
+                .find()
+                .then(
+                    function(servers) {
+                        res.json(servers);
+                    },
+                    function(err) {
+                        console.log("traffic_director.js:getAllServerInfo:" + err);
+                        res.status(500).send();
+                    }
+                )
+    }
+
     return {
         redirectRequest: redirectRequest,
         addServerInfo: addServerInfo,
-        removeServerInfo: removeServerInfo
+        removeServerInfo: removeServerInfo,
+        getAllServerInfo: getAllServerInfo
     };
 };

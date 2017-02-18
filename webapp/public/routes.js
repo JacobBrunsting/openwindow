@@ -22,6 +22,11 @@ angular.module('openwindow').config([
             templateUrl: '/devpanel/devpanel.html',
             controller: 'devpanelctrl'
         });
+        $stateProvider.state('serverinfo', {
+            url: '/serverinfo',
+            templateUrl: '/serverinfo/serverinfo.html',
+            controller: 'serverinfoctrl'
+        });
         $urlRouterProvider.otherwise('home');
     }
 ]);
