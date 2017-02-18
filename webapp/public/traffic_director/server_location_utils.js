@@ -80,6 +80,7 @@ function calculateSquareArea(blockLngs, blockLats, r1, c1, r2, c2) {
 }
 
 // returns {minLng, maxLng, minLat, maxLat}
+// gets the largest rectangle originating from the provided row and col
 function getLargestRectangleInfoFromCoord(blockVals, blockLngs, blockLats, 
                                           fillVal, row, col) {
     var largestRectangleInfo = {

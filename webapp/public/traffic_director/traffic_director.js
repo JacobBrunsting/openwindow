@@ -155,13 +155,12 @@ module.exports = function (app, mongoose) {
             var largestArea = 0;
             var targServer = {};
             servers.forEach(function (server) {
-                var area = (server.maxLatWrite - server.minLatWrite) * (server.maxLngWrite - server.maxLngWrite);
+                var area = (server.maxLatWrite - server.minLatWrite) * (server.maxLngWrite - server.minLngWrite);
                 if (area > largestArea) {
                     largestArea = area;
+                    targServer = server;
                 }
-                targServer = server;
             });
-
             var areaOfNewSpace = {
                 maxLngWrite: targServer.maxLngWrite,
                 maxLatWrite: targServer.maxLatWrite
