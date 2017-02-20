@@ -223,6 +223,78 @@ module.exports = function (app, mongoose) {
         }
     }
 
+    function replaceServer(oldServer) {
+        var query = {$or: [{minLngWrite: {$eq: oldServer.minLngWrite}},
+                           {maxLngWrite: {$eq: oldServer.maxLngWrite}},
+                           {minLatWrite: {$eq: oldServer.minLatWrite}},
+                           {maxLatWrite: {$eq: oldServer.maxLatWrite}}]};
+        // TODO: Actually copy over data from server
+        serverInfoModel
+            .find(query)
+            .then(
+                onBorderingServerListRetrieval,
+                function(err) {
+                    console.log("err:" + err);
+                });
+        
+        function onBorderingServerListRetrieval(servers) {
+            servers.forEach(function(server) {
+                var lngMatch = server.minLngWrite == oldServer.minLngWrite &&
+                               server.maxLngWrite == oldServer.maxLngWrite;
+                var latMatch = server.minLatWrite == oldServer.minLatWrite &&
+                               server.maxLatWrite == oldServer.maxLatWrite;
+                if (lngMatch || latMatch) {
+                    server.minLngWrite = Math.min(server.minLngWrite,
+                                                  oldServer.minLngWrite);
+                    server.maxLngWrite = Math.max(server.maxLngWrite,
+                                                  oldServer.maxLngWrite);
+                    server.minLatWrite = Math.min(server.minLatWrite,
+                                                  oldServer.minLatWrite);
+                    server.maxLatWrite = Math.max(server.maxLatWrite,
+                                                  oldServer.maxLatWrite);
+                    server.minLngRead = Math.min(server.minLngRead,
+                                                  oldServer.minLngRead);
+                    server.maxLngRead = Math.max(server.maxLngRead,
+                                                 oldServer.maxLngRead);
+                    server.minLatRead = Math.min(server.minLatRead,
+                                                 oldServer.minLatRead);
+                    server.maxLatRead = Math.max(server.maxLatRead,
+                                                 oldServer.maxLatRead);
+                    resizeServer(server, function() {
+                        mergeServers(oldServer, server);
+                    });
+                    return;
+                }
+            });
+
+            // TODO: Complete this relatively rare case
+            // find a server that shares a corner, and shrink it until it has 
+            // the same height or width, then expand, and fill in the gap with
+            // another server
+        }
+
+        function mergeServers(serverToMerge, serverToMergeWith) {
+            var url = "http://" + serverToMerge.baseAddress + "/api/allsiteposts";
+            request.get(url, function (err, res) {
+                if (err) {
+                    console.log("traffic_director.js:mergeServers:" + err);
+                    return;
+                } else if (!res) {
+                    console.log("traffic_director.js:mergeServers:empty response");
+                    return;
+                }
+                var posts = res.body;
+                var url = "http://" + serverToMergeWith.baseAddress + "/api/posts";
+                request.post(url, function(err, res) {
+                    if (err) {
+                        console.log("traffic_director.js:mergeServers:" + err);
+                    }
+                });
+            });
+        }
+    }
+
+    // TODO: Use a promise instead of a callback
     function resizeServer(newServer, onSuccess) {
         serverInfoModel.findByIdAndUpdate(
                 {_id: newServer._id},
@@ -264,6 +336,7 @@ module.exports = function (app, mongoose) {
         var newServer = req.body;
         console.log("request body is:");
         console.log(JSON.stringify(req.body));
+        // TODO: Refactor so this isn't so nested
         serverInfoModel
             .find({})
             .then(
@@ -292,15 +365,20 @@ module.exports = function (app, mongoose) {
     }
 
     function removeServerInfo(req, res) {
-        var baseAddress = req.baseAddress;
+        var baseAddress = req.query.baseAddress;
         serverInfoModel
-                .find({baseAddress: baseAddress})
-                .remove(function (err, data) {
-                    if (err || data === null) {
-                        res.status(400).send();
-                    } else {
-                        res.json(data);
+                .findOneAndRemove({baseAddress: baseAddress})
+                .then(function (server) {
+                    if (!server) {
+                        console.log("traffic_director.js:removeServerInfo:Could not find the server to remove")
+                        return;
                     }
+                    replaceServer(server);
+                    res.status(200).send();
+                },
+                function(err) {
+                    console.log("traffic_director.js:removeServerInfo:" + err);
+                    res.status(500).send();
                 });
     }
 

@@ -22,7 +22,7 @@ angular.module('openwindow').controller('homectrl', [
                 $scope.page = "home";
                 var params = $scope.location;
                 params.radius = INT_CONSTANTS.POST_RADIUS;
-                $http.get("/api/siteposts", {params:params})
+                $http.get("/api/sitepostsbylocation", {params:params})
                     .success(function(response) {
                         var posts = response.body;
                         $scope.posts = [];

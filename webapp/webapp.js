@@ -51,12 +51,18 @@ app.use('/api/*', function (req, res) {
     var loc = {longitude:req.query.longitude, latitude:req.query.latitude};
     trafficDirector.redirectRequest(req, res, loc, radius);
 });
+
 app.use("/director/addserverinfo", function (req, res) {
     console.log("adding server with base addr " + req.body.baseAddress);
     trafficDirector.addServerInfo(req, res);
 });
+
 app.use("/director/getallserverinfo", function(req, res) {
     trafficDirector.getAllServerInfo(req, res);
+});
+
+app.use("/director/removeserverinfo", function(req, res) {
+    trafficDirector.removeServerInfo(req, res);
 });
 
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);

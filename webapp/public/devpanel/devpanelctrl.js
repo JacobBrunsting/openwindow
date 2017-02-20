@@ -6,7 +6,7 @@ angular.module('openwindow').controller('devpanelctrl', [
         function($scope, $http, $window, post_creator) {
             getAllSitePosts = function() {
                 $scope.page = "dev";
-                $http.get("/api/siteposts")
+                $http.get("/api/sitepostsbylocation")
                      .success(function(response) {
                          var posts = response.body;
                          $scope.posts = [];

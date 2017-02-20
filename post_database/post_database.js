@@ -73,7 +73,7 @@ request.post(
             }
             process.exit(1);
         } else {
-            backupAddr = res.backupAddr;
+            backupAddr = res.body.backupAddr;
         }
     }
 );
@@ -131,11 +131,13 @@ app.all('*', function(req, res, next) {
 app.post("/api/upvote", upvotePost);
 app.post("/api/downvote", downvotePost);
 app.post("/api/sitepost", addNewSitePost);
+app.post("/api/posts", addNewPosts);
 app.post("/api/comment", comment);
 app.post("/api/settime", setTime);
 app.post("/api/deletecomment", deleteComment);
 app.post("/api/deletepost", deletePost);
-app.get("/api/siteposts", getAllSitePosts);
+app.get("/api/sitepostsbylocation", getSitePostsByLocation);
+app.get("/api/allsiteposts", getAllSitePosts)
 app.get("/api/post", getPost);
 app.get("/api/postswithinrange", getPostsWithinRange);
 app.get("/api/poststimeleft", getPostsSecondsToShowFor);
@@ -156,17 +158,44 @@ function addNewSitePost(req, res) {
     sitePost.postTime = Date.now();
     sitePost.mainDatabaseAddr = ipAddr + ":" + settings[PORT_KEY];
     sitePost.backupDatabaseAddr = backupAddr;
-    getCorrectModel(req).create(sitePost)
-            .then(function(req) {
-                      res.status(200).send();
-                  },
-                  function(error)   {
-                      console.log(error); 
-                      res.status(500).send();
-                  });
+    getCorrectModel(req)
+        .create(sitePost)
+        .then(
+            function(req) {
+                res.status(200).send();
+            },
+            function(error)   {
+                console.log(error); 
+                res.status(500).send();
+            });
+}
+
+function addNewPosts(req, res) {
+    var posts = req.body;
+    getCorrectModel(req)
+        .insert(posts)
+        .then(
+            function(req) {
+                res.status(200).send();
+            },
+            function(err) {
+                req.status(500).send();
+            });
 }
 
 function getAllSitePosts(req, res) {
+    getCorrectModel(req)
+        .find()
+        .then(
+            function(reqRes) {
+                res.json(reqRes);
+            },
+            function(err) {
+                res.status(500).send();
+            });
+}
+
+function getSitePostsByLocation(req, res) {
     var lng = req.query.longitude;
     var lat = req.query.latitude;
     var rad = req.query.radius;
