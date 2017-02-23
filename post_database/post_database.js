@@ -86,7 +86,7 @@ var commentSchema = mongoose.Schema({
 
 var coordinatesSchema = mongoose.Schema({
     type:       {type:String, default:"Point"},
-    coordinates:{type:[Number], required:true}
+    coordinates:{type:[Number], required:true}  // first index is lng, second is lat
 });
 
 var postSchema = mongoose.Schema({
@@ -141,6 +141,7 @@ app.get("/api/allsiteposts", getAllSitePosts)
 app.get("/api/post", getPost);
 app.get("/api/postswithinrange", getPostsWithinRange);
 app.get("/api/poststimeleft", getPostsSecondsToShowFor);
+app.get("/api/getpostrange", getPostRange);
 
 // ========= API Implementation =========
 
@@ -380,15 +381,57 @@ function getPostsSecondsToShowFor(req, res) {
         .then(
             function(posts) {
                 postsSecondsToShowForCache = {};
-                for (var i = 0; i < posts.length; ++i) {
-                    postsSecondsToShowForCache[posts[i]._id] = posts[i].secondsToShowFor;
-                }
+                posts.forEach(function(post) {
+                    postsSecondsToShowForCache[post._id] = post.secondsToShowFor;
+                });
                 res.json(postsSecondsToShowForCache);
             },
             function (error) {
                 res.json(error);
             }
      );
+}
+
+function getPostRange(req, res) {
+    var minLng = 180;
+    var maxLng = -180;
+    var minLat = 90;
+    var maxLat = -90;
+
+    getCorrectModel(req).find()
+        .then(
+            function(posts) {
+                posts.forEach(function(post) {
+                    updateRange(post);
+                });
+                res.json({
+                    minLng: minLng,
+                    maxLng: maxLng,
+                    minLat: minLat,
+                    maxLat: maxLat
+                });
+            },
+            function (error) {
+                res.json(error);
+            }
+        );
+    
+    function updateRange(post) {
+        var lng = post.loc.coordinates[0];
+        var lat = post.loc.coordinates[1];
+        if (lng < minLng) {
+            minLng = lng;
+        }
+        if (lng > maxLng) {
+            maxLng = lng;
+        }
+        if (lat < minLat) {
+            minLat = lat;
+        }
+        if (lat > maxLat) {
+            maxLat = lat;
+        }
+    }
 }
 
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);

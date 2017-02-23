@@ -9,5 +9,9 @@ module.exports = {
     mongoDbAddress: 'mongodb://localhost/openwindowdatabase',
     
     // the collection to store the info for all the servers
-    serversInfoCollection: 'ServersInfo'
+    serversInfoCollection: 'ServersInfo',
+
+    // the interval on which to update the information about the range of posts
+    // stored on each server
+    secondsBetweenServerSizeCalculations: 60
 };

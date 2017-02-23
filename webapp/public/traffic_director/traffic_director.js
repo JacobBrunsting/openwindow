@@ -8,12 +8,19 @@ var locationUtils = require('./server_location_utils');
 
 // ============== Settings ==============
 
-var serversInfoCollectionName = 'ServersInfo';
 var SERVERS_INFO_COLLECTION_KEY = 'serversInfoCollection';
-if (config[SERVERS_INFO_COLLECTION_KEY]) {
-    serversInfoCollectionName = config[SERVERS_INFO_COLLECTION_KEY];
-} else {
-    console.log(SERVERS_INFO_COLLECTION_KEY + " not set in config file, defaulting to " + serversInfoCollectionName);
+var SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY = 'secondsBetweenServerSizeCalculations';
+
+var settings = {};
+settings[SERVERS_INFO_COLLECTION_KEY] = 'ServersInfo';
+settings[SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY] = 20;
+
+for (var key in settings) {
+    if (config[key]) {
+        settings[key] = config[key];
+    } else {
+        console.log(key + " not set in config file, defaulting to " + settings[key]);
+    }
 }
 
 // ============= Constants ==============
@@ -42,9 +49,77 @@ module.exports = function (app, mongoose) {
         minLatRead: {type: Number, required: true},
         maxLngRead: {type: Number, required: true},
         minLngRead: {type: Number, required: true}
-    }, {collection: serversInfoCollectionName});
+    }, {collection: settings[SERVERS_INFO_COLLECTION_KEY]});
 
     var serverInfoModel = mongoose.model(SERVER_INFO_MODEL_NAME, serverInfoSchema);
+
+// ====== Server Range Calculations ======
+
+    setInterval(function() {
+        serverInfoModel
+            .find()
+            .then(
+                function (servers) {
+                    servers.forEach(function (server) {
+                        recalculateServerRanges(server);
+                    });
+                },
+                function (err) {
+                    console.log("traffic_director.js:server range calculations:" + err);
+                }
+            );
+    }, 1000 * settings[SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY]);
+
+    function recalculateServerRanges(server) {
+        var addr = server.baseAddress;
+        var url = "http://" + addr + "/api/getpostrange";
+        var requestParams = {
+            url: url,
+            method: 'GET',
+            json: true
+        };
+        request(requestParams, function (err, res) {
+            if (err) {
+                console.log("traffic_director.js:recalculateServerRanges:" + err);
+                return;
+            } else if (!res) {
+                console.log("traffic_director.js:recalculateServerRanges:empty response");
+                return;
+            }
+            var serverPostArea = res.body;
+            // we take the max/min of the serverPostArea and the original server
+            // values because we only update this information once in a while,
+            // so we need to assume that at any time a post can be added to 
+            // anywhere inside the write range, thus expanding the serverPostArea
+            // TODO: This can probably be done a bit nicer
+            var newMinLngRead = Math.min(serverPostArea.minLng, server.minLngWrite);
+            var newMaxLngRead = Math.max(serverPostArea.maxLng, server.maxLngWrite);
+            var newMinLatRead = Math.min(serverPostArea.minLat, server.minLatWrite);
+            var newMaxLatRead = Math.max(serverPostArea.maxLat, server.maxLatWrite);
+            var shouldUpdate = false;
+            if (newMinLngRead !== server.minLngRead) {
+                server.minLngRead = newMinLngRead;
+                shouldUpdate = true;
+            }
+            if (newMaxLngRead !== server.maxLngRead) {
+                server.maxLngRead = newMaxLngRead;
+                shouldUpdate = true;
+            }
+            if (newMinLatRead !== server.minLatRead) {
+                server.minLatRead = newMinLatRead;
+                shouldUpdate = true;
+            }
+            if (newMaxLatRead !== server.maxLatRead) {
+                server.maxLatRead = newMaxLatRead;
+                shouldUpdate = true;
+            }
+            if (shouldUpdate) {
+                console.log("updating read area for a database server, updated info is:");
+                console.log(JSON.stringify(server));
+                resizeServer(server);
+            }
+        });
+    }
 
     /**
      * Get the search query that should be used to find the servers the request 
@@ -310,8 +385,12 @@ module.exports = function (app, mongoose) {
                     }},
                 {new : true},
                 function (err, data) {
-                    if (!err) {
-                        onSuccess();
+                    if (err) {
+                        console.log("traffic_director.js:resizeServer:" + err);
+                    } else {
+                        if (onSuccess) {
+                            onSuccess();
+                        }
                     }
                 });
     }
