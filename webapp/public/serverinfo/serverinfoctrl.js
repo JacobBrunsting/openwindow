@@ -5,7 +5,7 @@ angular.module('openwindow').controller('serverinfoctrl', [
         var serverWriteAreaCanvas = document.getElementById("serverWriteAreaCanvas");
         var serverReadAreaCanvas = document.getElementById("serverReadAreaCanvas");
 
-        $http.get("/director/getallserverinfo")
+        $http.get("/director/allserverinfo")
             .success(function (servers) {
                 drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers);
             });

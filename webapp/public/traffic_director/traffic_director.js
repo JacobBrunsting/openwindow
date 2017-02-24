@@ -100,7 +100,7 @@ module.exports = function (app, mongoose) {
 
     function recalculateServerRanges(server) {
         var addr = server.baseAddress;
-        var url = "http://" + addr + "/api/getpostrange";
+        var url = "http://" + addr + "/api/postrange";
         var requestParams = {
             url: url,
             method: 'GET',

@@ -81,7 +81,7 @@ angular.module('openwindow').controller('devpanelctrl', [
             $scope.minLatitude = "";
             $scope.maxLatitude = "";
 
-            $http.post("/director/addserverinfo", serverInfo)
+            $http.post("/director/serverinfo", serverInfo)
                 .success(function (response) {})
                 .error(function (err) {
                     console.log(err);

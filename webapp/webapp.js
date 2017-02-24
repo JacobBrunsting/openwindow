@@ -54,11 +54,11 @@ app.use('/api/*', function (req, res) {
     trafficDirector.redirectRequest(req, res, loc, radius);
 });
 
-app.use("/director/addserverinfo", function (req, res) {
+app.use("/director/serverinfo", function (req, res) {
     trafficDirector.addServerInfo(req, res);
 });
 
-app.use("/director/getallserverinfo", function (req, res) {
+app.use("/director/allserverinfo", function (req, res) {
     trafficDirector.getAllServerInfo(req, res);
 });
 

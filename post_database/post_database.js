@@ -60,7 +60,7 @@ var backupAddr;
 // TEMP ONLY - Replace 'localhost:8080' with the actual website name later
 var baseAddress = ipAddr + ":" + settings[PORT_KEY];
 request.post(
-    'http://localhost:8080/director/addserverinfo', {
+    'http://localhost:8080/director/serverinfo', {
         json: {
             baseAddress: baseAddress
         }
@@ -71,7 +71,7 @@ request.post(
             if (err) {
                 console.log(err);
             } else {
-                console.log("Did not recieve backup database address");
+                console.log("Did not receive backup database address");
             }
             process.exit(1);
         } else {
@@ -170,16 +170,15 @@ app.all('*', function (req, res, next) {
 
 app.post("/api/upvote", upvotePost);
 app.post("/api/downvote", downvotePost);
-app.post("/api/sitepost", addNewSitePost);
+app.post("/api/post", addNewPost);
 app.post("/api/posts", addNewPosts);
-app.post("/api/comment", comment);
+app.post("/api/comment", addComment);
 app.post("/api/settime", setTime);
-app.get("/api/sitepostsbylocation", getSitePostsByLocation);
-app.get("/api/allsiteposts", getAllSitePosts)
+app.get("/api/allsiteposts", getAllPosts)
 app.get("/api/post", getPost);
-app.get("/api/postswithinrange", getPostsWithinRange);
+app.get("/api/posts", getPosts);
 app.get("/api/poststimeleft", getPostsSecondsToShowFor);
-app.get("/api/getpostrange", getPostRange);
+app.get("/api/postrange", getPostRange);
 app.delete("/api/cleanbackups", cleanBackups);
 app.delete("/api/deletecomment", deleteComment);
 app.delete("/api/deletepost", deletePost);
@@ -194,7 +193,7 @@ function getCorrectModel(req) {
     }
 }
 
-function addNewSitePost(req, res) {
+function addNewPost(req, res) {
     var sitePost = req.body;
     sitePost.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
     sitePost.postTime = Date.now();
@@ -227,7 +226,7 @@ function addNewPosts(req, res) {
         );
 }
 
-function getAllSitePosts(req, res) {
+function getAllPosts(req, res) {
     getCorrectModel(req)
         .find()
         .then(
@@ -240,7 +239,7 @@ function getAllSitePosts(req, res) {
         );
 }
 
-function getSitePostsByLocation(req, res) {
+function getPosts(req, res) {
     var lng = req.query.longitude;
     var lat = req.query.latitude;
     var rad = req.query.radius;
@@ -340,7 +339,7 @@ function getPost(req, res) {
     );
 }
 
-function comment(req, res) {
+function addComment(req, res) {
     var id = req.body.id;
     var comment = req.body.comment;
     getCorrectModel(req).findByIdAndUpdate({
@@ -424,24 +423,6 @@ function deletePost(req, res) {
             }
         }
     );
-}
-
-function getPostsWithinRange(req, res) {
-    var range = req.query.range;
-    var rangeSqrd = range * range;
-    getCorrectModel(req).find({}).$where(function () {
-            var longDiff = req.query.longitude - this.longitude;
-            var latDiff = req.query.latitude - this.latitude;
-            return longDiff * longDiff + latDiff * latDiff < rangeSqrd;
-        })
-        .then(
-            function (posts) {
-                res.json(posts);
-            },
-            function (error) {
-                res.json(error);
-            }
-        );
 }
 
 // TODO: Does this actually do stuff?
