@@ -109,14 +109,14 @@ div.comments {
     width: 70%;
 }
 
-div.comments > button.comments_btn {
+div.comments>button.comments_btn {
     background-color: transparent;
     border-style: none;
     outline: none;
     color: #A9ADD9;
 }
 
-div.comments > button.comments_btn:hover {
+div.comments>button.comments_btn:hover {
     color: #7C82BB;
     cursor: pointer;
 }
@@ -151,8 +151,10 @@ div.comments_container {
     background-color: #F4F5FC;
 }
 
+
 /* This is an ugly bit of css that stops floated elements inside post_container
  * from collapsing */
+
 div.post_container:after {
     content: "";
     display: block;
@@ -160,11 +162,11 @@ div.post_container:after {
     clear: both;
 }
 
-div.voting_section.upvoted > button.upvote_btn {
+div.voting_section.upvoted>button.upvote_btn {
     color: #7C82BB;
 }
 
-div.voting_section.downvoted > button.downvote_btn {
+div.voting_section.downvoted>button.downvote_btn {
     color: #7C82BB;
 }
 

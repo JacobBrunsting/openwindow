@@ -1,10 +1,9 @@
-
 // ============== Imports ===============
 
 var bodyParser = require('body-parser');
 var config = require('./config');
 var express = require('express');
-var ipAddr = require('ip').address(); 
+var ipAddr = require('ip').address();
 var mongoose = require('mongoose');
 var request = require('request');
 var util = require('util');
@@ -61,9 +60,12 @@ var backupAddr;
 // TEMP ONLY - Replace 'localhost:8080' with the actual website name later
 var baseAddress = ipAddr + ":" + settings[PORT_KEY];
 request.post(
-    'http://localhost:8080/director/addserverinfo', 
-    {json:{baseAddress:baseAddress}},
-    function(err, res) {
+    'http://localhost:8080/director/addserverinfo', {
+        json: {
+            baseAddress: baseAddress
+        }
+    },
+    function (err, res) {
         if (err || !res.body.backupAddr) {
             console.log("Error connecting to server network");
             if (err) {
@@ -81,37 +83,75 @@ request.post(
 // =============== Models ================
 
 var commentSchema = mongoose.Schema({
-    body: {type: String, required:true}
+    body: {
+        type: String,
+        required: true
+    }
 });
 
 var coordinatesSchema = mongoose.Schema({
-    type:       {type:String, default:"Point"},
-    coordinates:{type:[Number], required:true}  // first index is lng, second is lat
+    type: {
+        type: String,
+        default: "Point"
+    },
+    coordinates: {
+        type: [Number],
+        required: true
+    } // first index is lng, second is lat
 });
 
 var postSchema = mongoose.Schema({
-    title:              {type:String, required:true}, 
-    body:               {type:String, required:true},  
-    posterId:           {type:Number, default:0},
-    postTime:           {type:Number, required:true},
-    secondsToShowFor:   {type:Number, default:0},
-    comments:           {type:[commentSchema], default:[]},
-    loc:                {type:coordinatesSchema, required:true},
-    mainDatabaseAddr:   {type:String, required:true},
-    backupDatabaseAddr: {type:String, required:true}
+    title: {
+        type: String,
+        required: true
+    },
+    body: {
+        type: String,
+        required: true
+    },
+    posterId: {
+        type: Number,
+        default: 0
+    },
+    postTime: {
+        type: Number,
+        required: true
+    },
+    secondsToShowFor: {
+        type: Number,
+        default: 0
+    },
+    comments: {
+        type: [commentSchema],
+        default: []
+    },
+    loc: {
+        type: coordinatesSchema,
+        required: true
+    },
+    mainDatabaseAddr: {
+        type: String,
+        required: true
+    },
+    backupDatabaseAddr: {
+        type: String,
+        required: true
+    }
 });
 
-postSchema.index({loc:'2dsphere'});
+postSchema.index({
+    loc: '2dsphere'
+});
 
 var sitePostModel = mongoose.model(config[SITE_POST_MODEL_KEY], postSchema);
 var backupPostModel = mongoose.model(config[BACKUP_POST_MODEL_KEY], postSchema);
 
 // ========== Old Post Cleanup ==========
 
-setInterval(function() {
-    sitePostModel.find({}).$where(function() {
-        return this.secondsToShowFor < (Date.now() - this.postTime) / 1000; 
-    }).remove(function(err, data) {
+setInterval(function () {
+    sitePostModel.find({}).$where(function () {
+        return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;
+    }).remove(function (err, data) {
         if (err) {
             console.log(err);
         }
@@ -121,7 +161,7 @@ setInterval(function() {
 // =========== API Endpoints ============
 
 // allow access to external database servers directly from the frontend
-app.all('*', function(req, res, next) {
+app.all('*', function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
@@ -162,13 +202,14 @@ function addNewSitePost(req, res) {
     getCorrectModel(req)
         .create(sitePost)
         .then(
-            function(req) {
+            function (req) {
                 res.status(200).send();
             },
-            function(error)   {
-                console.log(error); 
+            function (error) {
+                console.log(error);
                 res.status(500).send();
-            });
+            }
+        );
 }
 
 function addNewPosts(req, res) {
@@ -176,24 +217,26 @@ function addNewPosts(req, res) {
     getCorrectModel(req)
         .insert(posts)
         .then(
-            function(req) {
+            function (req) {
                 res.status(200).send();
             },
-            function(err) {
+            function (err) {
                 req.status(500).send();
-            });
+            }
+        );
 }
 
 function getAllSitePosts(req, res) {
     getCorrectModel(req)
         .find()
         .then(
-            function(reqRes) {
+            function (reqRes) {
                 res.json(reqRes);
             },
-            function(err) {
+            function (err) {
                 res.status(500).send();
-            });
+            }
+        );
 }
 
 function getSitePostsByLocation(req, res) {
@@ -201,23 +244,23 @@ function getSitePostsByLocation(req, res) {
     var lat = req.query.latitude;
     var rad = req.query.radius;
     getCorrectModel(req).find()
-            .where('loc')
-            .near({
-                center: {
-                    type: 'Point',
-                    coordinates: [lng, lat]
-                },
-                maxDistance: rad
-            })
-            .then(
-        function(posts) {
-            res.json(posts);
-        },
-        function (error) {
-            console.log(error);
-            res.json(error);
-        }
-    );
+        .where('loc')
+        .near({
+            center: {
+                type: 'Point',
+                coordinates: [lng, lat]
+            },
+            maxDistance: rad
+        })
+        .then(
+            function (posts) {
+                res.json(posts);
+            },
+            function (error) {
+                console.log(error);
+                res.json(error);
+            }
+        );
 }
 
 function upvotePost(req, res) {
@@ -231,11 +274,16 @@ function upvotePost(req, res) {
     } else {
         amountToInc = settings[UPVOTE_INC_KEY];
     }
-    getCorrectModel(req).findByIdAndUpdate(
-        {_id:id},
-        {$inc:{secondsToShowFor:amountToInc}}, 
-        {new:true},
-        function(err, data) {
+    getCorrectModel(req).findByIdAndUpdate({
+            _id: id
+        }, {
+            $inc: {
+                secondsToShowFor: amountToInc
+            }
+        }, {
+            new: true
+        },
+        function (err, data) {
             if (err) {
                 res.status(400).send();
             } else {
@@ -256,11 +304,16 @@ function downvotePost(req, res) {
     } else {
         amountToInc = settings[DOWNVOTE_INC_KEY];
     }
-    getCorrectModel(req).findByIdAndUpdate(
-        {_id:id},
-        {$inc:{secondsToShowFor:amountToInc}}, 
-        {new:true},
-        function(err, data) {
+    getCorrectModel(req).findByIdAndUpdate({
+            _id: id
+        }, {
+            $inc: {
+                secondsToShowFor: amountToInc
+            }
+        }, {
+            new: true
+        },
+        function (err, data) {
             if (err) {
                 res.status(400).send();
             } else {
@@ -272,15 +325,14 @@ function downvotePost(req, res) {
 
 function getPost(req, res) {
     var id = req.query.id;
-    getCorrectModel(req).findOne(
-        {_id:id},
-        function(err, data) {
+    getCorrectModel(req).findOne({
+            _id: id
+        },
+        function (err, data) {
             if (err || data === null) {
                 console.log("error is " + JSON.stringify(err));
-                console.log("data is " + JSON.stringify(data));
                 res.status(400).send();
             } else {
-                console.log("data is " + JSON.stringify(data));
                 res.json(data);
             }
         }
@@ -290,11 +342,16 @@ function getPost(req, res) {
 function comment(req, res) {
     var id = req.body.id;
     var comment = req.body.comment;
-    getCorrectModel(req).findByIdAndUpdate(
-        {_id:id}, 
-        {$push:{comments:comment}},
-        {new:true},
-        function(err, data) {
+    getCorrectModel(req).findByIdAndUpdate({
+            _id: id
+        }, {
+            $push: {
+                comments: comment
+            }
+        }, {
+            new: true
+        },
+        function (err, data) {
             if (err || data === null) {
                 res.status(400).send();
             } else {
@@ -307,11 +364,16 @@ function comment(req, res) {
 function setTime(req, res) {
     var id = req.body.id;
     var newSecondsToShowFor = req.body.newSecondsToShowFor;
-    getCorrectModel(req).findByIdAndUpdate(
-        {_id:id}, 
-        {$set:{secondsToShowFor:newSecondsToShowFor}}, 
-        {new:true},
-        function(err, data) {
+    getCorrectModel(req).findByIdAndUpdate({
+            _id: id
+        }, {
+            $set: {
+                secondsToShowFor: newSecondsToShowFor
+            }
+        }, {
+            new: true
+        },
+        function (err, data) {
             if (err || data === null) {
                 res.status(400).send();
             } else {
@@ -324,11 +386,18 @@ function setTime(req, res) {
 function deleteComment(req, res) {
     var postId = req.body.postId;
     var commentId = req.body.commentId;
-    getCorrectModel(req).findByIdAndUpdate(
-        {_id:postId},
-        {$pull:{'comments':{'_id':commentId}}},
-        {new:true},
-        function(err, data) {
+    getCorrectModel(req).findByIdAndUpdate({
+            _id: postId
+        }, {
+            $pull: {
+                'comments': {
+                    '_id': commentId
+                }
+            }
+        }, {
+            new: true
+        },
+        function (err, data) {
             if (err || data === null) {
                 res.status(400).send();
             } else {
@@ -340,8 +409,10 @@ function deleteComment(req, res) {
 
 function deletePost(req, res) {
     var id = req.body.id;
-    getCorrectModel(req).find({_id:id}).remove(
-        function(err, data) {
+    getCorrectModel(req).find({
+        _id: id
+    }).remove(
+        function (err, data) {
             if (err || data === null) {
                 res.status(400).send();
             } else {
@@ -354,34 +425,34 @@ function deletePost(req, res) {
 function getPostsWithinRange(req, res) {
     var range = req.query.range;
     var rangeSqrd = range * range;
-    getCorrectModel(req).find({}).$where(function() {
-                var longDiff = req.query.longitude - this.longitude;
-                var latDiff = req.query.latitude - this.latitude;
-                return longDiff * longDiff + latDiff * latDiff < rangeSqrd;
+    getCorrectModel(req).find({}).$where(function () {
+            var longDiff = req.query.longitude - this.longitude;
+            var latDiff = req.query.latitude - this.latitude;
+            return longDiff * longDiff + latDiff * latDiff < rangeSqrd;
+        })
+        .then(
+            function (posts) {
+                res.json(posts);
+            },
+            function (error) {
+                res.json(error);
             }
-        )
-                 .then(
-        function(posts) {
-            res.json(posts);
-        },
-        function (error) {
-            res.json(error);
-        }
-    );
+        );
 }
 
 // TODO: Does this actually do stuff?
 var cacheTime = 0;
 var postsSecondsToShowForCache = {};
+
 function getPostsSecondsToShowFor(req, res) {
     if (Date.now() - cacheTime < settings[CACHE_EXPIRY_TIME_KEY]) {
         res.json(postsSecondsToShowForCache);
     }
     getCorrectModel(req).find()
         .then(
-            function(posts) {
+            function (posts) {
                 postsSecondsToShowForCache = {};
-                posts.forEach(function(post) {
+                posts.forEach(function (post) {
                     postsSecondsToShowForCache[post._id] = post.secondsToShowFor;
                 });
                 res.json(postsSecondsToShowForCache);
@@ -389,7 +460,7 @@ function getPostsSecondsToShowFor(req, res) {
             function (error) {
                 res.json(error);
             }
-     );
+        );
 }
 
 function getPostRange(req, res) {
@@ -400,8 +471,8 @@ function getPostRange(req, res) {
 
     getCorrectModel(req).find()
         .then(
-            function(posts) {
-                posts.forEach(function(post) {
+            function (posts) {
+                posts.forEach(function (post) {
                     updateRange(post);
                 });
                 res.json({
@@ -415,7 +486,7 @@ function getPostRange(req, res) {
                 res.json(error);
             }
         );
-    
+
     function updateRange(post) {
         var lng = post.loc.coordinates[0];
         var lat = post.loc.coordinates[1];

@@ -1,55 +1,53 @@
 <html>
-    <div ng-repeat="post in posts track by $index">
-        <div class="post_container" ng-controller="postctrl">  
-            <form ng-submit="deletePost(post)"> 
-                <button type="submit">delete</button>
-            </form>
-            <table>
-                <tr>
-                    <td>Post id:</td>
-                    <td>{{post.id}}</td>
-                </tr>
-                <tr>
-                    <td>Time Remaining:</td>
-                    <td>{{post.timeLeft}}</td>
-                </tr>
-                <tr>
-                    <td>Longitude, Latitude:</td>
-                    <td>{{post.longitude}}, {{post.latitude}}</td>
-            </table>
-            Set time remaining:
-            <form ng-submit="setTimeRemaining(post, secondsToShowFor)">
-                    <input type="number" ng-model="secondsToShowFor" />
-                    <button type="submit">Post</button>
-            </form>
-            <div class="post">
-                <div class="title">
-                    {{post.title}}
-                </div>
-                <div class="body">
-                    {{post.body}}
-                </div>
+<div ng-repeat="post in posts track by $index">
+    <div class="post_container" ng-controller="postctrl">
+        <form ng-submit="deletePost(post)">
+            <button type="submit">delete</button>
+        </form>
+        <table>
+            <tr>
+                <td>Post id:</td>
+                <td>{{post.id}}</td>
+            </tr>
+            <tr>
+                <td>Time Remaining:</td>
+                <td>{{post.timeLeft}}</td>
+            </tr>
+            <tr>
+                <td>Longitude, Latitude:</td>
+                <td>{{post.longitude}}, {{post.latitude}}</td>
+        </table>
+        Set time remaining:
+        <form ng-submit="setTimeRemaining(post, secondsToShowFor)">
+            <input type="number" ng-model="secondsToShowFor" />
+            <button type="submit">Post</button>
+        </form>
+        <div class="post">
+            <div class="title">
+                {{post.title}}
+            </div>
+            <div class="body">
+                {{post.body}}
             </div>
         </div>
-        <div ng-repeat="comment in post.comments track by $index">
-            {{comment.body}}<br>
-            <form ng-submit="deleteComment(post, comment)"> 
-                <button type="submit">delete</button>
-            </form>
-            ______________________
-        </div>
     </div>
-    <form ng-submit="addServerInfo(minLongitude, maxLongitude, minLatitude, maxLatitude)">
-            Min Longitude
-            <input type="number" ng-model="minLongitude" />
-            Max longitude
-            <input type="number" ng-model="maxLongitude" />
-            <br>
-            Min Latitude
-            <input type="number" ng-model="minLatitude" />
-            Max latitude
-            <input type="number" ng-model="maxLatitude" />
-            <br>
-            <button type="submit">Post</button>
-    </form>
+    <div ng-repeat="comment in post.comments track by $index">
+        {{comment.body}}<br>
+        <form ng-submit="deleteComment(post, comment)">
+            <button type="submit">delete</button>
+        </form>
+        ______________________
+    </div>
+</div>
+<form ng-submit="addServerInfo(minLongitude, maxLongitude, minLatitude, maxLatitude)">
+    Min Longitude
+    <input type="number" ng-model="minLongitude" /> Max longitude
+    <input type="number" ng-model="maxLongitude" />
+    <br> Min Latitude
+    <input type="number" ng-model="minLatitude" /> Max latitude
+    <input type="number" ng-model="maxLatitude" />
+    <br>
+    <button type="submit">Post</button>
+</form>
+
 </html>

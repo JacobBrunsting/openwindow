@@ -1,7 +1,7 @@
 angular.module('openwindow').config([
     '$stateProvider',
     '$urlRouterProvider',
-    function($stateProvider, $urlRouterProvider) {
+    function ($stateProvider, $urlRouterProvider) {
         $stateProvider.state('home', {
             url: '/home',
             templateUrl: '/home/home.html',

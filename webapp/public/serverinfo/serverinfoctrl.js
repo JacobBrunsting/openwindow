@@ -1,14 +1,14 @@
 angular.module('openwindow').controller('serverinfoctrl', [
     '$scope',
     '$http',
-    function($scope, $http) {
+    function ($scope, $http) {
         var serverWriteAreaCanvas = document.getElementById("serverWriteAreaCanvas");
         var serverReadAreaCanvas = document.getElementById("serverReadAreaCanvas");
 
         $http.get("/director/getallserverinfo")
-                .success(function(servers) {
-                    drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers);
-                });
+            .success(function (servers) {
+                drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers);
+            });
     }
 ]);
 
@@ -23,11 +23,11 @@ var MIN_LAT = -90;
 var currentColor = [3 * MIN_COLOR_VAL, 3 * MIN_COLOR_VAL, 0];
 
 function drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers) {
-    servers.forEach(function(server) {
-        drawServerArea(serverWriteAreaCanvas, server.minLngWrite, 
-                       server.minLatWrite, server.maxLngWrite, server.maxLatWrite);
-        drawServerArea(serverReadAreaCanvas, server.minLngRead, 
-                       server.minLatRead, server.maxLngRead, server.maxLatRead);
+    servers.forEach(function (server) {
+        drawServerArea(serverWriteAreaCanvas, server.minLngWrite,
+            server.minLatWrite, server.maxLngWrite, server.maxLatWrite);
+        drawServerArea(serverReadAreaCanvas, server.minLngRead,
+            server.minLatRead, server.maxLngRead, server.maxLatRead);
         generateNextColor();
     });
 }
@@ -44,8 +44,8 @@ function generateNextColor() {
 }
 
 function getCurrentColor() {
-    return "rgba(" + currentColor[0] + "," + currentColor[1] + "," + 
-           currentColor[2] + "," + ALPHA + ")";
+    return "rgba(" + currentColor[0] + "," + currentColor[1] + "," +
+        currentColor[2] + "," + ALPHA + ")";
 }
 
 function mapToNewRange(val, oldMin, oldMax, newMin, newMax) {
@@ -58,19 +58,16 @@ function mapToNewRange(val, oldMin, oldMax, newMin, newMax) {
 }
 
 function drawServerArea(canvas, minLng, minLat, maxLng, maxLat) {
-    console.log("drawing with range " + minLng + ", " + minLat + "...");
-    console.log("canvas width, height are " + canvas.width + ", " + canvas.height);
     var canvasContext = canvas.getContext("2d");
     var minX = mapToNewRange(minLng, MIN_LNG, MAX_LNG, 0, canvas.width);
     var minY = mapToNewRange(minLat, MIN_LAT, MAX_LAT, 0, canvas.height);
     var maxX = mapToNewRange(maxLng, MIN_LNG, MAX_LNG, 0, canvas.width);
     var maxY = mapToNewRange(maxLat, MIN_LAT, MAX_LAT, 0, canvas.height);
     canvasContext.beginPath();
-    canvasContext.lineWidth="1";
-    canvasContext.strokeStyle="black";
+    canvasContext.lineWidth = "1";
+    canvasContext.strokeStyle = "black";
     canvasContext.fillStyle = getCurrentColor();
     canvasContext.rect(minX, minY, maxX, maxY);
     canvasContext.fill();
     canvasContext.stroke();
-    console.log("drawing at " + minX + ", " + minY + ", " + maxX + ", " + maxY);
 }

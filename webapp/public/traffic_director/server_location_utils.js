@@ -32,8 +32,8 @@ function splitAtLongitude(blockVals, blockLngs, longitude) {
     }
 }
 
-function fillRange(blockVals, blockLngs, blockLats, minLng, maxLng, 
-                   minLat, maxLat, fillVal) {
+function fillRange(blockVals, blockLngs, blockLats, minLng, maxLng,
+    minLat, maxLat, fillVal) {
     var minLatIndex = -1;
     var maxLatIndex = -1;
     for (var i = 0; i < blockLats.length; ++i) {
@@ -81,8 +81,8 @@ function calculateSquareArea(blockLngs, blockLats, r1, c1, r2, c2) {
 
 // returns {minLng, maxLng, minLat, maxLat}
 // gets the largest rectangle originating from the provided row and col
-function getLargestRectangleInfoFromCoord(blockVals, blockLngs, blockLats, 
-                                          fillVal, row, col) {
+function getLargestRectangleInfoFromCoord(blockVals, blockLngs, blockLats,
+    fillVal, row, col) {
     var largestRectangleInfo = {
         area: 0,
         minLng: 0,
