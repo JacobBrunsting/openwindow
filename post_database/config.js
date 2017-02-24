@@ -1,6 +1,6 @@
 module.exports = {
     // the port used for the webapp 
-    port: 3004,
+    port: 3000,
 
     // the IP the webapp is bound to (0.0.0.0 represents all IP addresses)
     boundIp: '0.0.0.0',

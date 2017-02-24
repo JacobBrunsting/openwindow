@@ -174,14 +174,14 @@ app.post("/api/sitepost", addNewSitePost);
 app.post("/api/posts", addNewPosts);
 app.post("/api/comment", comment);
 app.post("/api/settime", setTime);
-app.post("/api/deletecomment", deleteComment);
-app.post("/api/deletepost", deletePost);
 app.get("/api/sitepostsbylocation", getSitePostsByLocation);
 app.get("/api/allsiteposts", getAllSitePosts)
 app.get("/api/post", getPost);
 app.get("/api/postswithinrange", getPostsWithinRange);
 app.get("/api/poststimeleft", getPostsSecondsToShowFor);
 app.get("/api/getpostrange", getPostRange);
+app.delete("/api/deletecomment", deleteComment);
+app.delete("/api/deletepost", deletePost);
 
 // ========= API Implementation =========
 
@@ -384,8 +384,8 @@ function setTime(req, res) {
 }
 
 function deleteComment(req, res) {
-    var postId = req.body.postId;
-    var commentId = req.body.commentId;
+    var postId = req.query.postId;
+    var commentId = req.query.commentId;
     getCorrectModel(req).findByIdAndUpdate({
             _id: postId
         }, {
@@ -399,7 +399,10 @@ function deleteComment(req, res) {
         },
         function (err, data) {
             if (err || data === null) {
-                res.status(400).send();
+                if (err) {
+                    console.log("post_database:deleteComment:" + err);
+                }
+                res.status(500).send();
             } else {
                 res.json(data);
             }
@@ -408,7 +411,7 @@ function deleteComment(req, res) {
 }
 
 function deletePost(req, res) {
-    var id = req.body.id;
+    var id = req.query.id;
     getCorrectModel(req).find({
         _id: id
     }).remove(

@@ -158,6 +158,10 @@ module.exports = function (app, mongoose) {
      *          mongoose query
      */
     function getServerSearchQuery(targLoc, targRad) {
+        if (!targRad || targRad == 0) {
+            console.log("returning empty serach uery");
+            return {};
+        }
         var lat = Number(targLoc.latitude);
         var lng = Number(targLoc.longitude);
         var oneLatDegInMeters = Math.cos(lat * Math.PI / 180) * 111000;
@@ -488,7 +492,6 @@ module.exports = function (app, mongoose) {
 
     function redirectRequest(req, res, targLoc, targRad) {
         var query = getServerSearchQuery(targLoc, targRad);
-        console.log("traffic_director:redirecting request " + JSON.stringify(query));
         serverInfoModel
             .find(query)
             .then(

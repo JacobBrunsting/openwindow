@@ -95,10 +95,14 @@ angular.module('openwindow').service('post_creator', [function () {
         );
     }
 
-    this.createComment = function (body) {
+    this.createComment = function (id, body) {
         var comment = {};
+        comment.id = id;
         comment.body = body;
 
+        comment.getId = function() {
+            return comment.id;
+        }
         comment.getBody = function () {
             return comment.body;
         }
@@ -114,7 +118,7 @@ angular.module('openwindow').service('post_creator', [function () {
     }
 
     this.getFormattedComment = function (comment) {
-        return this.createComment(comment.body);
+        return this.createComment(comment._id, comment.body);
     }
 
     this.title = function (post) {
