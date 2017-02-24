@@ -180,6 +180,7 @@ app.get("/api/post", getPost);
 app.get("/api/postswithinrange", getPostsWithinRange);
 app.get("/api/poststimeleft", getPostsSecondsToShowFor);
 app.get("/api/getpostrange", getPostRange);
+app.delete("/api/cleanbackups", cleanBackups);
 app.delete("/api/deletecomment", deleteComment);
 app.delete("/api/deletepost", deletePost);
 
@@ -506,6 +507,18 @@ function getPostRange(req, res) {
             maxLat = lat;
         }
     }
+}
+
+function cleanBackups(req, res) {
+    backupPostModel
+        .remove({}, function (err) {
+            if (err) {
+                console.log("traffic_director:cleanBackups:" + err);
+                response.status(500).send();
+            } else {
+                response.status(200).send();
+            }
+        });
 }
 
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
