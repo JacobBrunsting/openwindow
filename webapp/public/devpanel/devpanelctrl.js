@@ -43,7 +43,7 @@ angular.module('openwindow').controller('devpanelctrl', [
                     }
                 })
                 .success(function (response) {
-                    post.setComments(post_creator.getFormattedCommentList(response.body));
+                    post.setComments(post_creator.getFormattedCommentList(response.body.comments));
                 })
                 .error(function (error) {});
         }

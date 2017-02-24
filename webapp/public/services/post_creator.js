@@ -95,16 +95,16 @@ angular.module('openwindow').service('post_creator', [function () {
         );
     }
 
-    this.createComment = function (id, body) {
+    this.createComment = function(body, id) {
         var comment = {};
-        comment.id = id;
         comment.body = body;
+        comment.id = id;
 
-        comment.getId = function() {
-            return comment.id;
-        }
         comment.getBody = function () {
             return comment.body;
+        }
+        comment.getId = function() {
+            return comment.id;
         }
         return comment;
     }
@@ -118,7 +118,7 @@ angular.module('openwindow').service('post_creator', [function () {
     }
 
     this.getFormattedComment = function (comment) {
-        return this.createComment(comment._id, comment.body);
+        return this.createComment(comment.body, comment._id);
     }
 
     this.title = function (post) {
