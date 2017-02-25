@@ -159,7 +159,6 @@ module.exports = function (app, mongoose) {
      */
     function getServerSearchQuery(targLoc, targRad) {
         if (!targRad || targRad == 0) {
-            console.log("returning empty serach uery");
             return {};
         }
         var lat = Number(targLoc.latitude);
@@ -522,7 +521,7 @@ module.exports = function (app, mongoose) {
                                 function (reqRes) {
                                     // TODO: Setup backup stuff
                                     res.json({
-                                        backupAddr: "asdf"
+                                        backupAddr: newServer.baseAddress
                                     });
                                 },
                                 function (err) {
