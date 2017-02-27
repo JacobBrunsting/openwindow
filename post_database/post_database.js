@@ -42,6 +42,27 @@ for (var key in settings) {
     }
 }
 
+// ======= Command Line Arguments =======
+
+process.argv.forEach(function (val, index) {
+    if (index >= 2) {
+        var splitVal = val.split("=");
+        if (splitVal.length > 1) {
+            switch(splitVal[0]) {
+                case PORT_KEY:
+                    settings[PORT_KEY] = parseInt(splitVal[1]);
+                    break;
+                case SITE_POST_MODEL_KEY:
+                    settings[SITE_POST_MODEL_KEY] = splitVal[1];
+                    break;
+                case BACKUP_POST_MODEL_KEY:
+                    settings[BACKUP_POST_MODEL_KEY] = splitVal[1];
+                    break;     
+            }
+        }
+    }
+});
+
 // ============= Constants ==============
 
 var UPVOTE = 2;
@@ -148,8 +169,8 @@ postSchema.index({
     loc: '2dsphere'
 });
 
-var sitePostModel = mongoose.model(config[SITE_POST_MODEL_KEY], postSchema);
-var backupPostModel = mongoose.model(config[BACKUP_POST_MODEL_KEY], postSchema);
+var sitePostModel = mongoose.model(settings[SITE_POST_MODEL_KEY], postSchema);
+var backupPostModel = mongoose.model(settings[BACKUP_POST_MODEL_KEY], postSchema);
 
 // ========== Old Post Cleanup ==========
 

@@ -362,6 +362,7 @@ module.exports = function (app, mongoose) {
 
         var serverArea = locationUtils.getLargestArea(blockVals, blockLngs, blockLats, FILL_VAL);
         if (serverArea.area === 0) {
+            // if there are no open spaces split a server to create one
             splitLargestServerArea(otherServers, function (resultingArea) {
                 Object.assign(newServer, resultingArea);
                 onServerLocationUpdate(newServer);
@@ -633,7 +634,7 @@ module.exports = function (app, mongoose) {
         var latRange = getDistanceBetweenPointsOnCircle(server.minLatWrite, server.maxLatWrite, 180);
         var center = {
             lng: server.minLngWrite + lngRange / 2,
-            lat: server.minLatWrite = latRange / 2
+            lat: server.minLatWrite + latRange / 2
         };
         if (center.lng > 180) {
             center.lng -= 360;
