@@ -39,9 +39,15 @@ module.exports = function (app, mongoose) {
     // TODO: Resize the 'read' area to match the current posts on the server
     // periodically
     var serverInfoSchema = mongoose.Schema({
+        // TODO: In all cases, these addresses are just IP's, so rename them to
+        // reflect that
         baseAddress: {
             type: String,
             required: true
+        },
+        backupAddress: {
+            type: String,
+            required: true,
         },
         maxLatWrite: {
             type: Number,
@@ -286,6 +292,8 @@ module.exports = function (app, mongoose) {
     // no, it is most definitely not, but it's very rarely called, since servers 
     // aren't added very often, so I'm not too worried about it
     // TODO: Use promise instead of callback
+    // TODO: You aren't handling cases where a server is on a lng/lat extreme
+    // very well
     function setupServerLocation(newServer, otherServers, onServerLocationUpdate) {
         var FILL_VAL = 1;
         var EMPTY_VAL = 0;
@@ -426,7 +434,7 @@ module.exports = function (app, mongoose) {
         }
 
         function mergeServers(serverToMerge, serverToMergeWith) {
-            var url = "http://" + serverToMerge.baseAddress + "/api/allsiteposts";
+            var url = "http://" + serverToMerge.backupAddress + "/api/allsiteposts";
             request.get(url, function (err, res) {
                 if (err) {
                     console.log("traffic_director:mergeServers:" + err);
@@ -462,31 +470,32 @@ module.exports = function (app, mongoose) {
 
     // TODO: Use a promise instead of a callback
     function resizeServer(newServer, onSuccess) {
-        serverInfoModel.findByIdAndUpdate({
-                _id: newServer._id
-            }, {
-                $set: {
-                    maxLatWrite: newServer.maxLatWrite,
-                    minLatWrite: newServer.minLatWrite,
-                    maxLngWrite: newServer.maxLngWrite,
-                    minLngWrite: newServer.minLngWrite,
-                    maxLatRead: newServer.maxLatRead,
-                    minLatRead: newServer.minLatRead,
-                    maxLngRead: newServer.maxLngRead,
-                    minLngRead: newServer.minLngRead
-                }
-            }, {
-                new: true
-            },
-            function (err, data) {
-                if (err) {
-                    console.log("traffic_director:resizeServer:" + err);
-                } else {
-                    if (onSuccess) {
-                        onSuccess();
+        serverInfoModel
+            .findByIdAndUpdate({
+                    _id: newServer._id
+                }, {
+                    $set: {
+                        maxLatWrite: newServer.maxLatWrite,
+                        minLatWrite: newServer.minLatWrite,
+                        maxLngWrite: newServer.maxLngWrite,
+                        minLngWrite: newServer.minLngWrite,
+                        maxLatRead: newServer.maxLatRead,
+                        minLatRead: newServer.minLatRead,
+                        maxLngRead: newServer.maxLngRead,
+                        minLngRead: newServer.minLngRead
                     }
-                }
-            });
+                }, {
+                    new: true
+                },
+                function (err, data) {
+                    if (err) {
+                        console.log("traffic_director:resizeServer:" + err);
+                    } else {
+                        if (onSuccess) {
+                            onSuccess();
+                        }
+                    }
+                });
     }
 
     function redirectRequest(req, res, targLoc, targRad) {
@@ -505,38 +514,165 @@ module.exports = function (app, mongoose) {
 
     // req.body must be of form {baseAddress:Number}
     function addServerInfo(req, res) {
-        var newServer = req.body;
-        console.log("request body is:");
-        console.log(JSON.stringify(req.body));
-        // TODO: Refactor so this isn't so nested
         serverInfoModel
-            .find({})
+            .find()
             .then(
-                function (servers) {
-                    setupServerLocation(newServer, servers, function (newServerWithLocation) {
-                        console.log("traffic_director:adding server" + JSON.stringify(newServerWithLocation));
-                        serverInfoModel
-                            .create(newServerWithLocation)
-                            .then(
-                                function (reqRes) {
-                                    // TODO: Setup backup stuff
-                                    res.json({
-                                        backupAddr: newServer.baseAddress
-                                    });
-                                },
-                                function (err) {
-                                    console.log("traffic_director:addServerInfo(1):" + err);
-                                    res.status(500).send();
-                                }
-                            );
-                    });
-                },
+                onServerListRetrieval,
                 function (err) {
-                    console.log("traffic_director:addServerInfo(2):" + err);
+                    console.log("traffic_director:addServerInfo:" + err);
                 }
             );
+
+        function onServerListRetrieval(servers) {
+            var newServer = req.body;
+            setupServerLocation(newServer, servers, function (newServer) {
+                setupServerBackup(newServer, servers, insertNewServer);
+            });
+        }
+
+        function setupServerBackup(newServer, otherServers, onComplete) {
+            var farthestServer = findFarthestServer(newServer, otherServers);
+            if (farthestServer) {
+                // make the farthest server back up to the new server, and make
+                // the new server backup to the server the farthest server was 
+                // previously backing up to
+                // we chose the farthest server because if there is ever logic
+                // implemented to have database servers store posts only from 
+                // their area, we want to avoid having servers back up other
+                // servers in the same area
+                console.log("farthest server is " + JSON.stringify(farthestServer));
+                clearBackupsAtServer(farthestServer.backupAddress);
+                newServer.backupAddress = farthestServer.backupAddress;
+                changeServerBackupAddress(farthestServer, newServer.baseAddress);
+            } else {
+                newServer.backupAddress = newServer.baseAddress;
+            }
+            onComplete(newServer);
+        }
+
+        function insertNewServer(newServer) {
+            console.log("traffic_director:adding server" + JSON.stringify(newServer));
+            serverInfoModel
+                .create(newServer)
+                .then(
+                    function (reqRes) {
+                        res.json(newServer);
+                    },
+                    function (err) {
+                        console.log("traffic_director:insertNewServer:" + err);
+                        res.status(500).send();
+                    }
+                );
+        }
     }
 
+    function clearBackupsAtServer(serverIp) {
+        var requestParams = {
+            url: "http://" + serverIp + "/api/backups",
+            json: true
+        };
+        request.delete(requestParams, function (err) {
+            if (err) {
+                console.log("traffic_director:clearBackupsAtServer:" + err);
+            }
+        });
+    }
+
+    function changeServerBackupAddress(server, newBackupIp) {
+        serverInfoModel
+            .findByIdAndUpdate({
+                    _id: server._id
+                }, {
+                    $set: {
+                        backupAddress: newBackupIp,
+                    }
+                },
+                function (err, data) {
+                    if (err) {
+                        console.log("traffic_director:changeServerBackupAddress:" + err);
+                    } else {
+                        notifyServerOfChange();
+                    }
+                });
+
+        function notifyServerOfChange() {
+            var requestParams = {
+                url: "http://" + server.baseAddress + "/api/backupaddress",
+                qs: {
+                    newBackupAddress: newBackupIp
+                },
+                json: true
+            };
+            request.put(requestParams, function (err) {
+                if (err) {
+                    console.log("traffic_director:changeServerBackupAddress:notifyServerOfChange:" + err);
+                }
+            });
+        }
+    }
+
+    function findFarthestServer(targetServer, otherServers) {
+        console.log("finding farthest erver =================");
+        var curMaxDist = -1;
+        var targetCoords = getCenterOfServer(targetServer);
+        var farthestServer;
+        otherServers.forEach(function (server) {
+            var dist = getDistanceBetweenCoords(targetCoords, getCenterOfServer(server));
+            console.log("dist is " + dist);
+            if (dist > curMaxDist) {
+                curMaxDist = dist;
+                farthestServer = server;
+                console.log("found farther server, " + JSON.stringify(server));
+            }
+        });
+        return farthestServer
+    }
+
+    function getCenterOfServer(server) {
+        var lngRange = getDistanceBetweenPointsOnCircle(server.minLngWrite, server.maxLngWrite, 360);
+        var latRange = getDistanceBetweenPointsOnCircle(server.minLatWrite, server.maxLatWrite, 180);
+        var center = {
+            lng: server.minLngWrite + lngRange / 2,
+            lat: server.minLatWrite = latRange / 2
+        };
+        if (center.lng > 180) {
+            center.lng -= 360;
+        } else if (center.lng < -180) {
+            center.lng += 360;
+        }
+        if (center.lat > 90) {
+            center.lat -= 180;
+        } else if (center.lat < -90) {
+            center.lat += 180;
+        }
+        return center;
+    }
+
+    // coordinates must be of the form {lng:Number, lat:Number}
+    function getDistanceBetweenCoords(coord1, coord2) {
+        var lngDist = Math.min(
+            getDistanceBetweenPointsOnCircle(coord1.lng, coord2.lng, 360),
+            getDistanceBetweenPointsOnCircle(coord2.lng, coord1.lng, 360)
+        );
+        var latDist = Math.min(
+            getDistanceBetweenPointsOnCircle(coord1.lat, coord2.lat, 180),
+            getDistanceBetweenPointsOnCircle(coord2.lat, coord1.lat, 180)
+        );
+        return Math.sqrt(lngDist * lngDist + latDist * latDist);
+    }
+
+    // gets the distance it takes to travel from startPos to endPos by only
+    // incrimenting the position. When the position exceeds maxVal, it skips to
+    // minVal
+    function getDistanceBetweenPointsOnCircle(startPos, endPos, circleLen) {
+        if (startPos < endPos) {
+            return endPos - startPos;
+        } else {
+            return endPos + circleLen - startPos;
+        }
+    }
+
+    // TODO: Rearange backups after removing the server
     function removeServerInfo(req, res) {
         var baseAddress = req.query.baseAddress;
         serverInfoModel
@@ -546,6 +682,7 @@ module.exports = function (app, mongoose) {
             .then(function (server) {
                     if (!server) {
                         console.log("traffic_director:removeServerInfo:Could not find the server to remove")
+                        req.status(500).send();
                         return;
                     }
                     replaceServer(server);

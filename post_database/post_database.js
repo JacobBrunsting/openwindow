@@ -67,7 +67,7 @@ request.post(
         }
     },
     function (err, res) {
-        if (err || !res.body.backupAddr) {
+        if (err || !res.body.backupAddress) {
             console.log("Error connecting to server network");
             if (err) {
                 console.log(err);
@@ -76,7 +76,7 @@ request.post(
             }
             process.exit(1);
         } else {
-            backupAddr = res.body.backupAddr;
+            backupAddr = res.body.backupAddress;
         }
     }
 );
@@ -195,15 +195,16 @@ app.post("/api/backuppost", addNewBackupPost);
 app.post("/api/backupposts", addNewBackupPosts);
 app.post("/api/comment", addComment);
 app.post("/api/settime", setTime);
-app.post("/api/movebackups", moveBackups);
 app.put("/api/post", updatePost);
 app.put("/api/backuppost", updateBackupPost);
+app.put("/api/backupaddress", changeBackupAddress);
 app.get("/api/allsiteposts", getAllPosts);
+app.get("/api/allbackupposts", getAllBackupPosts);
 app.get("/api/post", getPost);
 app.get("/api/posts", getPosts);
 app.get("/api/poststimeleft", getPostsSecondsToShowFor);
 app.get("/api/postrange", getPostRange);
-app.delete("/api/cleanbackups", cleanBackups);
+app.delete("/api/backups", cleanBackups);
 app.delete("/api/deletecomment", deleteComment);
 app.delete("/api/deletepost", deletePost);
 app.delete("/api/backuppost", deleteBackupPost);
@@ -296,6 +297,19 @@ function getAllPosts(req, res) {
         );
 }
 
+function getAllBackupPosts(req, res) {
+    backupPostModel
+        .find()
+        .then(
+            function (reqRes) {
+                res.json(reqRes);
+            },
+            function (err) {
+                res.status(500).send();
+            }
+        );
+}
+
 function getPosts(req, res) {
     var lng = req.query.longitude;
     var lat = req.query.latitude;
@@ -377,8 +391,8 @@ function downvotePost(req, res) {
                 new: true
             },
             function (err, post) {
-                if (err) {
-                    res.status(400).send();
+                if (err || !post) {
+                    res.status(500).send();
                 } else {
                     res.json(post);
                     updatePostBackup(post._id, {
@@ -458,33 +472,6 @@ function setTime(req, res) {
         );
 }
 
-function moveBackups(req, res) {
-    backupPostModel
-        .find()
-        .then(function (posts) {
-                backupPostsToDatabase(posts, req.body.newAddress);
-            },
-            function (err) {
-                console.log("post_database:moveBackups:" + err);
-            });
-}
-
-function backupPostsToDatabase(posts, databaseAddress) {
-    var requestParams = {
-        url: "http://" + backupAddr + "/api/posts",
-        body: posts,
-        json: true
-    };
-    console.log("request params are " + JSON.stringify(requestParams));
-    request.post(requestParams, function (err, reqRes) {
-        if (err) {
-            console.log("post_database:middleware:" + err);
-        } else if (!reqRes || !reqRes.body) {
-            console.log("post_database:middleware:empty response");
-        }
-    });
-}
-
 function updatePost(req, res) {
     sitePostModel
         .findByIdAndUpdate(req.body._id, {
@@ -515,6 +502,22 @@ function updateBackupPost(req, res) {
                     res.status(200).send();
                 }
             });
+}
+
+function changeBackupAddress(req, res) {
+    clearBackups();
+    backupAddr = req.query.newBackupAddress;
+    sitePostModel
+        .find()
+        .then(function (err, posts) {
+            if (err && err !== []) {
+                res.status(500).send();
+                console.log("post_database:changeBackupAddress:" + err);
+            } else {
+                res.status(200).send();
+                addPostsToBackup(posts);
+            }
+        });
 }
 
 function deleteComment(req, res) {
@@ -587,7 +590,7 @@ function deleteExpiredBackupPosts(req, res) {
         function () {
             res.status(200).send();
         },
-        function() {
+        function () {
             res.status(500).send();
         });
 }
@@ -664,13 +667,17 @@ function cleanBackups(req, res) {
         .remove({}, function (err) {
             if (err) {
                 console.log("post_database:cleanBackups:" + err);
-                response.status(500).send();
+                res.status(500).send();
             } else {
-                response.status(200).send();
+                res.status(200).send();
             }
         });
 }
-
+// TODO: Differentiate better between functions that deal with the backups 
+// stored on this database, and the backups of the main data from this server
+// Consider solving this issue by moving the backup api to a different file
+// Also, you should pass the response object into these functions to send back
+// a status code when done
 // ========== Backup Utilities ==========
 
 function updatePostBackup(_id, updatedPostFields) {
@@ -737,7 +744,21 @@ function removeExpiredPostsFromBackup() {
         json: true
     };
     request.delete(requestParams, function (err) {
-        console.log("post_database:removeExpiredPostsFromBackup:" + err);
+        if (err) {
+            console.log("post_database:removeExpiredPostsFromBackup:" + err);
+        }
+    });
+}
+
+function clearBackups() {
+    var requestParams = {
+        url: "http://" + backupAddr + "/api/backups",
+        json: true
+    };
+    request.delete(requestParams, function (err) {
+        if (err) {
+            console.log("post_database:clearBackups:" + err);
+        }
     });
 }
 
