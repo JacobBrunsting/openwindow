@@ -6,8 +6,8 @@ var express = require('express');
 var ipAddr = require('ip').address();
 var mongoose = require('mongoose');
 var ObjectID = mongoose.ObjectID;
-var request = require('request');
 var util = require('util');
+var networkUtils = require('./network_utils');
 
 // ============== Settings ==============
 
@@ -48,7 +48,7 @@ process.argv.forEach(function (val, index) {
     if (index >= 2) {
         var splitVal = val.split("=");
         if (splitVal.length > 1) {
-            switch(splitVal[0]) {
+            switch (splitVal[0]) {
                 case PORT_KEY:
                     settings[PORT_KEY] = parseInt(splitVal[1]);
                     break;
@@ -57,7 +57,7 @@ process.argv.forEach(function (val, index) {
                     break;
                 case BACKUP_POST_MODEL_KEY:
                     settings[BACKUP_POST_MODEL_KEY] = splitVal[1];
-                    break;     
+                    break;
             }
         }
     }
@@ -80,27 +80,24 @@ var backupAddr;
 
 // ========= Add Server to List =========
 // TEMP ONLY - Replace 'localhost:8080' with the actual website name later
-var baseAddress = ipAddr + ":" + settings[PORT_KEY];
-request.post(
-    'http://localhost:8080/director/serverinfo', {
-        json: {
-            baseAddress: baseAddress
-        }
-    },
-    function (err, res) {
-        if (err || !res.body.backupAddress) {
-            console.log("Error connecting to server network");
-            if (err) {
-                console.log(err);
+networkUtils.serverCall('http://localhost:8080/director/serverinfo',
+        networkUtils.POST, {
+            baseAddress: "http://" + ipAddr + ":" + settings[PORT_KEY]
+        })
+    .then(
+        (res) => {
+            if (res.backupAddress) {
+                backupAddr = res.backupAddress;
             } else {
-                console.log("Did not receive backup database address");
+                console.log("did not receive backup database address. exiting.");
+                process.exit(1);
             }
+        },
+        (err) => {
+            console.log("error connecting to server network: " + err);
             process.exit(1);
-        } else {
-            backupAddr = res.body.backupAddress;
         }
-    }
-);
+    );
 
 // =============== Models ================
 
@@ -459,9 +456,9 @@ function addComment(req, res) {
                     res.status(400).send();
                 } else {
                     res.json(post.comments);
-                    updatePostBackup(post._id, {
+                    updatePostBackup({
                         comments: post.comments
-                    });
+                    }, post._id);
                 }
             }
         );
@@ -702,85 +699,63 @@ function cleanBackups(req, res) {
 // ========== Backup Utilities ==========
 
 function updatePostBackup(_id, updatedPostFields) {
-    var requestParams = {
-        url: "http://" + backupAddr + "/api/backuppost",
-        body: {
-            _id: _id,
-            updatedPostFields: updatedPostFields
-        },
-        json: true
-    };
-    request.put(requestParams, function (err) {
-        if (err) {
-            console.log("post_database:updatePostBackup:" + err);
-        }
-    });
+    let body = {
+        _id: _id,
+        updatedPostFields: updatedPostFields
+    }
+    networkUtils.apiCall(backupAddr, "backuppost", networkUtils.PUT, body)
+        .catch(
+            (err) => {
+                console.log("post_database:updatePostBackup:" + err);
+            }
+        );
 }
 
 function addPostToBackup(post) {
-    var requestParams = {
-        url: "http://" + backupAddr + "/api/backuppost",
-        body: post,
-        json: true
-    };
-    console.log("adding post " + JSON.stringify(post));
-    request.post(requestParams, function (err) {
-        if (err) {
-            console.log("post_database:addPostToBackup:" + err);
-        }
-    });
+    networkUtils.apiCall(backupAddr, "backuppost", networkUtils.POST, post)
+        .catch(
+            (err) => {
+                console.log("post_database:addPostToBackup:" + err);
+            }
+        );
 }
 
 function addPostsToBackup(posts) {
-    var requestParams = {
-        url: "http://" + backupAddr + "/api/backupposts",
-        body: posts,
-        json: true
-    };
-    request.post(requestParams, function (err) {
-        if (err) {
-            console.log("post_database:addPostsToBackup:" + err);
-        }
-    });
+    networkUtils.apiCall(backupAddr, "backupposts", networkUtils.POST, posts)
+        .catch(
+            (err) => {
+                console.log("post_database:addPostToBackup:" + err);
+            }
+        );
 }
 
 function removePostFromBackup(_id) {
-    var requestParams = {
-        url: "http://" + backupAddr + "/api/backuppost",
-        qs: {
+    networkUtils.apiCall(backupAddr, "backuppost", networkUtils.DELETE, undefined, {
             id: _id
-        },
-        json: true
-    };
-    request.delete(requestParams, function (err) {
-        if (err) {
-            console.log("post_database:removePostFromBackup:" + err);
-        }
-    });
+        })
+        .catch(
+            (err) => {
+                console.log("post_database:removePostFromBackup:" + err);
+            }
+        );
 }
 
 function removeExpiredPostsFromBackup() {
-    var requestParams = {
-        url: "http://" + backupAddr + "/api/expiredbackupposts",
-        json: true
-    };
-    request.delete(requestParams, function (err) {
-        if (err) {
-            console.log("post_database:removeExpiredPostsFromBackup:" + err);
-        }
-    });
+    networkUtils.apiCall(backupAddr, "expiredbackupposts", networkUtils.DELETE)
+        .catch(
+            (err) => {
+                console.log("post_database:removeExpiredPostsFromBackup:" + err);
+            }
+        );
 }
 
 function clearBackups() {
-    var requestParams = {
-        url: "http://" + backupAddr + "/api/backups",
-        json: true
-    };
-    request.delete(requestParams, function (err) {
-        if (err) {
-            console.log("post_database:clearBackups:" + err);
-        }
-    });
+    networkUtils.apiCall(backupAddr, "backups", networkUtils.DELETE)
+        .catch(
+            (err) => {
+                console.log("post_database:clearBackups:" + err);
+            }
+        );
 }
 
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
