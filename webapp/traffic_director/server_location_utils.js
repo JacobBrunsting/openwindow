@@ -1,6 +1,7 @@
-var FILL_VAL = 1;
+var ServerInfo = require('./classes/server_info');
+var SqrGeoRng = require('./classes/sqr_geo_rng');
 
-// returns the index of insertion, or -1 if it was not inserted
+// returns the index of insertion, or undefined if it was not inserted
 function insertEntryInOrderNoDuplicates(arr, val) {
     for (var splitIndex = 0; splitIndex < arr.length; ++splitIndex) {
         if (arr[splitIndex] >= val) {
@@ -81,29 +82,21 @@ function calculateSquareArea(blockLngs, blockLats, r1, c1, r2, c2) {
 
 // returns {minLng, maxLng, minLat, maxLat}
 // gets the largest rectangle originating from the provided row and col
-function getLargestRectangleInfoFromCoord(blockVals, blockLngs, blockLats,
-    fillVal, row, col) {
-    var largestRectangleInfo = {
-        area: 0,
-        minLng: 0,
-        maxLng: 0,
-        minLat: 0,
-        maxLat: 0
-    };
+function getLargestRectangleInfoFromCoord(blockVals, blockLngs, blockLats, fillVal, row, col) {
+    let largestRectangleInfo;
+    let largestRectangleArea = 0;
     for (var h = 0; row + h < blockVals.length; ++h) {
         for (var w = 0; col + w < blockVals[0].length; ++w) {
             var area = calculateSquareArea(blockLngs, blockLats, row, col, row + h, col + w);
             if (bottomPerimeterContainsVal(blockVals, fillVal, row, col, row + h, col + w)) {
                 break;
             }
-            if (area > largestRectangleInfo.area) {
-                largestRectangleInfo = {
-                    area: area,
-                    minLng: blockLngs[col],
-                    maxLng: blockLngs[col + w + 1],
-                    minLat: blockLats[row],
-                    maxLat: blockLats[row + h + 1]
-                };
+            if (area > largestRectangleArea) {
+                let minLat = blockLats[row];
+                let maxLat = blockLats[row + h + 1];
+                let minLng = blockLngs[col];
+                let maxLng = blockLngs[col + w + 1];
+                largestRectangleInfo = new SqrGeoRng(minLat, maxLat, minLng, maxLng);
             }
         }
     }
@@ -112,24 +105,21 @@ function getLargestRectangleInfoFromCoord(blockVals, blockLngs, blockLats,
 
 // returns {minLng, maxLng, minLat, maxLat}
 function getLargestArea(blockVals, blockLngs, blockLats, fillVal) {
-    var currentLargestAreaParams = {
-        area: 0,
-        minLng: 0,
-        maxLng: 0,
-        minLat: 0,
-        maxLat: 0
-    };
+    let currentLargest = new SqrGeoRng(0, 0, 0, 0);
+    let currentLargestArea = 0;
     for (var r = 0; r < blockVals.length; ++r) {
         for (var c = 0; c < blockVals[0].length; ++c) {
             if (blockVals[r][c] !== fillVal) {
                 var rectangleInfo = getLargestRectangleInfoFromCoord(blockVals, blockLngs, blockLats, fillVal, r, c);
-                if (rectangleInfo.area > currentLargestAreaParams.area) {
-                    currentLargestAreaParams = rectangleInfo;
+                var rectangleArea = rectangleInfo.getArea();
+                if (rectangleArea > currentLargestArea) {
+                    currentLargest = rectangleInfo;
+                    currentLargestArea = rectangleArea;
                 }
             }
         }
     }
-    return currentLargestAreaParams;
+    return currentLargest;
 }
 
 module.exports = {

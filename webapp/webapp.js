@@ -74,6 +74,6 @@ app.use("/director/removeserverinfo", function (req, res) {
 });
 
 var millsBetweenSizeUpdates = 1000 * settings[SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY];
-setInterval(trafficDirector.updateServerSizes, millsBetweenSizeUpdates);
+setInterval(trafficDirector.recalculateServersRanges, millsBetweenSizeUpdates);
 
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);

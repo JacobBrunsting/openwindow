@@ -1,4 +1,5 @@
 var request = require('request');
+var util = require('util');
 
 var serverInfoModel;
 
@@ -39,12 +40,12 @@ function getServerSearchQuery(targLoc, targRad) {
     // longitude wraps around from -180 to 180
     var query = {
         $and: [{
-                maxLatRead: {
+                'readRng.maxLat': {
                     $gte: minValidMaxLat
                 }
             },
             {
-                minLatRead: {
+                'readRng.minLat': {
                     $lte: maxValidMinLat
                 }
             }
@@ -53,12 +54,12 @@ function getServerSearchQuery(targLoc, targRad) {
     if (minValidMaxLng < -180) {
         query.$and.push({
             $or: [{
-                    maxLngRead: {
+                    'readRng.maxLng': {
                         $gte: -180
                     }
                 },
                 {
-                    maxLngRead: {
+                    'readRng.maxLng': {
                         $gte: minValidMaxLng + 180
                     }
                 }
@@ -66,7 +67,7 @@ function getServerSearchQuery(targLoc, targRad) {
         });
     } else {
         query.$and.push({
-            maxLngRead: {
+            'readRng.maxLng': {
                 $gte: minValidMaxLng
             }
         });
@@ -74,12 +75,12 @@ function getServerSearchQuery(targLoc, targRad) {
     if (maxValidMinLng > 180) {
         query.$and.push({
             $or: [{
-                    minLngRead: {
+                    'readRng.minLng': {
                         $lte: 180
                     }
                 },
                 {
-                    minLngRead: {
+                    'readRng.minLng': {
                         $lte: maxValidMinLng - 360
                     }
                 }
@@ -87,7 +88,7 @@ function getServerSearchQuery(targLoc, targRad) {
         });
     } else {
         query.$and.push({
-            minLngRead: {
+            'readRng.minLng': {
                 $lte: maxValidMinLng
             }
         });
@@ -96,8 +97,7 @@ function getServerSearchQuery(targLoc, targRad) {
 }
 
 function redirectRequest(req, res, targLoc, targRad) {
-
-    var query = getServerSearchQuery(targLoc, targRad);``
+    var query = getServerSearchQuery(targLoc, targRad);
     serverInfoModel
         .find(query)
         .then(
@@ -115,15 +115,15 @@ function redirectRequest(req, res, targLoc, targRad) {
  * req:     The mongoose request
  * res:     The mongoose response
  * servers: A list of Objects which each have the address of a server stored in
- *          the baseAddress property
+ *          the baseAddr property
  */
 function sendRequestToServers(req, res, servers) {
     var numCallsRemaining = servers.length;
     var mergedRspBody = {};
     servers.forEach(function (server) {
-        var addr = server.baseAddress;
+        var addr = server.baseAddr;
         var path = req.originalUrl;
-        var url = "http://" + addr + path;
+        var url = addr + path;
         var requestParams = {
             url: url,
             method: req.method,
@@ -133,7 +133,7 @@ function sendRequestToServers(req, res, servers) {
         request(requestParams, function (err, reqRes) {
             numCallsRemaining -= 1;
             if (err) {
-                console.log("request_redirector:redirectRequest:" + err);
+                console.log("request_redirector:sendRequestToServers:" + err);
             } else {
                 // This only does a shallow merge, and isn't supported by
                 // older versions of IE, so you should look varo changing

@@ -24,10 +24,10 @@ var currentColor = [3 * MIN_COLOR_VAL, 3 * MIN_COLOR_VAL, 0];
 
 function drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers) {
     servers.forEach(function (server) {
-        drawServerArea(serverWriteAreaCanvas, server.minLngWrite,
-            server.minLatWrite, server.maxLngWrite, server.maxLatWrite);
-        drawServerArea(serverReadAreaCanvas, server.minLngRead,
-            server.minLatRead, server.maxLngRead, server.maxLatRead);
+        drawServerArea(serverWriteAreaCanvas, server.writeRng.minLng,
+            server.writeRng.minLat, server.writeRng.maxLng, server.writeRng.maxLat);
+        drawServerArea(serverReadAreaCanvas, server.readRng.minLng,
+            server.readRng.minLat, server.readRng.maxLng, server.readRng.maxLat);
         generateNextColor();
     });
 }

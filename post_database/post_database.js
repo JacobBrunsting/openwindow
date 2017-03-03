@@ -5,7 +5,6 @@ var config = require('./config');
 var express = require('express');
 var ipAddr = require('ip').address();
 var mongoose = require('mongoose');
-var ObjectID = mongoose.ObjectID;
 var util = require('util');
 var networkUtils = require('./network_utils');
 
@@ -82,12 +81,12 @@ var backupAddr;
 // TEMP ONLY - Replace 'localhost:8080' with the actual website name later
 networkUtils.serverCall('http://localhost:8080/director/serverinfo',
         networkUtils.POST, {
-            baseAddress: "http://" + ipAddr + ":" + settings[PORT_KEY]
+            baseAddr: "http://" + ipAddr + ":" + settings[PORT_KEY]
         })
     .then(
         (res) => {
-            if (res.backupAddress) {
-                backupAddr = res.backupAddress;
+            if (res.backupAddr) {
+                backupAddr = res.backupAddr;
             } else {
                 console.log("did not receive backup database address. exiting.");
                 process.exit(1);
@@ -215,7 +214,7 @@ app.post("/api/comment", addComment);
 app.post("/api/settime", setTime);
 app.put("/api/post", updatePost);
 app.put("/api/backuppost", updateBackupPost);
-app.put("/api/backupaddress", changeBackupAddress);
+app.put("/api/backupAddr", changebackupAddr);
 app.get("/api/allsiteposts", getAllPosts);
 app.get("/api/allbackupposts", getAllBackupPosts);
 app.get("/api/post", getPost);
@@ -252,7 +251,7 @@ function addNewPosts(req, res) {
     var posts = req.body;
     posts.forEach(addExtraPostProperties);
     sitePostModel
-        .insert(posts)
+        .create(posts)
         .then(
             function (req) {
                 addPostToBackup(posts);
@@ -290,7 +289,7 @@ function addNewBackupPost(req, res) {
 
 function addNewBackupPosts(req, res) {
     backupPostModel
-        .insert(req.body)
+        .create(req.body)
         .then(
             function (req) {
                 res.status(200).send();
@@ -456,9 +455,9 @@ function addComment(req, res) {
                     res.status(400).send();
                 } else {
                     res.json(post.comments);
-                    updatePostBackup({
+                    updatePostBackup(post._id, {
                         comments: post.comments
-                    }, post._id);
+                    });
                 }
             }
         );
@@ -522,19 +521,18 @@ function updateBackupPost(req, res) {
             });
 }
 
-function changeBackupAddress(req, res) {
+function changebackupAddr(req, res) {
     clearBackups();
-    backupAddr = req.query.newBackupAddress;
+    backupAddr = req.query.newbackupAddr;
     sitePostModel
         .find()
-        .then(function (err, posts) {
-            if (err && err !== []) {
-                res.status(500).send();
-                console.log("post_database:changeBackupAddress:" + err);
-            } else {
-                res.status(200).send();
-                addPostsToBackup(posts);
-            }
+        .then(function (posts) {
+            res.status(200).send();
+            addPostsToBackup(posts);
+        })
+        .catch(function (err) {
+            res.status(500).send();
+            console.log("post_database:changeBackupAddr:" + err);
         });
 }
 
@@ -724,7 +722,7 @@ function addPostsToBackup(posts) {
     networkUtils.apiCall(backupAddr, "backupposts", networkUtils.POST, posts)
         .catch(
             (err) => {
-                console.log("post_database:addPostToBackup:" + err);
+                console.log("post_database:addPostsToBackup:" + err);
             }
         );
 }

@@ -1,18 +1,18 @@
 var request = require('request');
 
-function apiCall(serverIp, path, method, body, queries) {
-    return serverCall("http://" + serverIp + "/api/" + path, method, body, queries);
+function apiCall(serverAddress, path, method, body, queries) {
+    return serverCall(serverAddress + "/api/" + path, method, body, queries);
 }
 
 function serverCall(url, method, body, queries) {
+    let requestParams = {
+        url: url,
+        body: body,
+        qs: queries,
+        method: method,
+        json: true
+    }
     return new Promise((resolve, reject) => {
-        let requestParams = {
-            url: url,
-            body: body,
-            qs: queries,
-            method: method,
-            json: true
-        }
         request(requestParams, (err, res) => {
             if (err) {
                 reject(err);

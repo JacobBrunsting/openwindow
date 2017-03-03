@@ -1,4 +1,10 @@
-// ============= Constants ==============
+/**
+ * @file Provides functions to add and remove database servers from the network,
+ * and redirect requests to the correct server based on the location the request
+ * originates from
+ */
+
+var ServerInfo = require('./classes/server_info');
 
 var SERVER_INFO_MODEL_NAME = 'ServerInfo';
 
@@ -12,50 +18,7 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
     // the read distance further.
     // TODO: Resize the 'read' area to match the current posts on the server
     // periodically
-    var serverInfoSchema = mongoose.Schema({
-        // TODO: In all cases, these addresses are just IP's, so rename them to
-        // reflect that
-        baseAddress: {
-            type: String,
-            required: true
-        },
-        backupAddress: {
-            type: String,
-            required: true,
-        },
-        maxLatWrite: {
-            type: Number,
-            required: true
-        },
-        minLatWrite: {
-            type: Number,
-            required: true
-        },
-        maxLngWrite: {
-            type: Number,
-            required: true
-        },
-        minLngWrite: {
-            type: Number,
-            required: true
-        },
-        maxLatRead: {
-            type: Number,
-            required: true
-        },
-        minLatRead: {
-            type: Number,
-            required: true
-        },
-        maxLngRead: {
-            type: Number,
-            required: true
-        },
-        minLngRead: {
-            type: Number,
-            required: true
-        }
-    }, {
+    var serverInfoSchema = mongoose.Schema(ServerInfo.getStructure(), {
         collection: serverInfoCollectionName
     });
 
@@ -64,26 +27,11 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
     var requestRedirector = require('./request_redirector')(serverInfoModel);
     var serverManager = require('./server_manager')(serverInfoModel);
 
-    function updateServerSizes() {
-        serverInfoModel
-            .find()
-            .then(
-                function (servers) {
-                    servers.forEach(function (server) {
-                        serverManager.recalculateServerRanges(server);
-                    });
-                },
-                function (err) {
-                    console.log("traffic_director:server range calculations:" + err);
-                }
-            );
-    }
-
     return {
         redirectRequest: requestRedirector.redirectRequest,
         addServerInfo: serverManager.addServerInfo,
         removeServerInfo: serverManager.removeServerInfo,
         getAllServerInfo: serverManager.getAllServerInfo,
-        updateServerSizes: updateServerSizes
+        recalculateServersRanges: serverManager.recalculateServersRanges
     };
 };
