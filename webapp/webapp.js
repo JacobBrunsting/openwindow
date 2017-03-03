@@ -31,7 +31,7 @@ var app = express();
 var mongoose = require('mongoose');
 var request = require('request');
 var trafficDirector;
-var trafficDirector = require('./public/traffic_director/traffic_director')
+var trafficDirector = require('./traffic_director/traffic_director')
     (app, mongoose, settings[SERVERS_INFO_COLLECTION_KEY]);
 var util = require('util');
 
