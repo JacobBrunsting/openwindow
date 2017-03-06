@@ -75,7 +75,7 @@ angular.module('openwindow').controller('postctrl', [
             var call = "/api/" + getVoteCall(vote);
             var params = $scope.location;
             params.radius = INT_CONSTANTS.POST_RADIUS;
-            $http.post(call, {
+            $http.put(call, {
                     id: $scope.post.id,
                     oldVote: $scope.getPostStatus($scope.post)
                 }, {

@@ -86,7 +86,7 @@ function replaceServer(oldServer) {
     }
 
     function mergeServers(serverToMerge, serverToMergeWith) {
-        var url = getApiCallURL(serverToMerge.backupAddr, "allsiteposts");
+        var url = getApiCallURL(serverToMerge.backupAddr, "allposts");
         request.get(url, function (err, res) {
             if (err) {
                 console.log("server_manager:mergeServers:" + err);
@@ -331,8 +331,8 @@ function changeServerbackupAddr(serverInfo, newbackupAddr) {
 
     function notifyServerOfChange() {
         var requestParams = {
-            url: getApiCallURL(serverInfo.baseAddr, "backupAddr"),
-            qs: {
+            url: getApiCallURL(serverInfo.baseAddr, "backupaddr"),
+            body: {
                 newbackupAddr: newbackupAddr
             },
             json: true

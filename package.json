@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/JacobBrunsting/openwindow#readme",
   "dependencies": {
+    "apidoc": "^0.17.5",
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
     "geolib": "^2.0.22",

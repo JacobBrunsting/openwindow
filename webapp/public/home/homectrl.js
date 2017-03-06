@@ -9,7 +9,7 @@ angular.module('openwindow').controller('homectrl', [
     function ($scope, $http, $location, post_updater, geolocation, post_creator, INT_CONSTANTS) {
         function setupPage(location) {
             $scope.location = location;
-            getAllSitePosts();
+            getAllPosts();
             $scope.addPost = function () {
                 $location.url(geolocation.addLocationToURL('/new', $scope.location));
             }
@@ -20,7 +20,7 @@ angular.module('openwindow').controller('homectrl', [
         }
         geolocation.get(setupPage, onLocationRetrievalFailure);
 
-        function getAllSitePosts() {
+        function getAllPosts() {
             $scope.page = "home";
             var params = $scope.location;
             params.radius = INT_CONSTANTS.POST_RADIUS;

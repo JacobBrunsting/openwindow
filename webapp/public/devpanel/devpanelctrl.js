@@ -4,9 +4,9 @@ angular.module('openwindow').controller('devpanelctrl', [
     '$window',
     'post_creator',
     function ($scope, $http, $window, post_creator) {
-        getAllSitePosts = function () {
+        getAllPosts = function () {
             $scope.page = "dev";
-            $http.get("/api/allsiteposts")
+            $http.get("/api/allposts")
                 .success(function (response) {
                     var posts = response.body;
                     $scope.posts = [];
@@ -28,7 +28,7 @@ angular.module('openwindow').controller('devpanelctrl', [
                 .error(function (error) {});
             $scope.body_box = "";
         }
-        getAllSitePosts();
+        getAllPosts();
         getTimeLeft = function (post) {
             return Math.round(((post.getPostTime() - Date.now()) / 1000) + post.getSecondsToShowFor());
         }
@@ -36,7 +36,7 @@ angular.module('openwindow').controller('devpanelctrl', [
             return timeLeft - Math.round((post.postTime - Date.now()) / 1000);
         }
         $scope.deleteComment = function (post, comment) {
-            $http.delete("/api/deletecomment", {
+            $http.delete("/api/comment", {
                     params: {
                         postId: post.getId(),
                         commentId: comment.getId()
@@ -48,7 +48,7 @@ angular.module('openwindow').controller('devpanelctrl', [
                 .error(function (error) {});
         }
         $scope.deletePost = function (post) {
-            $http.delete("/api/deletepost", {
+            $http.delete("/api/post", {
                     params: {
                         id: post.getId()
                     }

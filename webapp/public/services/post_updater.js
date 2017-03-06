@@ -5,7 +5,7 @@ angular.module('openwindow').service('post_updater', [
     function ($interval, $http, INT_CONSTANTS) {
         this.startUpdatingPosts = function (posts, location, updateInterval, callback) {
             $interval(function (response) {
-                $http.get("/api/poststimeleft", {
+                $http.get("/api/postssecondstoshowfor", {
                         params: {
                             radius: INT_CONSTANTS.POST_RADIUS,
                             longitude: location.longitude,

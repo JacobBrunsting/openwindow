@@ -8,9 +8,9 @@ module.exports = {
     // the path to the database used to store the posts
     mongoDbAddress: 'mongodb://localhost/openwindowdatabase',
 
-    // the name of the site post model, used to generate the name of the 
+    // the name of the post model, used to generate the name of the 
     // collection
-    sitePostModelName: 'SitePost',
+    postModelName: 'Post',
 
     // the name of the backup post model, used to generate the name of the
     // collection
@@ -19,7 +19,7 @@ module.exports = {
     // seconds between removing all expired posts
     secondsBetweenCleanup: 200,
 
-    // the number of seconds to chache responses for
+    // the number of seconds to cache responses for
     cacheExpiryTime: 30,
 
     // the number of seconds to incriment the time when an upvote is received

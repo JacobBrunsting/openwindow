@@ -1,3 +1,11 @@
+/**
+ * @file Runs a database server that provides endpoints to create, modify, and
+ * delete posts from a database. It has two databases, one main database storing
+ * posts, accessed from a large variety of endpoints, and a backup database with
+ * less complex endpoints, used to back up posts from another server in the
+ * network
+ */
+
 // ============== Imports ===============
 
 var bodyParser = require('body-parser');
@@ -18,7 +26,7 @@ var CACHE_EXPIRY_TIME_KEY = "cacheExpiryTime";
 var UPVOTE_INC_KEY = "upvoteInc";
 var DOWNVOTE_INC_KEY = "downvoteInc";
 var INITIAL_SECONDS_TO_SHOW_FOR = "initialSecondsToShowFor";
-var SITE_POST_MODEL_KEY = "sitePostModelName";
+var SITE_POST_MODEL_KEY = "postModelName";
 var BACKUP_POST_MODEL_KEY = "backupPostModelName";
 
 var settings = {};
@@ -30,7 +38,7 @@ settings[CACHE_EXPIRY_TIME_KEY] = 20;
 settings[UPVOTE_INC_KEY] = 80;
 settings[DOWNVOTE_INC_KEY] = -150;
 settings[INITIAL_SECONDS_TO_SHOW_FOR] = 1000;
-settings[SITE_POST_MODEL_KEY] = 'SitePost';
+settings[SITE_POST_MODEL_KEY] = 'Post';
 settings[BACKUP_POST_MODEL_KEY] = 'BackupPost';
 
 for (var key in settings) {
@@ -67,6 +75,10 @@ process.argv.forEach(function (val, index) {
 var UPVOTE = 2;
 var DOWNVOTE = 1;
 var NONE = 0;
+var MAX_LNG = 180;
+var MIN_LNG = -180;
+var MAX_LAT = 90;
+var MIN_LAT = -90;
 
 // ================ Setup ================
 
@@ -83,31 +95,29 @@ networkUtils.serverCall('http://localhost:8080/director/serverinfo',
         networkUtils.POST, {
             baseAddr: "http://" + ipAddr + ":" + settings[PORT_KEY]
         })
-    .then(
-        (res) => {
-            if (res.backupAddr) {
-                backupAddr = res.backupAddr;
-            } else {
-                console.log("did not receive backup database address. exiting.");
-                process.exit(1);
-            }
-        },
-        (err) => {
-            console.log("error connecting to server network: " + err);
+    .then((res) => {
+        if (res.backupAddr) {
+            backupAddr = res.backupAddr;
+        } else {
+            console.log("did not receive backup database address. exiting.");
             process.exit(1);
         }
-    );
+    })
+    .catch((err) => {
+        console.log("error connecting to server network: " + err);
+        process.exit(1);
+    });
 
 // =============== Models ================
 
-var commentSchema = mongoose.Schema({
+const commentSchema = mongoose.Schema({
     body: {
         type: String,
         required: true
     }
 });
 
-var coordinatesSchema = mongoose.Schema({
+const coordinatesSchema = mongoose.Schema({
     type: {
         type: String,
         default: "Point"
@@ -118,7 +128,7 @@ var coordinatesSchema = mongoose.Schema({
     } // first index is lng, second is lat
 });
 
-var postSchema = mongoose.Schema({
+const postSchema = mongoose.Schema({
     title: {
         type: String,
         required: true
@@ -165,33 +175,39 @@ postSchema.index({
     loc: '2dsphere'
 });
 
-var sitePostModel = mongoose.model(settings[SITE_POST_MODEL_KEY], postSchema);
-var backupPostModel = mongoose.model(settings[BACKUP_POST_MODEL_KEY], postSchema);
+const postModel = mongoose.model(settings[SITE_POST_MODEL_KEY], postSchema);
+const backupPostModel = mongoose.model(settings[BACKUP_POST_MODEL_KEY], postSchema);
 
 // ========== Old Post Cleanup ==========
 
-setInterval(function () {
-    removeExpiredPosts(sitePostModel, function () {
-        removeExpiredPostsFromBackup();
-    });
-
-}, 1000 * settings[SECONDS_BETWEEN_CLEANUP_KEY]);
-
-function removeExpiredPosts(model, onSuccess, onFailure) {
-    model
-        .find({})
-        .$where(function () {
-            return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;
-        }).remove(function (err, data) {
-            if (err) {
-                console.log("post_database:removeExpiredPosts:" + err);
-                if (onFailure) {
-                    onFailure();
-                }
-            } else if (onSuccess) {
-                onSuccess();
-            }
+const cleanupInterval = 1000 * settings[SECONDS_BETWEEN_CLEANUP_KEY];
+setInterval(() => {
+    removeExpiredPosts(postModel)
+        .then(() => {
+            removeExpiredPostsFromBackup();
+        })
+        .catch((err) => {
+            console.log("post_database:old post cleanup:" + err);
         });
+
+}, cleanupInterval);
+
+function removeExpiredPosts(model) {
+    return new Promise((resolve, reject) => {
+        model
+            .find()
+            .$where(() => {
+                return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;
+            })
+            .remove((err, data) => {
+                if (err) {
+                    console.log("post_database:removeExpiredPosts:" + err);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+    });
 }
 
 // =========== API Endpoints ============
@@ -204,134 +220,360 @@ app.all('*', function (req, res, next) {
     next();
 });
 
-app.post("/api/upvote", upvotePost);
-app.post("/api/downvote", downvotePost);
-app.post("/api/post", addNewPost);
-app.post("/api/posts", addNewPosts);
-app.post("/api/backuppost", addNewBackupPost);
-app.post("/api/backupposts", addNewBackupPosts);
-app.post("/api/comment", addComment);
-app.post("/api/settime", setTime);
-app.put("/api/post", updatePost);
-app.put("/api/backuppost", updateBackupPost);
-app.put("/api/backupAddr", changebackupAddr);
-app.get("/api/allsiteposts", getAllPosts);
-app.get("/api/allbackupposts", getAllBackupPosts);
+// ----- Main Database Endpoints ------
+
+/**
+ * @api {post} /api/post - Create a new post
+ * @apiParam {Object} post - The post being created
+ * @apiParam {String} post.id
+ * @apiParam {String} post.body
+ * @apiParam {Number} post.posterId
+ * @apiParam {Number} post.postTime
+ * @apiParam {Number} post.secondsToShowFor
+ * @apiParam {Object[]} post.comments
+ * @apiParam {String} post.comments.body
+ * @apiParams {Object} post.loc
+ * @apiParam {String} post.loc.type
+ * @apiParam {Number[]} post.loc.coordinates
+ * @apiParam {String} post.mainDatabaseAddr
+ * @apiParam {String} post.backupDatabaseAddr
+ * @apiParam {mongoose.Types.ObjectId} post._id
+ */
+app.post("/api/post", postPost);
+
+/**
+ * @api {post} /api/posts - Create new posts
+ * @apiParam {Object[]} posts
+ * @apiParam {String} posts.id
+ * @apiParam {String} posts.body
+ * @apiParam {Number} posts.posterId
+ * @apiParam {Number} posts.postTime
+ * @apiParam {Number} posts.secondsToShowFor
+ * @apiParam {Object[]} posts.comments
+ * @apiParam {String} posts.comments.body
+ * @apiParams {Object} posts.loc
+ * @apiParam {String} posts.loc.type
+ * @apiParam {Number[]} posts.loc.coordinates
+ * @apiParam {String} posts.mainDatabaseAddr
+ * @apiParam {String} posts.backupDatabaseAddr
+ * @apiParam {mongoose.Types.ObjectId} posts._id
+ */
+app.post("/api/posts", postPosts);
+
+/**
+ * @api {post} /api/comment - Add a new comment to a post
+ * @apiParam {mongoose.Types.ObjectId} id
+ * @apiParam {String} comment 
+ */
+app.post("/api/comment", postComment);
+
+/**
+ * @api {post} /api/settime - Update the total seconds to show the post for
+ * @apiParam {mongoose.Types.ObjectId} id
+ * @apiParam {Number} newSecondsToShowFor
+ */
+app.post("/api/settime", postSetTime);
+
+/**
+ * @api {get} /api/allposts - Get all posts stored in the main database
+ * @apiSuccess {Object[]} posts
+ * @apiSuccess {String} posts.id
+ * @apiSuccess {String} posts.body
+ * @apiSuccess {Number} posts.posterId
+ * @apiSuccess {Number} posts.postTime
+ * @apiSuccess {Number} posts.secondsToShowFor
+ * @apiSuccess {Object[]} posts.comments
+ * @apiSuccess {String} posts.comments.body
+ * @apiSuccess {Object} posts.loc
+ * @apiSuccess {String} posts.loc.type
+ * @apiSuccess {Number[]} posts.loc.coordinates
+ * @apiSuccess {String} posts.mainDatabaseAddr
+ * @apiSuccess {String} posts.backupDatabaseAddr
+ * @apiSuccess {mongoose.Types.ObjectId} posts._id
+ */
+app.get("/api/allposts", getAllPosts);
+
+/**
+ * @api {get} /api/post - Get a specific post by id
+ * @apiParam {mongoose.Types.ObjectId} id
+ * @apiSuccess {Object[]} post
+ * @apiSuccess {String} post.id
+ * @apiSuccess {String} post.body
+ * @apiSuccess {Number} post.posterId
+ * @apiSuccess {Number} post.postTime
+ * @apiSuccess {Number} post.secondsToShowFor
+ * @apiSuccess {Object[]} post.comments
+ * @apiSuccess {String} post.comments.body
+ * @apiSuccess {Object} post.loc
+ * @apiSuccess {String} post.loc.type
+ * @apiSuccess {Number[]} post.loc.coordinates
+ * @apiSuccess {String} post.mainDatabaseAddr
+ * @apiSuccess {String} post.backupDatabaseAddr
+ * @apiSuccess {mongoose.Types.ObjectId} posts._id
+ */
 app.get("/api/post", getPost);
+
+/**
+ * @api {get} /api/posts - Get all the posts within a certain radius of a set of
+ *  coordinates
+ * @apiParam {Number} longitude - The longitude we want posts from
+ * @apiParam {Number} latitude - The latitude we want posts from
+ * @apiParam {Number} radius - The maximum distance from the provided longitude
+ *  and latitude for a post returned by this endpoint
+ * @apiSuccess {Object[]} post
+ * @apiSuccess {String} post.id
+ * @apiSuccess {String} post.body
+ * @apiSuccess {Number} post.posterId
+ * @apiSuccess {Number} post.postTime
+ * @apiSuccess {Number} post.secondsToShowFor
+ * @apiSuccess {Object[]} post.comments
+ * @apiSuccess {String} post.comments.body
+ * @apiSuccess {Object} post.loc
+ * @apiSuccess {String} post.loc.type
+ * @apiSuccess {Number[]} post.loc.coordinates
+ * @apiSuccess {String} post.mainDatabaseAddr
+ * @apiSuccess {String} post.backupDatabaseAddr
+ * @apiSuccess {mongoose.Types.ObjectId} posts._id
+ */
 app.get("/api/posts", getPosts);
-app.get("/api/poststimeleft", getPostsSecondsToShowFor);
+
+/**
+ * @api {get} /api/postssecondstoshowfor - Get the total time a post should be
+ *  shown for, measured from the time it was first created
+ * @apiSuccess {Object[]} postTimesToShowFor
+ */
+app.get("/api/postssecondstoshowfor", getPostsSecondsToShowFor);
+
+/**
+ * @api {get} /api/postrange - Get the range of posts stored in the main 
+ *  database
+ * @apiSuccess {Object} range
+ * @apiSuccess {Number} range.minLng
+ * @apiSuccess {Number} range.maxLng
+ * @apiSuccess {Number} range.minLat
+ * @apiSuccess {Number} range.maxLat
+ */
 app.get("/api/postrange", getPostRange);
-app.delete("/api/backups", cleanBackups);
-app.delete("/api/deletecomment", deleteComment);
-app.delete("/api/deletepost", deletePost);
+
+/**
+ * @api {put} /api/upvote - Upvote a post
+ * @apiParam {mongoose.Type.ObjectId} id - The id of the upvoted post
+ * @apiParam {number} oldVote - The previous vote on the post
+ */
+app.put("/api/upvote", putUpvote);
+
+/**
+ * @api {put} /api/downvote - Downvote a post
+ * @apiParam {mongoose.Type.ObjectId} id - The id of the downvoted post
+ * @apiParam {number} oldVote - The previous vote on the post
+ */
+app.put("/api/downvote", putDownvote);
+
+/**
+ * @api {put} /api/post - Update a post, undefined post parameters will not be
+ *  modified
+ * @apiParam {Object[]} posts - The posts being created
+ * @apiParam {String} posts.id
+ * @apiParam {String} posts.body
+ * @apiParam {Number} posts.posterId
+ * @apiParam {Number} posts.postTime
+ * @apiParam {Number} posts.secondsToShowFor
+ * @apiParam {Object[]} posts.comments
+ * @apiParam {String} posts.comments.body
+ * @apiParams {Object} posts.loc
+ * @apiParam {String} posts.loc.type
+ * @apiParam {Number[]} posts.loc.coordinates
+ * @apiParam {String} posts.mainDatabaseAddr
+ * @apiParam {String} posts.backupDatabaseAddr
+ * @apiParam {mongoose.Types.ObjectId} posts._id
+ */
+app.put("/api/post", putPost);
+
+/**
+ * @api {put} /api/backupaddr - Update the address of the database server this 
+ *  server backs up to
+ * @apiParam {String} newBackupAddr
+ */
+app.put("/api/backupaddr", putBackupAddr);
+
+/**
+ * @api {delete} /api/comment - Delete a comment from a post
+ * @apiParam {mongoose.Types.ObjectId} postId - The id of the post containing 
+ *  the comment
+ * @apiParam {mongoose.Types.ObjectId} commentId - The id of the comment
+ */
+app.delete("/api/comment", deleteComment);
+
+/**
+ * @api {delete} /api/comment - Delete a post
+ * @apiParam {mongoose.Types.ObjectId} id
+ */
+app.delete("/api/post", deletePost);
+
+// ----- Backup Database Endpoints ------
+
+/**
+ * @api {post} /api/backuppost - Create a new post in the backup database
+ * @apiParam {Object} post - The post being created
+ * @apiParam {String} post.id
+ * @apiParam {String} post.body
+ * @apiParam {Number} post.posterId
+ * @apiParam {Number} post.postTime
+ * @apiParam {Number} post.secondsToShowFor
+ * @apiParam {Object[]} post.comments
+ * @apiParam {String} post.comments.body
+ * @apiParams {Object} post.loc
+ * @apiParam {String} post.loc.type
+ * @apiParam {Number[]} post.loc.coordinates
+ * @apiParam {String} post.mainDatabaseAddr
+ * @apiParam {String} post.backupDatabaseAddr
+ * @apiParam {mongoose.Types.ObjectId} post._id
+ */
+app.post("/api/backuppost", postBackupPost);
+
+/**
+ * @api {post} /api/backupposts - Create new posts in the backup database
+ * @apiParam {Object[]} posts - The posts being created
+ * @apiParam {String} posts.id
+ * @apiParam {String} posts.body
+ * @apiParam {Number} posts.posterId
+ * @apiParam {Number} posts.postTime
+ * @apiParam {Number} posts.secondsToShowFor
+ * @apiParam {Object[]} posts.comments
+ * @apiParam {String} posts.comments.body
+ * @apiParams {Object} posts.loc
+ * @apiParam {String} posts.loc.type
+ * @apiParam {Number[]} posts.loc.coordinates
+ * @apiParam {String} posts.mainDatabaseAddr
+ * @apiParam {String} posts.backupDatabaseAddr
+ * @apiParam {mongoose.Types.ObjectId} posts._id
+ */
+app.post("/api/backupposts", postBackupPosts);
+
+/**
+ * @api {get} /api/allbackupposts - Get all posts stored in the backup database
+ * @apiSuccess {Object[]} posts
+ * @apiSuccess {String} posts.id
+ * @apiSuccess {String} posts.body
+ * @apiSuccess {Number} posts.posterId
+ * @apiSuccess {Number} posts.postTime
+ * @apiSuccess {Number} posts.secondsToShowFor
+ * @apiSuccess {Object[]} posts.comments
+ * @apiSuccess {String} posts.comments.body
+ * @apiSuccess {Object} posts.loc
+ * @apiSuccess {String} posts.loc.type
+ * @apiSuccess {Number[]} posts.loc.coordinates
+ * @apiSuccess {String} posts.mainDatabaseAddr
+ * @apiSuccess {String} posts.backupDatabaseAddr
+ * @apiSuccess {mongoose.Types.ObjectId} posts._id
+ */
+app.get("/api/allbackupposts", getAllBackupPosts);
+
+/**
+ * @api {put} /api/backuppost - Update a post stored in the backup database, 
+ *  undefined post parameters will not be modified
+ * @apiParam {Object[]} posts - The posts being created
+ * @apiParam {String} posts.id
+ * @apiParam {String} posts.body
+ * @apiParam {Number} posts.posterId
+ * @apiParam {Number} posts.postTime
+ * @apiParam {Number} posts.secondsToShowFor
+ * @apiParam {Object[]} posts.comments
+ * @apiParam {String} posts.comments.body
+ * @apiParams {Object} posts.loc
+ * @apiParam {String} posts.loc.type
+ * @apiParam {Number[]} posts.loc.coordinates
+ * @apiParam {String} posts.mainDatabaseAddr
+ * @apiParam {String} posts.backupDatabaseAddr
+ * @apiParam {mongoose.Types.ObjectId} posts._id
+ */
+app.put("/api/backuppost", putBackupPost);
+
+/**
+ * @api {delete} /api/backuppost - Delete a post from the backup database
+ * @apiParam {mongoose.Types.ObjectId} id
+ */
 app.delete("/api/backuppost", deleteBackupPost);
+
+/**
+ * @api {delete} /api/expiredbackupposts - Delete all posts from the backup
+ *  database which have been displayed longer than their secondsToShowFor
+ */
 app.delete("/api/expiredbackupposts", deleteExpiredBackupPosts);
+
+/**
+ * @api {delete} /api/backups - Delete all backups from the backup database
+ */
+app.delete("/api/backups", deleteBackups);
 
 // ========= API Implementation =========
 
-function addNewPost(req, res) {
-    var post = req.body;
+// ----- Main Database Endpoints ------
+
+function postPost(req, res) {
+    let post = req.body;
     addExtraPostProperties(post);
     console.log("adding post " + JSON.stringify(post));
-    sitePostModel
+    postModel
         .create(post)
-        .then(
-            function (req) {
-                addPostToBackup(post);
-                res.status(200).send();
-            },
-            function (err) {
-                console.log("post_database:addNewPost:" + err);
-                res.status(500).send();
-            }
-        );
+        .then(() => {
+            addPostToBackup(post);
+            res.status(200).send();
+        })
+        .catch((err) => {
+            res.status(500).send();
+            console.log("post_database:postPost:" + err);
+        });
 }
 
-function addNewPosts(req, res) {
-    var posts = req.body;
+function postPosts(req, res) {
+    let posts = req.body;
     posts.forEach(addExtraPostProperties);
-    sitePostModel
+    postModel
         .create(posts)
-        .then(
-            function (req) {
-                addPostToBackup(posts);
-                res.status(200).send();
-            },
-            function (err) {
-                console.log("post_database:addNewPosts:" + err);
-                req.status(500).send();
-            }
-        );
-}
-
-function addExtraPostProperties(post) {
-    post.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
-    post.postTime = Date.now();
-    post.mainDatabaseAddr = ipAddr + ":" + settings[PORT_KEY];
-    post.backupDatabaseAddr = backupAddr;
-    post._id = mongoose.Types.ObjectId();
-}
-
-function addNewBackupPost(req, res) {
-    console.log("adding backup post " + JSON.stringify(req.body));
-    backupPostModel
-        .create(req.body)
-        .then(
-            function (req) {
-                res.status(200).send();
-            },
-            function (err) {
-                console.log("post_database:addNewBackupPost:" + err);
-                res.status(500).send();
-            }
-        );
-}
-
-function addNewBackupPosts(req, res) {
-    backupPostModel
-        .create(req.body)
-        .then(
-            function (req) {
-                res.status(200).send();
-            },
-            function (err) {
-                console.log("post_database:addNewPosts:" + err);
-                req.status(500).send();
-            }
-        );
+        .then(() => {
+            addPostToBackup(posts);
+            res.status(200).send();
+        })
+        .catch((err) => {
+            req.status(500).send();
+            console.log("post_database:postPosts:" + err);
+        });
 }
 
 function getAllPosts(req, res) {
-    sitePostModel
+    postModel
         .find()
-        .then(
-            function (reqRes) {
-                res.json(reqRes);
-            },
-            function (err) {
-                res.status(500).send();
-            }
-        );
+        .then((posts) => {
+            res.json(posts);
+        })
+        .catch((err) => {
+            res.status(500).send();
+            console.log("post_database:getAllPosts:" + err);
+        });
 }
 
-function getAllBackupPosts(req, res) {
-    backupPostModel
-        .find()
-        .then(
-            function (reqRes) {
-                res.json(reqRes);
+function getPost(req, res) {
+    postModel
+        .findOne({
+                _id: req.query.id
             },
-            function (err) {
-                res.status(500).send();
+            function (err, data) {
+                if (err || data === null) {
+                    console.log("post_database:getPost:" + JSON.stringify(err));
+                    res.status(500).send();
+                } else {
+                    res.json(data);
+                }
             }
         );
 }
 
 function getPosts(req, res) {
-    var lng = req.query.longitude;
-    var lat = req.query.latitude;
-    var rad = req.query.radius;
-    sitePostModel
+    const lng = req.query.longitude;
+    const lat = req.query.latitude;
+    const rad = req.query.radius;
+    postModel
         .find()
         .where('loc')
         .near({
@@ -341,21 +583,100 @@ function getPosts(req, res) {
             },
             maxDistance: rad
         })
-        .then(
-            function (posts) {
-                res.json(posts);
-            },
-            function (error) {
-                console.log(error);
-                res.json(error);
-            }
-        );
+        .then((posts) => {
+            res.json(posts);
+        })
+        .catch((err) => {
+            res.status(500).send();
+            console.log("post_database:getPosts:" + err);
+        });
 }
 
-function upvotePost(req, res) {
-    var id = req.body.id;
-    var oldVote = req.body.oldVote;
-    var amountToInc;
+var cacheTime = 0;
+var postsSecondsToShowForCache = {};
+
+function getPostsSecondsToShowFor(req, res) {
+    if (Date.now() - cacheTime < settings[CACHE_EXPIRY_TIME_KEY]) {
+        res.json(postsSecondsToShowForCache);
+    }
+    postModel
+        .find()
+        .then((posts) => {
+            postsSecondsToShowForCache = {};
+            posts.forEach(function (post) {
+                postsSecondsToShowForCache[post._id] = post.secondsToShowFor;
+            });
+            res.json(postsSecondsToShowForCache);
+        })
+        .catch((err) => {
+            res.json("post_database:getPostsSecondsToShowFor:" + err);
+        });
+}
+
+function getPostRange(req, res) {
+    let minLng = MAX_LNG;
+    let maxLng = MIN_LNG;
+    let minLat = MAX_LAT;
+    let maxLat = MIN_LAT;
+
+    postModel
+        .find()
+        .then((posts) => {
+            posts.forEach((post) => {
+                updateRange(post);
+            });
+            res.json({
+                minLng: minLng,
+                maxLng: maxLng,
+                minLat: minLat,
+                maxLat: maxLat
+            });
+        })
+        .catch((err) => {
+            res.json("post_database:getPostRange:" + err);
+        });
+
+    function updateRange(post) {
+        const lng = post.loc.coordinates[0];
+        const lat = post.loc.coordinates[1];
+        if (lng < minLng) {
+            minLng = lng;
+        }
+        if (lng > maxLng) {
+            maxLng = lng;
+        }
+        if (lat < minLat) {
+            minLat = lat;
+        }
+        if (lat > maxLat) {
+            maxLat = lat;
+        }
+    }
+}
+
+function postComment(req, res) {
+    const updateObj = {
+        $push: {
+            comments: req.body.comment
+        }
+    };
+    updatePostFromUpdateObj(req.body.id, updateObj, req, res);
+}
+
+function postSetTime(req, res) {
+    const updateObj = {
+        $set: {
+            secondsToShowFor: req.body.newSecondsToShowFor
+        }
+    };
+    updatePostFromUpdateObj(req.body.id, updateObj, req, res);
+}
+
+function putUpvote(req, res) {
+    const id = req.body.id;
+    const oldVote = req.body.oldVote;
+
+    let amountToInc;
     if (oldVote === UPVOTE) {
         amountToInc = -settings[UPVOTE_INC_KEY];
     } else if (oldVote === DOWNVOTE) {
@@ -363,33 +684,20 @@ function upvotePost(req, res) {
     } else {
         amountToInc = settings[UPVOTE_INC_KEY];
     }
-    sitePostModel
-        .findByIdAndUpdate({
-                _id: id
-            }, {
-                $inc: {
-                    secondsToShowFor: amountToInc
-                }
-            }, {
-                new: true
-            },
-            function (err, post) {
-                if (err) {
-                    res.status(400).send();
-                } else {
-                    res.json(post);
-                    updatePostBackup(post._id, {
-                        secondsToShowFor: post.secondsToShowFor
-                    });
-                }
-            }
-        );
+
+    const updateObj = {
+        $inc: {
+            secondsToShowFor: amountToInc
+        }
+    };
+    updatePostFromUpdateObj(id, updateObj, req, res);
 }
 
-function downvotePost(req, res) {
-    var id = req.body.id;
-    var oldVote = req.body.oldVote;
-    var amountToInc;
+function putDownvote(req, res) {
+    const id = req.body.id;
+    const oldVote = req.body.oldVote;
+
+    let amountToInc;
     if (oldVote === DOWNVOTE) {
         amountToInc = -settings[DOWNVOTE_INC_KEY];
     } else if (oldVote === UPVOTE) {
@@ -397,179 +705,51 @@ function downvotePost(req, res) {
     } else {
         amountToInc = settings[DOWNVOTE_INC_KEY];
     }
-    sitePostModel
-        .findByIdAndUpdate({
-                _id: id
-            }, {
-                $inc: {
-                    secondsToShowFor: amountToInc
-                }
-            }, {
-                new: true
-            },
-            function (err, post) {
-                if (err || !post) {
-                    res.status(500).send();
-                } else {
-                    res.json(post);
-                    updatePostBackup(post._id, {
-                        secondsToShowFor: post.secondsToShowFor
-                    });
-                }
-            }
-        );
+
+    const updateObj = {
+        $inc: {
+            secondsToShowFor: amountToInc
+        }
+    };
+    updatePostFromUpdateObj(id, updateObj, req, res);
 }
 
-function getPost(req, res) {
-    var id = req.query.id;
-    sitePostModel
-        .findOne({
-                _id: id
-            },
-            function (err, data) {
-                if (err || data === null) {
-                    console.log("error is " + JSON.stringify(err));
-                    res.status(400).send();
-                } else {
-                    res.json(data);
-                }
-            }
-        );
+function putPost(req, res) {
+    const updateObj = {
+        $set: req.body.updatedPostFields
+    };
+    updatePostFromUpdateObj(req.body._id, updateObj, req, res);
 }
 
-function addComment(req, res) {
-    var id = req.body.id;
-    var comment = req.body.comment;
-    sitePostModel
-        .findByIdAndUpdate({
-                _id: id
-            }, {
-                $push: {
-                    comments: comment
-                }
-            }, {
-                new: true
-            },
-            function (err, post) {
-                if (err || post === null) {
-                    res.status(400).send();
-                } else {
-                    res.json(post.comments);
-                    updatePostBackup(post._id, {
-                        comments: post.comments
-                    });
-                }
-            }
-        );
-}
-
-function setTime(req, res) {
-    var id = req.body.id;
-    var newSecondsToShowFor = req.body.newSecondsToShowFor;
-    sitePostModel
-        .findByIdAndUpdate({
-                _id: id
-            }, {
-                $set: {
-                    secondsToShowFor: newSecondsToShowFor
-                }
-            }, {
-                new: true
-            },
-            function (err, post) {
-                if (err || post === null) {
-                    res.status(400).send();
-                } else {
-                    res.json(post);
-                    updatePostBackup(post._id, {
-                        secondsToShowFor: post.secondsToShowFor
-                    });
-                }
-            }
-        );
-}
-
-function updatePost(req, res) {
-    sitePostModel
-        .findByIdAndUpdate(req.body._id, {
-                $set: req.body.updatedPostFields
-            },
-            function (err, post) {
-                if (err) {
-                    console.log("post_database:updatePost:" + err);
-                    res.status(500).send();
-                } else {
-                    res.status(200).send();
-                    updatePostBackup(post._id,
-                        req.body.updatedPostFields);
-                }
-            });
-}
-
-function updateBackupPost(req, res) {
-    backupPostModel
-        .findByIdAndUpdate(req.body._id, {
-                $set: req.body.updatedPostFields
-            },
-            function (err) {
-                if (err) {
-                    console.log("post_database:updateBackupPost:" + err);
-                    res.status(500).send();
-                } else {
-                    res.status(200).send();
-                }
-            });
-}
-
-function changebackupAddr(req, res) {
+function putBackupAddr(req, res) {
     clearBackups();
-    backupAddr = req.query.newbackupAddr;
-    sitePostModel
+    backupAddr = req.body.newbackupAddr;
+    postModel
         .find()
-        .then(function (posts) {
+        .then((posts) => {
             res.status(200).send();
             addPostsToBackup(posts);
         })
-        .catch(function (err) {
+        .catch((err) => {
             res.status(500).send();
             console.log("post_database:changeBackupAddr:" + err);
         });
 }
 
 function deleteComment(req, res) {
-    var postId = req.query.postId;
-    var commentId = req.query.commentId;
-    sitePostModel
-        .findByIdAndUpdate({
-                _id: postId
-            }, {
-                $pull: {
-                    'comments': {
-                        '_id': commentId
-                    }
-                }
-            }, {
-                new: true
-            },
-            function (err, post) {
-                if (err || post === null) {
-                    if (err) {
-                        console.log("post_database:deleteComment:" + err);
-                    }
-                    res.status(500).send();
-                } else {
-                    res.json(post);
-                    updatePostBackup(post._id, {
-                        comments: post.comments
-                    });
-                }
+    const updateObj = {
+        $pull: {
+            'comments': {
+                '_id': req.query.commentId
             }
-        );
+        }
+    };
+    updatePostFromUpdateObj(req.query.postId, updateObj, req, res);
 }
 
 function deletePost(req, res) {
     var id = req.query.id;
-    sitePostModel
+    postModel
         .find({
             _id: id
         }).remove(
@@ -584,8 +764,59 @@ function deletePost(req, res) {
         );
 }
 
+// ----- Backup Database Endpoints ------
+
+function postBackupPost(req, res) {
+    backupPostModel
+        .create(req.body)
+        .then(() => {
+            res.status(200).send();
+        })
+        .catch((err) => {
+            res.status(500).send();
+            console.log("post_database:postBackupPost:" + err);
+        });
+}
+
+function postBackupPosts(req, res) {
+    backupPostModel
+        .create(req.body)
+        .then(() => {
+            res.status(200).send();
+        })
+        .catch((err) => {
+            req.status(500).send();
+            console.log("post_database:postPosts:" + err);
+        });
+}
+
+function getAllBackupPosts(req, res) {
+    backupPostModel
+        .find()
+        .then((reqRes) => {
+            res.json(reqRes);
+        })
+        .catch((err) => {
+            res.status(500).send();
+            console.log("post_database:getAllBackupPosts:" + err);
+        });
+}
+
+function putBackupPost(req, res) {
+    backupPostModel
+        .findByIdAndUpdate(req.body._id, {
+            $set: req.body.updatedPostFields
+        })
+        .then(() => {
+            res.status(200).send();
+        })
+        .catch((err) => {
+            console.log("post_database:putBackupPost:" + err);
+            res.status(500).send();
+        });
+}
+
 function deleteBackupPost(req, res) {
-    console.log("deleting backup post");
     var id = req.query.id;
     backupPostModel
         .find({
@@ -602,93 +833,63 @@ function deleteBackupPost(req, res) {
 }
 
 function deleteExpiredBackupPosts(req, res) {
-    removeExpiredPosts(backupPostModel,
-        function () {
+    removeExpiredPosts(backupPostModel)
+        .then(() => {
             res.status(200).send();
-        },
-        function () {
+        })
+        .catch((err) => {
             res.status(500).send();
+            console.log("post_database:deleteExpiredBackupPosts:" + err);
         });
 }
 
-// TODO: Does this actually do stuff?
-var cacheTime = 0;
-var postsSecondsToShowForCache = {};
-
-function getPostsSecondsToShowFor(req, res) {
-    if (Date.now() - cacheTime < settings[CACHE_EXPIRY_TIME_KEY]) {
-        res.json(postsSecondsToShowForCache);
-    }
-    sitePostModel
-        .find()
-        .then(
-            function (posts) {
-                postsSecondsToShowForCache = {};
-                posts.forEach(function (post) {
-                    postsSecondsToShowForCache[post._id] = post.secondsToShowFor;
-                });
-                res.json(postsSecondsToShowForCache);
-            },
-            function (error) {
-                res.json(error);
-            }
-        );
-}
-
-function getPostRange(req, res) {
-    var minLng = 180;
-    var maxLng = -180;
-    var minLat = 90;
-    var maxLat = -90;
-
-    sitePostModel
-        .find()
-        .then(
-            function (posts) {
-                posts.forEach(function (post) {
-                    updateRange(post);
-                });
-                res.json({
-                    minLng: minLng,
-                    maxLng: maxLng,
-                    minLat: minLat,
-                    maxLat: maxLat
-                });
-            },
-            function (error) {
-                res.json(error);
-            }
-        );
-
-    function updateRange(post) {
-        var lng = post.loc.coordinates[0];
-        var lat = post.loc.coordinates[1];
-        if (lng < minLng) {
-            minLng = lng;
-        }
-        if (lng > maxLng) {
-            maxLng = lng;
-        }
-        if (lat < minLat) {
-            minLat = lat;
-        }
-        if (lat > maxLat) {
-            maxLat = lat;
-        }
-    }
-}
-
-function cleanBackups(req, res) {
+function deleteBackups(req, res) {
     backupPostModel
         .remove({}, function (err) {
             if (err) {
-                console.log("post_database:cleanBackups:" + err);
+                console.log("post_database:deleteBackups:" + err);
                 res.status(500).send();
             } else {
                 res.status(200).send();
             }
         });
 }
+
+// ====== Post Management Utilities =====
+
+function addExtraPostProperties(post) {
+    post.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
+    post.postTime = Date.now();
+    post.mainDatabaseAddr = ipAddr + ":" + settings[PORT_KEY];
+    post.backupDatabaseAddr = backupAddr;
+    post._id = mongoose.Types.ObjectId();
+}
+
+/**
+ * Update an individual post, updating the main database, and the backup 
+ * database
+ * @param {mongoose.Types.ObjectId} id - id of the post being updated
+ * @param {Object} updateInfo - Mongoose update object
+ */
+function updatePostFromUpdateObj(id, updateInfo, req, res) {
+    postModel
+        .findByIdAndUpdate({
+                _id: id
+            },
+            updateInfo, {
+                new: true
+            }
+        )
+        .then((post) => {
+            res.status(200).send();
+            updatePostBackup(id, post);
+        })
+        .catch((err) => {
+            res.status(500).send();
+            console.log("post_database:updatePostFromUpdateObj:" + err);
+        });
+}
+
 // TODO: Differentiate better between functions that deal with the backups 
 // stored on this database, and the backups of the main data from this server
 // Consider solving this issue by moving the backup api to a different file

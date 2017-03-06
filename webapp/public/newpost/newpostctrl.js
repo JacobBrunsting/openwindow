@@ -7,14 +7,14 @@ angular.module('openwindow').controller('newpostctrl', [
     function ($scope, $location, $http, post_creator, geolocation) {
         var posterLocation;
         $scope.location = geolocation.getLocationFromLocationService($location);
-        $scope.createNewSitePost = function () {
-            var sitePost = post_creator.createPostForServer($scope.title,
+        $scope.createNewPost = function () {
+            var post = post_creator.createPostForServer($scope.title,
                 $scope.body,
                 $scope.location.latitude,
                 $scope.location.longitude);
             $scope.title = '';
             $scope.body = '';
-            $http.post("/api/post", sitePost, {
+            $http.post("/api/post", post, {
                     params: $scope.location
                 })
                 .success(
