@@ -1,3 +1,10 @@
+/**
+ * @file Runs a webapp that allows users to anonymously create, comment on, and
+ * vote on posts in their geographic area. These posts area stored on a network
+ * of database servers, and each post is backed up so that is not lost in the 
+ * event of a server failure or disconnection.
+ */
+
 // ============== Settings ==============
 
 var config = require('./config');
@@ -30,7 +37,6 @@ var express = require('express');
 var app = express();
 var mongoose = require('mongoose');
 var request = require('request');
-var trafficDirector;
 var trafficDirector = require('./traffic_director/traffic_director')
     (app, mongoose, settings[SERVERS_INFO_COLLECTION_KEY]);
 var util = require('util');
@@ -46,6 +52,9 @@ app.use(bodyParser.urlencoded({
 }));
 app.set('json spaces', 1);
 app.use(express.static('./public'));
+
+var millsBetweenSizeUpdates = 1000 * settings[SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY];
+setInterval(trafficDirector.recalculateServersRanges, millsBetweenSizeUpdates);
 
 // ============= Endpoints ==============
 
@@ -72,8 +81,5 @@ app.use("/director/allserverinfo", function (req, res) {
 app.use("/director/removeserverinfo", function (req, res) {
     trafficDirector.removeServerInfo(req, res);
 });
-
-var millsBetweenSizeUpdates = 1000 * settings[SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY];
-setInterval(trafficDirector.recalculateServersRanges, millsBetweenSizeUpdates);
 
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);

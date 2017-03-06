@@ -16,8 +16,6 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
     // old server, and write new ones to the new server until all the posts from
     // that area have been removed from the old server, meaning we can restrict
     // the read distance further.
-    // TODO: Resize the 'read' area to match the current posts on the server
-    // periodically
     var serverInfoSchema = mongoose.Schema(ServerInfo.getStructure(), {
         collection: serverInfoCollectionName
     });

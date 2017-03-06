@@ -1,4 +1,5 @@
 angular.module('openwindow').service('post_creator', [function () {
+    // TODO: Use classes instead of functions
     this.createPostForServer = function (title, body, latitude, longitude) {
         return {
             title: title,

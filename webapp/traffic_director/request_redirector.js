@@ -1,44 +1,71 @@
-var request = require('request');
-var util = require('util');
+/**
+ * @file Provides a redirectRequest function which will take a request that 
+ * retrieves or modifies post(s) from a geographic area or location, and directs
+ * that request to the correct server
+ */
 
+const request = require('request');
+const util = require('util');
 var serverInfoModel;
+
+const MAX_LNG = 180;
+const MIN_LNG = -180;
+const MAX_LAT = 90;
+const MIN_LAT = -90;
 
 /**
  * Get the search query that should be used to find the servers the request 
  * should be routed to
- * targLoc ({longitude, latitude}): The center of the search range
- * targRad (Number):                The search radius in meters
- * returns: An object that should be passed to the 'find' function of a 
- *          mongoose query
+ * @param {Object} targLoc - The center of the search range
+ * @param {number} targLoc.latitude
+ * @param {number} targLoc.longitude
+ * @param {number} targRad - The query radius in meters (a negative radius 
+ *  redirects to all available servers)
+ * @returns {Object} A mongoose query object
  */
 function getServerSearchQuery(targLoc, targRad) {
-    if (!targRad || targRad == 0) {
+    if (!targRad || targRad < 0) {
         return {};
     }
-    var lat = Number(targLoc.latitude);
-    var lng = Number(targLoc.longitude);
-    var oneLatDegInMeters = Math.cos(lat * Math.PI / 180) * 111000;
-    var oneLngDegInMeters = Math.cos(lng * Math.PI / 180) * 111000;
 
+    const lat = Number(targLoc.latitude);
+    const lng = Number(targLoc.longitude);
+    const oneLatDegInMeters = Math.cos(lat * Math.PI / 180) * 111000;
+    const oneLngDegInMeters = Math.cos(lng * Math.PI / 180) * 111000;
+
+    // To avoid creating complex queries, we make a query to find all the
+    // servers storing posts within the square surrounding the query location 
+    // instead of finding all servers within the circular radius. This may 
+    // result in a some extra calls to servers that do not fall within the
+    // circular search radius, but allows for much simpler queries.
+
+    let minValidMaxLat;
+    let maxValidMinLat;
     if (oneLatDegInMeters > 0) {
-        var locationRadInLatDeg = Number(targRad) / oneLatDegInMeters;
-        var minValidMaxLat = lat - locationRadInLatDeg;
-        var maxValidMinLat = lat + locationRadInLatDeg;
+        const locationRadInLatDeg = Number(targRad) / oneLatDegInMeters;
+        minValidMaxLat = lat - locationRadInLatDeg;
+        maxValidMinLat = lat + locationRadInLatDeg;
     } else {
-        var minValidMaxLat = -90;
-        var maxValidMinLat = 90;
+        minValidMaxLat = MIN_LAT;
+        maxValidMinLat = MAX_LAT;
     }
+
+    let minValidMaxLng;
+    let maxValidMinLng;
     if (oneLngDegInMeters > 0) {
-        var locationRadInLngDeg = Number(targRad) / oneLngDegInMeters;
-        var minValidMaxLng = lng - locationRadInLngDeg;
-        var maxValidMinLng = lng + locationRadInLngDeg;
+        const locationRadInLngDeg = Number(targRad) / oneLngDegInMeters;
+        minValidMaxLng = lng - locationRadInLngDeg;
+        maxValidMinLng = lng + locationRadInLngDeg;
     } else {
-        var minValidMaxLat = -180;
-        var maxValidMinLng = 180;
+        minValidMaxLat = MIN_LNG;
+        maxValidMinLng = MAX_LNG;
     }
-    // we add latitude to the query immediately, but not longitude, because
-    // longitude wraps around from -180 to 180
-    var query = {
+
+    // Now that we have found a square search area, we construct a query to find
+    // all servers that may possibly store posts from within that square region
+
+    // Find all servers within the correct latitude
+    let query = {
         $and: [{
                 'readRng.maxLat': {
                     $gte: minValidMaxLat
@@ -51,16 +78,21 @@ function getServerSearchQuery(targLoc, targRad) {
             }
         ]
     };
-    if (minValidMaxLng < -180) {
+
+    // Find all servers storing posts from a longitude greater than the 
+    // minimum search area longitude
+    if (minValidMaxLng < MIN_LNG) {
+        // We need two cases here because our search area crosses the wraparound
+        // point for the longitude
         query.$and.push({
             $or: [{
                     'readRng.maxLng': {
-                        $gte: -180
+                        $gte: MIN_LNG
                     }
                 },
                 {
                     'readRng.maxLng': {
-                        $gte: minValidMaxLng + 180
+                        $gte: minValidMaxLng + (MAX_LNG - MIN_LNG)
                     }
                 }
             ]
@@ -72,16 +104,21 @@ function getServerSearchQuery(targLoc, targRad) {
             }
         });
     }
-    if (maxValidMinLng > 180) {
+
+    // Find all servers storing posts from a latitude less than the maximum
+    // search area latitude
+    if (maxValidMinLng > MAX_LNG) {
+        // We need two cases here because our search area crosses the wraparound
+        // point for the longitude
         query.$and.push({
             $or: [{
                     'readRng.minLng': {
-                        $lte: 180
+                        $lte: MAX_LNG
                     }
                 },
                 {
                     'readRng.minLng': {
-                        $lte: maxValidMinLng - 360
+                        $lte: maxValidMinLng - (MAX_LNG - MIN_LNG)
                     }
                 }
             ]
@@ -93,51 +130,56 @@ function getServerSearchQuery(targLoc, targRad) {
             }
         });
     }
+
     return query;
 }
 
+/**
+ * Redirect a location-based request to the correct database servers
+ * @param {Object} req - The Express request object
+ * @param {Object} res - The Express response object
+ * @param {Object} targLoc - The target location for the query
+ * @param {number} targLoc.latitude
+ * @param {number} targLoc.longitude
+ * @param {number} targRad - The query radius in meters (a negative radius 
+ *  redirects to all available servers)
+ */
 function redirectRequest(req, res, targLoc, targRad) {
     var query = getServerSearchQuery(targLoc, targRad);
     serverInfoModel
         .find(query)
-        .then(
-            function (servers) {
-                sendRequestToServers(req, res, servers);
-            },
-            function (err) {
-                console.log("request_redirector:redirectRequest:" + err);
-            }
-        );
+        .then((servers) => {
+            sendRequestToServers(req, res, servers);
+        })
+        .catch((err) => {
+            console.log("request_redirector:redirectRequest:" + err);
+        });
 }
 
 /**
- * Makes and merges a request to a list of servers
- * req:     The mongoose request
- * res:     The mongoose response
- * servers: A list of Objects which each have the address of a server stored in
- *          the baseAddr property
+ * Make a request to multiple servers, and then merge the response
+ * @param {Object} req - The Express request object
+ * @param {Object} res - The Express response object
+ * @param {Object[]} - The servers to redirect the request to, where each server
+ *  was retrieved from the server database
  */
 function sendRequestToServers(req, res, servers) {
-    var numCallsRemaining = servers.length;
-    var mergedRspBody = {};
-    servers.forEach(function (server) {
-        var addr = server.baseAddr;
-        var path = req.originalUrl;
-        var url = addr + path;
-        var requestParams = {
-            url: url,
-            method: req.method,
-            body: req.body,
-            json: true
-        };
-        request(requestParams, function (err, reqRes) {
+    let numCallsRemaining = servers.length;
+    let mergedRspBody = {};
+
+    var requestParams = {
+        method: req.method,
+        body: req.body,
+        json: true
+    };
+
+    servers.forEach((server) => {
+        requestParams.url = server.baseAddr + req.originalUrl;
+        request(requestParams, (err, reqRes) => {
             numCallsRemaining -= 1;
             if (err) {
                 console.log("request_redirector:sendRequestToServers:" + err);
             } else {
-                // This only does a shallow merge, and isn't supported by
-                // older versions of IE, so you should look varo changing
-                // potentially
                 Object.assign(mergedRspBody, reqRes.body);
             }
             if (numCallsRemaining === 0) {
