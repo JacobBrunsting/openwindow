@@ -24,7 +24,7 @@ module.exports = class SqrGeoRng {
         this.minLat = Math.min(rangeToEncompass.minLat, this.minLat);
         this.maxLat = Math.max(rangeToEncompass.maxLat, this.maxLat);
         this.minLng = Math.min(rangeToEncompass.minLng, this.minLng);
-        this.maxLng = Math.max(rangeToEncompass.maxLng);
+        this.maxLng = Math.max(rangeToEncompass.maxLng, this.maxLng);
     }
 
     /**
