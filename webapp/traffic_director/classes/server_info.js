@@ -30,6 +30,17 @@ module.exports = class ServerInfo {
     }
 
     /**
+     * Expand the read/write area of this server to encompass their original
+     * areas, along with the area of the provided server
+     * @param {ServerInfo} serverToEncompass - The server this server will be 
+     *  expanding to contain
+     */
+    expandToContainOther(serverToEncompass) {
+        this.writeRng.expandToEncompassOther(serverToEncompass.writeRng);
+        this.readRng.expandToEncompassOther(serverToEncompass.readRng);
+    }
+
+    /**
      * Convert a javascript object with the same fields as a ServerInfo into a 
      * ServerInfo object
      * @param {Object} obj

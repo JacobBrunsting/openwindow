@@ -16,6 +16,27 @@ module.exports = class SqrGeoRng {
     }
 
     /**
+     * Expand the range to encompass the provided range
+     * @param {SqrGeoRng} rangeToEncompass - The range this range will be
+     *  expanded to contain
+     */
+    expandToContainOther(rangeToEncompass) {
+        this.minLat = Math.min(rangeToEncompass.minLat, this.minLat);
+        this.maxLat = Math.max(rangeToEncompass.maxLat, this.maxLat);
+        this.minLng = Math.min(rangeToEncompass.minLng, this.minLng);
+        this.maxLng = Math.max(rangeToEncompass.maxLng);
+    }
+
+    /**
+     * Preforms a deep comparison with another SqrGeoRng
+     * @param {SqrGeoRng} other - The range to compare with
+     */
+    equals(other) {
+        return this.minLat === other.minLat && this.maxLat === other.maxLat &&
+               this.minLng === other.minLng && this.maxLng === other.maxLng;
+    }
+
+    /**
      * Convert a javascript object with the same fields as a SqrGeoRng into a 
      * SqrGeoRng object
      * @param {Object} obj
@@ -30,6 +51,27 @@ module.exports = class SqrGeoRng {
         let minLng = obj.minLng;
         let maxLng = obj.maxLng;
         return new SqrGeoRng(minLat, maxLat, minLng, maxLng);
+    }
+
+    /**
+     * Convert an array javascript objects with the same fields as a SqrGeoRng 
+     * into an array of SqrGeoRng object
+     * @param {Object[]} objs
+     * @param {number} objs.minLat
+     * @param {number} objs.maxLat
+     * @param {number} objs.minLng
+     * @param {number} objs.maxLng
+     */
+    static convertObjsToClasses(objs) {
+        let newArr = [];
+        objs.forEach((obj) => {
+            let minLat = obj.minLat;
+            let maxLat = obj.maxLat;
+            let minLng = obj.minLng;
+            let maxLng = obj.maxLng;
+            newArr.push(new SqrGeoRng(minLat, maxLat, minLng, maxLng));
+        });
+        return newArr;
     }
 
     /**

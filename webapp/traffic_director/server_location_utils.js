@@ -24,107 +24,52 @@ function splitAtLatitude(blockVals, blockLats, latitude) {
     }
 }
 
-function splitAtLongitude(blockVals, blockLngs, longitude) {
-    var insertionIndex = insertEntryInOrderNoDuplicates(blockLngs, longitude);
-    if (insertionIndex !== -1) {
-        for (var i = 0; i < blockVals.length; ++i) {
-            blockVals[i].splice(insertionIndex, 0, blockVals[i][insertionIndex - 1]);
-        }
+function getCenterOfRange(geoRange) {
+    var lngRange = getDistanceBetweenPointsOnCircle(geoRange.minLng, geoRange.maxLng, 360);
+    var latRange = getDistanceBetweenPointsOnCircle(geoRange.minLat, geoRange.maxLat, 180);
+    var center = {
+        lng: geoRange.minLng + lngRange / 2,
+        lat: geoRange.minLat + latRange / 2
+    };
+    if (center.lng > 180) {
+        center.lng -= 360;
+    } else if (center.lng < -180) {
+        center.lng += 360;
     }
+    if (center.lat > 90) {
+        center.lat -= 180;
+    } else if (center.lat < -90) {
+        center.lat += 180;
+    }
+    return center;
 }
 
-function fillRange(blockVals, blockLngs, blockLats, minLng, maxLng,
-    minLat, maxLat, fillVal) {
-    var minLatIndex = -1;
-    var maxLatIndex = -1;
-    for (var i = 0; i < blockLats.length; ++i) {
-        if (minLatIndex === -1 && minLat <= blockLats[i]) {
-            minLatIndex = i;
-        } else if (maxLatIndex === -1 && maxLat <= blockLats[i]) {
-            maxLatIndex = i - 1;
-        }
-    }
-
-    var minLngIndex = -1;
-    var maxLngIndex = -1;
-    for (var i = 0; i < blockLngs.length; ++i) {
-        if (minLngIndex === -1 && minLng <= blockLngs[i]) {
-            minLngIndex = i;
-        } else if (maxLngIndex === -1 && maxLng <= blockLngs[i]) {
-            maxLngIndex = i - 1;
-        }
-    }
-    for (var lat = minLatIndex; lat <= maxLatIndex; ++lat) {
-        for (var lng = minLngIndex; lng <= maxLngIndex; ++lng) {
-            blockVals[lat][lng] = fillVal;
-        }
-    }
+// coordinates must be of the form {lng:Number, lat:Number}
+function getDistanceBetweenCoords(coord1, coord2) {
+    var lngDist = Math.min(
+        getDistanceBetweenPointsOnCircle(coord1.lng, coord2.lng, 360),
+        getDistanceBetweenPointsOnCircle(coord2.lng, coord1.lng, 360)
+    );
+    var latDist = Math.min(
+        getDistanceBetweenPointsOnCircle(coord1.lat, coord2.lat, 180),
+        getDistanceBetweenPointsOnCircle(coord2.lat, coord1.lat, 180)
+    );
+    return Math.sqrt(lngDist * lngDist + latDist * latDist);
 }
 
-function bottomPerimeterContainsVal(blockVals, targVal, r1, c1, r2, c2) {
-    for (var c = c1; c <= c2; ++c) {
-        if (blockVals[r2][c] === targVal) {
-            return true;
-        }
+// gets the distance it takes to travel from startPos to endPos by only
+// incrimenting the position. When the position exceeds maxVal, it skips to
+// minVal
+function getDistanceBetweenPointsOnCircle(startPos, endPos, circleLen) {
+    if (startPos < endPos) {
+        return endPos - startPos;
+    } else {
+        return endPos + circleLen - startPos;
     }
-    for (var r = r1; r <= r2; ++r) {
-        if (blockVals[r][c2] === targVal) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// TODO: Clean up this mess, stop using 'r' and 'c', us 'lng' and 'lat'
-function calculateSquareArea(blockLngs, blockLats, r1, c1, r2, c2) {
-    return (blockLngs[c2 + 1] - blockLngs[c1]) * (blockLats[r2 + 1] - blockLats[r1]);
-}
-
-// returns {minLng, maxLng, minLat, maxLat}
-// gets the largest rectangle originating from the provided row and col
-function getLargestRectangleInfoFromCoord(blockVals, blockLngs, blockLats, fillVal, row, col) {
-    let largestRectangleInfo;
-    let largestRectangleArea = 0;
-    for (var h = 0; row + h < blockVals.length; ++h) {
-        for (var w = 0; col + w < blockVals[0].length; ++w) {
-            var area = calculateSquareArea(blockLngs, blockLats, row, col, row + h, col + w);
-            if (bottomPerimeterContainsVal(blockVals, fillVal, row, col, row + h, col + w)) {
-                break;
-            }
-            if (area > largestRectangleArea) {
-                let minLat = blockLats[row];
-                let maxLat = blockLats[row + h + 1];
-                let minLng = blockLngs[col];
-                let maxLng = blockLngs[col + w + 1];
-                largestRectangleInfo = new SqrGeoRng(minLat, maxLat, minLng, maxLng);
-            }
-        }
-    }
-    return largestRectangleInfo;
-}
-
-// returns {minLng, maxLng, minLat, maxLat}
-function getLargestArea(blockVals, blockLngs, blockLats, fillVal) {
-    let currentLargest = new SqrGeoRng(0, 0, 0, 0);
-    let currentLargestArea = 0;
-    for (var r = 0; r < blockVals.length; ++r) {
-        for (var c = 0; c < blockVals[0].length; ++c) {
-            if (blockVals[r][c] !== fillVal) {
-                var rectangleInfo = getLargestRectangleInfoFromCoord(blockVals, blockLngs, blockLats, fillVal, r, c);
-                var rectangleArea = rectangleInfo.getArea();
-                if (rectangleArea > currentLargestArea) {
-                    currentLargest = rectangleInfo;
-                    currentLargestArea = rectangleArea;
-                }
-            }
-        }
-    }
-    return currentLargest;
 }
 
 module.exports = {
-    splitAtLongitude: splitAtLongitude,
+    getCenterOfRange: getCenterOfRange,
     splitAtLatitude: splitAtLatitude,
-    fillRange: fillRange,
-    getLargestArea: getLargestArea
+    getDistanceBetweenCoords: getDistanceBetweenCoords,
 };

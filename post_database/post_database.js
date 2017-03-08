@@ -603,7 +603,7 @@ function getPostsSecondsToShowFor(req, res) {
         .find()
         .then((posts) => {
             postsSecondsToShowForCache = {};
-            posts.forEach(function (post) {
+            posts.forEach((post) => {
                 postsSecondsToShowForCache[post._id] = post.secondsToShowFor;
             });
             res.json(postsSecondsToShowForCache);

@@ -15,22 +15,23 @@ function removeServerInfo(req, res) {
         .findOneAndRemove({
             baseAddr: baseAddr
         })
-        .then(function (server) {
-                if (!server) {
-                    console.log("server_manager:removeServerInfo:Could not find the server to remove")
-                    req.status(500).send();
-                    return;
-                }
-                replaceServer(server);
-                res.status(200).send();
-            },
-            function (err) {
-                console.log("server_manager:removeServerInfo:" + err);
+        .then((server) => {
+            if (!server) {
                 res.status(500).send();
+                console.log("server_manager:removeServerInfo:" + err);
+                return;
             }
-        );
+            replaceServer(ServerInfo.convertObjToClass(server));
+            res.status(200).send();
+        })
+        .catch((err) => {
+            res.status(500).send();
+            console.log("server_manager:removeServerInfo:" + err);
+        });
 }
 
+// Fills in the area previously covered by the provided server by expanding an
+// existing server
 function replaceServer(oldServer) {
     var query = {
         $or: [{
@@ -55,24 +56,23 @@ function replaceServer(oldServer) {
             }
         ]
     };
-    // TODO: Actually copy over data from server
+
     serverInfoModel
         .find(query)
-        .then(
-            function (servers) {
-                onBorderingServersRetrieval(servers);
-            },
-            function (err) {
-                console.log("server_manager:replaceServer:" + err);
-            }
-        );
+        .then((servers) => {
+            const formattedServers = ServerInfo.convertObjsToClasses(servers);
+            onBorderingServerRetrieval(formattedServers);
+        })
+        .catch((err) => {
+            console.log("server_manager:replaceServer:" + err);
+        });
 
     function onBorderingServerRetrieval(server) {
         servers.forEach(function (server) {
-            var minLngMatch = server.writeRng.minLng == oldServer.writeRng.minLng;
-            var maxLngMatch = server.writeRng.maxLng == oldServer.writeRng.maxLng;
-            var minLatMatch = server.writeRng.minLat == oldServer.writeRng.minLat;
-            var maxLatMatch = server.writeRng.maxLat == oldServer.writeRng.maxLat;
+            let minLngMatch = server.writeRng.minLng == oldServer.writeRng.minLng;
+            let maxLngMatch = server.writeRng.maxLng == oldServer.writeRng.maxLng;
+            let minLatMatch = server.writeRng.minLat == oldServer.writeRng.minLat;
+            let maxLatMatch = server.writeRng.maxLat == oldServer.writeRng.maxLat;
             if ((minLngMatch && maxLngMatch) || (minLatMatch && maxLatMatch)) {
                 expandServerToMatchOldServer(server, oldServer);
                 return;
@@ -86,8 +86,8 @@ function replaceServer(oldServer) {
     }
 
     function mergeServers(serverToMerge, serverToMergeWith) {
-        var url = getApiCallURL(serverToMerge.backupAddr, "allposts");
-        request.get(url, function (err, res) {
+        let url = getApiCallURL(serverToMerge.backupAddr, "allposts");
+        request.get(url, (err, res) => {
             if (err) {
                 console.log("server_manager:mergeServers:" + err);
                 return;
@@ -95,9 +95,9 @@ function replaceServer(oldServer) {
                 console.log("server_manager:mergeServers:empty response");
                 return;
             }
-            var posts = res.body;
-            var url = getApiCallURL(serverToMergeWith.baseAddr, "posts");
-            request.post(url, function (err, res) {
+            let posts = res.body;
+            let url = getApiCallURL(serverToMergeWith.baseAddr, "posts");
+            request.post(url, (err, res) => {
                 if (err) {
                     console.log("server_manager:mergeServers:" + err);
                 }
@@ -114,22 +114,20 @@ function replaceServer(oldServer) {
 function recalculateServersRanges() {
     serverInfoModel
         .find()
-        .then(
-            function (servers) {
-                servers.forEach(function (server) {
-                    recalculateServerRanges(ServerInfo.convertObjToClass(server));
-                });
-            },
-            function (err) {
-                console.log("traffic_director:server range calculations:" + err);
-            }
-        );
+        .then((servers) => {
+            servers.forEach((server) => {
+                recalculateServerRanges(ServerInfo.convertObjToClass(server));
+            });
+        })
+        .catch((err) => {
+            console.log("traffic_director:server range calculations:" + err);
+        });
 }
 
 function recalculateServerRanges(server) {
-    var addr = server.baseAddr;
-    var url = getApiCallURL(addr, "postrange");
-    var requestParams = {
+    let addr = server.baseAddr;
+    let url = getApiCallURL(addr, "postrange");
+    let requestParams = {
         url: url,
         method: 'GET',
         json: true
@@ -142,17 +140,20 @@ function recalculateServerRanges(server) {
             console.log("server_manager:recalculateServerRanges:empty response");
             return;
         }
-        var serverPostArea = res.body;
+        let serverPostArea = res.body;
         // we take the max/min of the serverPostArea and the original server
         // values because we only update this information once in a while,
         // so we need to assume that at any time a post can be added to 
         // anywhere inside the write range, thus expanding the serverPostArea
         // TODO: This can probably be done a bit nicer
-        var newMinLngRead = Math.min(serverPostArea.minLng, server.writeRng.minLng);
-        var newMaxLngRead = Math.max(serverPostArea.maxLng, server.writeRng.maxLng);
-        var newMinLatRead = Math.min(serverPostArea.minLat, server.writeRng.minLat);
-        var newMaxLatRead = Math.max(serverPostArea.maxLat, server.writeRng.maxLat);
-        var shouldUpdate = false;
+        // This can be done nicer by using the 'expandRange...' function and
+        // comparing after
+        server.writeRng.expandToContainOther(serverPostArea); // TODO: IS THIS ThE RIGHT FUNCTION TO USE HERE
+        let newMinLngRead = Math.min(serverPostArea.minLng, server.writeRng.minLng);
+        let newMaxLngRead = Math.max(serverPostArea.maxLng, server.writeRng.maxLng);
+        let newMinLatRead = Math.min(serverPostArea.minLat, server.writeRng.minLat);
+        let newMaxLatRead = Math.max(serverPostArea.maxLat, server.writeRng.maxLat);
+        let shouldUpdate = false;
         if (newMinLngRead !== server.readRng.minLng) {
             server.readRng.minLng = newMinLngRead;
             shouldUpdate = true;
@@ -178,15 +179,8 @@ function recalculateServerRanges(server) {
 }
 
 function expandServerToMatchOldServer(server, oldServer) {
-    server.writeRng.minLng = Math.min(server.writeRng.minLng, oldServer.writeRng.minLng);
-    server.writeRng.maxLng = Math.max(server.writeRng.maxLng, oldServer.writeRng.maxLng);
-    server.writeRng.minLat = Math.min(server.writeRng.minLat, oldServer.writeRng.minLat);
-    server.writeRng.maxLat = Math.max(server.writeRng.maxLat, oldServer.writeRng.maxLat);
-    server.readRng.minLng = Math.min(server.readRng.minLng, oldServer.readRng.minLng);
-    server.readRng.maxLng = Math.max(server.readRng.maxLng, oldServer.readRng.maxLng);
-    server.readRng.minLat = Math.min(server.readRng.minLat, oldServer.readRng.minLat);
-    server.readRng.maxLat = Math.max(server.readRng.maxLat, oldServer.readRng.maxLat);
-    resizeServer(server, function () {
+    server.expandToContainOther(oldServer);
+    resizeServer(server, () => {
         mergeServers(oldServer, server);
     });
 }
@@ -210,7 +204,7 @@ function resizeServer(newServer, onSuccess) {
             }, {
                 new: true
             },
-            function (err, data) {
+            (err, data) => {
                 if (err) {
                     console.log("server_manager:resizeServer:" + err);
                 } else {
@@ -224,15 +218,13 @@ function resizeServer(newServer, onSuccess) {
 function getAllServerInfo(req, res) {
     serverInfoModel
         .find()
-        .then(
-            function (servers) {
-                res.json(servers);
-            },
-            function (err) {
-                console.log("server_manager:getAllServerInfo:" + err);
-                res.status(500).send();
-            }
-        )
+        .then((servers) => {
+            res.json(servers);
+        })
+        .catch((err) => {
+            res.status(500).send();
+            console.log("server_manager:getAllServerInfo:" + err);
+        })
 }
 
 
@@ -246,20 +238,19 @@ function addServerInfo(req, res) {
     let backupAddr;
     serverInfoModel
         .find()
-        .then(
-            onServerListRetrieval,
-            (err) => {
-                console.log("server_creator:addServerInfo:" + err);
-            }
-        );
+        .then(onServerListRetrieval)
+        .catch((err) => {
+            console.log("server_creator:addServerInfo:" + err);
+        });
 
     function onServerListRetrieval(servers) {
         let serverInfos = [];
         servers.forEach((server) => {
             serverInfos.push(ServerInfo.convertObjToClass(server));
         });
-        getNewServerLocation(serverInfos).then(function (range) {
+        getNewServerLocation(serverInfos).then((range) => {
             backupAddr = getBackupAddr(baseAddr, range, serverInfos);
+            console.log("backup addr is " + backupAddr);
             insertNewServer(new ServerInfo(baseAddr, backupAddr, range, range));
         });
     }
@@ -288,15 +279,13 @@ function addServerInfo(req, res) {
         console.log("server_creator:adding server" + JSON.stringify(newServer));
         serverInfoModel
             .create(newServer)
-            .then(
-                function (reqRes) {
-                    res.json(newServer);
-                },
-                function (err) {
-                    console.log("server_creator:insertNewServer:" + err);
-                    res.status(500).send();
-                }
-            );
+            .then((reqRes) => {
+                res.json(newServer);
+            })
+            .catch((err) => {
+                res.status(500).send();
+                console.log("server_creator:insertNewServer:" + err);
+            });
     }
 }
 
@@ -305,7 +294,7 @@ function clearBackupsAtServer(serverAddress) {
         url: getApiCallURL(serverAddress, "backups"),
         json: true
     };
-    request.delete(requestParams, function (err) {
+    request.delete(requestParams, (err) => {
         if (err) {
             console.log("server_creator:clearBackupsAtServer:" + err);
         }
@@ -321,7 +310,7 @@ function changeServerbackupAddr(serverInfo, newbackupAddr) {
                     backupAddr: newbackupAddr,
                 }
             },
-            function (err, data) {
+            (err, data) => {
                 if (err) {
                     console.log("server_creator:changeServerbackupAddr:" + err);
                 } else {
@@ -330,7 +319,7 @@ function changeServerbackupAddr(serverInfo, newbackupAddr) {
             });
 
     function notifyServerOfChange() {
-        var requestParams = {
+        const requestParams = {
             url: getApiCallURL(serverInfo.baseAddr, "backupaddr"),
             body: {
                 newbackupAddr: newbackupAddr
@@ -346,11 +335,12 @@ function changeServerbackupAddr(serverInfo, newbackupAddr) {
 }
 
 function findFarthestServer(serverRng, otherServers) {
-    var curMaxDist = -1;
-    var targetCoords = getCenterOfRange(serverRng);
-    var farthestServer;
+    let curMaxDist = -1;
+    let targetCoords = locationUtils.getCenterOfRange(serverRng);
+    let farthestServer;
     otherServers.forEach(function (server) {
-        var dist = getDistanceBetweenCoords(targetCoords, getCenterOfRange(server.writeRng));
+        const serverCoords = locationUtils.getCenterOfRange(server.writeRng);
+        const dist = locationUtils.getDistanceBetweenCoords(targetCoords, serverCoords);
         if (dist > curMaxDist) {
             curMaxDist = dist;
             farthestServer = server;
@@ -359,68 +349,7 @@ function findFarthestServer(serverRng, otherServers) {
     return farthestServer;
 }
 
-function getCenterOfRange(geoRange) {
-    var lngRange = getDistanceBetweenPointsOnCircle(geoRange.minLng, geoRange.maxLng, 360);
-    var latRange = getDistanceBetweenPointsOnCircle(geoRange.minLat, geoRange.maxLat, 180);
-    var center = {
-        lng: geoRange.minLng + lngRange / 2,
-        lat: geoRange.minLat + latRange / 2
-    };
-    if (center.lng > 180) {
-        center.lng -= 360;
-    } else if (center.lng < -180) {
-        center.lng += 360;
-    }
-    if (center.lat > 90) {
-        center.lat -= 180;
-    } else if (center.lat < -90) {
-        center.lat += 180;
-    }
-    return center;
-}
-
-// coordinates must be of the form {lng:Number, lat:Number}
-function getDistanceBetweenCoords(coord1, coord2) {
-    var lngDist = Math.min(
-        getDistanceBetweenPointsOnCircle(coord1.lng, coord2.lng, 360),
-        getDistanceBetweenPointsOnCircle(coord2.lng, coord1.lng, 360)
-    );
-    var latDist = Math.min(
-        getDistanceBetweenPointsOnCircle(coord1.lat, coord2.lat, 180),
-        getDistanceBetweenPointsOnCircle(coord2.lat, coord1.lat, 180)
-    );
-    return Math.sqrt(lngDist * lngDist + latDist * latDist);
-}
-
-// gets the distance it takes to travel from startPos to endPos by only
-// incrimenting the position. When the position exceeds maxVal, it skips to
-// minVal
-function getDistanceBetweenPointsOnCircle(startPos, endPos, circleLen) {
-    if (startPos < endPos) {
-        return endPos - startPos;
-    } else {
-        return endPos + circleLen - startPos;
-    }
-}
-
-// You may find yourself wondering if this function is efficient. The answer is
-// no, it is most definitely not, but it's very rarely called, since servers 
-// aren't added very often, so I'm not too worried about it
-// TODO: You aren't handling cases where a server is on a lng/lat extreme
-// very well
 function getNewServerLocation(serverInfos) {
-    var FILL_VAL = 1;
-    var EMPTY_VAL = 0;
-
-    var blockLngs = [-180, 180]; // width of a chunk of the world in degrees longitude
-    var blockLats = [-90, 90]; // height of a chunk of the world in degrees latitude
-    var blockVals = [
-        [EMPTY_VAL]
-    ]; // 1 for a covered block, 0 for a uncovered one
-    // first index lat, next is lng
-
-    // on success should take an area object representing the area removed from the server
-    // TODO: Create function to get area object
     function splitLargestServerArea(serverInfos) {
         let largestArea = 0;
         let targServer;
@@ -428,22 +357,22 @@ function getNewServerLocation(serverInfos) {
         let maxLng;
         let minLat;
         let maxLat;
-        serverInfos.forEach(function (serverInfo) {
-            var area = serverInfo.writeRng.getArea();
+        serverInfos.forEach((serverInfo) => {
+            let area = serverInfo.writeRng.getArea();
             if (area > largestArea) {
                 largestArea = area;
                 targServer = serverInfo;
             }
         });
         if ((targServer.writeRng.maxLat - targServer.writeRng.minLat) > (targServer.writeRng.maxLng - targServer.writeRng.minLng)) {
-            var middleLat = (targServer.writeRng.maxLat + targServer.writeRng.minLat) / 2;
+            let middleLat = (targServer.writeRng.maxLat + targServer.writeRng.minLat) / 2;
             minLng = targServer.writeRng.minLng;
             maxLng = targServer.writeRng.maxLng;
             minLat = middleLat;
             maxLat = targServer.writeRng.maxLat;
             targServer.writeRng.maxLat = middleLat;
         } else {
-            var middleLng = (targServer.writeRng.maxLng + targServer.writeRng.minLng) / 2;
+            let middleLng = (targServer.writeRng.maxLng + targServer.writeRng.minLng) / 2;
             minLng = middleLng;
             maxLng = targServer.writeRng.maxLng;
             minLat = targServer.writeRng.minLat;
@@ -451,29 +380,19 @@ function getNewServerLocation(serverInfos) {
             targServer.writeRng.maxLng = middleLng;
         }
         return new Promise((resolve, reject) => {
-            resizeServer(targServer, function (res) {
+            resizeServer(targServer, (res) => {
                 resolve(new SqrGeoRng(minLat, maxLat, minLng, maxLng));
             });
         });
     }
-    
-    return new Promise((resolve, reject) => {
-        serverInfos.forEach(function (serverInfo) {
-            locationUtils.splitAtLatitude(blockVals, blockLats, serverInfo.writeRng.minLat);
-            locationUtils.splitAtLatitude(blockVals, blockLats, serverInfo.writeRng.maxLat);
-            locationUtils.splitAtLongitude(blockVals, blockLngs, serverInfo.writeRng.minLng);
-            locationUtils.splitAtLongitude(blockVals, blockLngs, serverInfo.writeRng.maxLng);
-            locationUtils.fillRange(blockVals, blockLngs, blockLats, serverInfo.writeRng.minLng,
-                serverInfo.writeRng.maxLng, serverInfo.writeRng.minLat,
-                serverInfo.writeRng.maxLat, FILL_VAL);
-        });
 
-        var range = locationUtils.getLargestArea(blockVals, blockLngs, blockLats, FILL_VAL);
-        if (range.getArea() === 0) {
-            // if there are no open spaces split a server to create one
-            splitLargestServerArea(serverInfos).then(resolve);
+    return new Promise((resolve, reject) => {
+        if (serverInfos.length === 0) {
+            resolve(new SqrGeoRng(-90, 90, -180, 180));
+            return;
         } else {
-            resolve(range);
+            splitLargestServerArea(serverInfos).then(resolve);
+            return;
         }
     });
 }
