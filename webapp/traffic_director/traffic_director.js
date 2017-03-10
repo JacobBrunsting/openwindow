@@ -4,9 +4,9 @@
  * originates from
  */
 
-var ServerInfo = require('./classes/server_info');
+var DatabaseServerInfo = require('../classes/database_server_info');
 
-var SERVER_INFO_MODEL_NAME = 'ServerInfo';
+var SERVER_INFO_MODEL_NAME = 'DatabaseServerInfo';
 
 module.exports = (app, mongoose, serverInfoCollectionName) => {
     // We have seperate longitudes for reading and writting because when we get
@@ -16,7 +16,7 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
     // old server, and write new ones to the new server until all the posts from
     // that area have been removed from the old server, meaning we can restrict
     // the read distance further.
-    var serverInfoSchema = mongoose.Schema(ServerInfo.getStructure(), {
+    var serverInfoSchema = mongoose.Schema(DatabaseServerInfo.getStructure(), {
         collection: serverInfoCollectionName
     });
 
@@ -27,9 +27,10 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
 
     return {
         redirectRequest: requestRedirector.redirectRequest,
-        addServerInfo: serverManager.addServerInfo,
+        generateServerInfo: serverManager.generateServerInfo,
         removeServerInfo: serverManager.removeServerInfo,
         getAllServerInfo: serverManager.getAllServerInfo,
+        addServerInfo: serverManager.addServerInfo,
         recalculateServersRanges: serverManager.recalculateServersRanges
     };
 };

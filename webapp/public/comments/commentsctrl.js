@@ -7,7 +7,7 @@ angular.module('openwindow').controller('commentsctrl', [
     'INT_CONSTANTS',
     function ($scope, $http, $location, post_creator, request_maker, INT_CONSTANTS) {
         var postId = $location.search().postId;
-        var postServerAddress = $location.search().postServerAddress;
+        var postServerAddress = 'http://' + $location.search().postServerAddress;
 
         $scope.page = "comments";
         $scope.post = post_creator.createPost("", "", "", false, false, "", "", "", "", "", "");
@@ -28,8 +28,8 @@ angular.module('openwindow').controller('commentsctrl', [
             }
             var comment = post_creator.createComment($scope.body_box);
             request_maker.addComment($scope.post.getId(), postServerAddress, comment,
-                function (res) {
-                    $scope.comments = post_creator.getFormattedCommentList(res);
+                function (post) {
+                    $scope.comments = post_creator.getFormattedCommentList(post.comments);
                 }
             );
             $scope.body_box = "";

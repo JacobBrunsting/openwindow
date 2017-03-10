@@ -1,6 +1,6 @@
 var request = require('request');
-var ServerInfo = require('./classes/server_info');
-var SqrGeoRng = require('./classes/sqr_geo_rng');
+var DatabaseServerInfo = require('../classes/database_server_info');
+var SqrGeoRng = require('../classes/sqr_geo_rng');
 
 var serverInfoModel;
 
@@ -8,26 +8,43 @@ function getApiCallURL(baseAddr, path) {
     return baseAddr + "/api/" + path;
 }
 
-// TODO: Rearange backups after removing the server
-function removeServerInfo(req, res) {
-    var baseAddr = req.query.baseAddr;
+function addServerInfo(req, res) {
     serverInfoModel
-        .findOneAndRemove({
-            baseAddr: baseAddr
-        })
+        .create(req.body)
         .then((server) => {
-            if (!server) {
-                res.status(500).send();
-                console.log("server_manager:removeServerInfo:" + err);
-                return;
-            }
-            replaceServer(ServerInfo.convertObjToClass(server));
-            res.status(200).send();
+            res.json(server);
         })
         .catch((err) => {
-            res.status(500).send();
-            console.log("server_manager:removeServerInfo:" + err);
+            res.json(500).send();
+            console.log("server_manager:addServerInfo:" + err);
         });
+}
+
+// TODO: Rearange backups after removing the server
+function removeServerInfo(req, res) {
+    return new Promise((resolve, reject) => {
+        var baseAddr = req.query.baseAddr;
+        serverInfoModel
+            .findOneAndRemove({
+                baseAddr: baseAddr
+            })
+            .then((server) => {
+                if (!server) {
+                    res.status(500).send();
+                    reject();
+                    console.log("server_manager:removeServerInfo:" + err);
+                    return;
+                }
+                replaceServer(DatabaseServerInfo.convertObjToClass(server));
+                resolve();
+                res.status(200).send();
+            })
+            .catch((err) => {
+                reject();
+                res.status(500).send();
+                console.log("server_manager:removeServerInfo:" + err);
+            });
+    });
 }
 
 // Fills in the area previously covered by the provided server by expanding an
@@ -60,7 +77,7 @@ function replaceServer(oldServer) {
     serverInfoModel
         .find(query)
         .then((servers) => {
-            const formattedServers = ServerInfo.convertObjsToClasses(servers);
+            const formattedServers = DatabaseServerInfo.convertObjsToClasses(servers);
             onBorderingServerRetrieval(formattedServers);
         })
         .catch((err) => {
@@ -116,7 +133,7 @@ function recalculateServersRanges() {
         .find()
         .then((servers) => {
             servers.forEach((server) => {
-                recalculateServerRanges(ServerInfo.convertObjToClass(server));
+                recalculateServerRanges(DatabaseServerInfo.convertObjToClass(server));
             });
         })
         .catch((err) => {
@@ -233,60 +250,65 @@ var locationUtils = require('./server_location_utils');
 var serverInfoModel;
 
 // req.body must be of form {baseAddr:Number}
-function addServerInfo(req, res) {
-    let baseAddr = req.body.baseAddr;
-    let backupAddr;
-    serverInfoModel
-        .find()
-        .then(onServerListRetrieval)
-        .catch((err) => {
-            console.log("server_creator:addServerInfo:" + err);
-        });
-
-    function onServerListRetrieval(servers) {
-        let serverInfos = [];
-        servers.forEach((server) => {
-            serverInfos.push(ServerInfo.convertObjToClass(server));
-        });
-        getNewServerLocation(serverInfos).then((range) => {
-            backupAddr = getBackupAddr(baseAddr, range, serverInfos);
-            console.log("backup addr is " + backupAddr);
-            insertNewServer(new ServerInfo(baseAddr, backupAddr, range, range));
-        });
-    }
-
-    function getBackupAddr(newBaseAddr, newWriteRng, otherServers) {
-        let farthestServer = findFarthestServer(newWriteRng, otherServers);
+function generateServerInfo(req, res, resolve, reject) {
+    // nesting for days
+    return new Promise((resolve, reject) => {
+        let baseAddr = req.body.baseAddr;
         let backupAddr;
-        if (farthestServer) {
-            // make the farthest server back up to the new server, and make
-            // the new server backup to the server the farthest server was 
-            // previously backing up to
-            // we chose the farthest server because if there is ever logic
-            // implemented to have database servers store posts only from 
-            // their area, we want to avoid having servers back up other
-            // servers in the same area
-            clearBackupsAtServer(farthestServer.backupAddr);
-            backupAddr = farthestServer.backupAddr;
-            changeServerbackupAddr(farthestServer, newBaseAddr);
-        } else {
-            backupAddr = baseAddr;
-        }
-        return backupAddr;
-    }
-
-    function insertNewServer(newServer) {
-        console.log("server_creator:adding server" + JSON.stringify(newServer));
         serverInfoModel
-            .create(newServer)
-            .then((reqRes) => {
-                res.json(newServer);
-            })
+            .find()
+            .then(onServerListRetrieval)
             .catch((err) => {
-                res.status(500).send();
-                console.log("server_creator:insertNewServer:" + err);
+                console.log("server_creator:generateServerInfo:" + err);
             });
-    }
+
+        function onServerListRetrieval(servers) {
+            let serverInfos = [];
+            servers.forEach((server) => {
+                serverInfos.push(DatabaseServerInfo.convertObjToClass(server));
+            });
+            getNewServerLocation(serverInfos).then((range) => {
+                backupAddr = getBackupAddr(baseAddr, range, serverInfos);
+                console.log("backup addr is " + backupAddr);
+                insertNewServer(new DatabaseServerInfo(baseAddr, backupAddr, range, range));
+            });
+        }
+
+        function getBackupAddr(newBaseAddr, newWriteRng, otherServers) {
+            let farthestServer = findFarthestServer(newWriteRng, otherServers);
+            let backupAddr;
+            if (farthestServer) {
+                // make the farthest server back up to the new server, and make
+                // the new server backup to the server the farthest server was 
+                // previously backing up to
+                // we chose the farthest server because if there is ever logic
+                // implemented to have database servers store posts only from 
+                // their area, we want to avoid having servers back up other
+                // servers in the same area
+                clearBackupsAtServer(farthestServer.backupAddr);
+                backupAddr = farthestServer.backupAddr;
+                changeServerbackupAddr(farthestServer, newBaseAddr);
+            } else {
+                backupAddr = baseAddr;
+            }
+            return backupAddr;
+        }
+
+        function insertNewServer(newServer) {
+            console.log("server_creator:adding server" + JSON.stringify(newServer));
+            serverInfoModel
+                .create(newServer)
+                .then((reqRes) => {
+                    res.json(newServer);
+                    resolve(newServer);
+                })
+                .catch((err) => {
+                    res.status(500).send();
+                    reject();
+                    console.log("server_creator:insertNewServer:" + err);
+                });
+        }
+    });
 }
 
 function clearBackupsAtServer(serverAddress) {
@@ -401,10 +423,11 @@ module.exports = (nServerInfoModel) => {
     serverInfoModel = nServerInfoModel;
 
     return {
-        removeServerInfo: removeServerInfo,
-        getAllServerInfo: getAllServerInfo,
-        recalculateServersRanges: recalculateServersRanges,
-        resizeServer: resizeServer,
-        addServerInfo: addServerInfo
+        removeServerInfo,
+        getAllServerInfo,
+        addServerInfo,
+        recalculateServersRanges,
+        resizeServer,
+        generateServerInfo
     }
 }

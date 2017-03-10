@@ -8,8 +8,11 @@ module.exports = {
     // the path to the database used to store the posts
     mongoDbAddress: 'mongodb://localhost/openwindowdatabase',
 
-    // the collection to store the info for all the servers
-    serversInfoCollection: 'ServersInfo',
+    // the collection to store the info for all the database servers
+    databaseServersInfoCollection: 'DatabaseServersInfo',
+
+    // the collection to store the info for all the web servers
+    webServersInfoCollection: 'WebServersInfo',
 
     // the interval on which to update the information about the range of posts
     // stored on each server

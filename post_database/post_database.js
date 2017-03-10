@@ -91,7 +91,7 @@ var backupAddr;
 
 // ========= Add Server to List =========
 // TEMP ONLY - Replace 'localhost:8080' with the actual website name later
-networkUtils.serverCall('http://localhost:8080/director/serverinfo',
+networkUtils.serverCall('http://localhost:8080/director/newserver',
         networkUtils.POST, {
             baseAddr: "http://" + ipAddr + ":" + settings[PORT_KEY]
         })
@@ -220,7 +220,7 @@ app.all('*', function (req, res, next) {
     next();
 });
 
-// ----- Main Database Endpoints ------
+// ------ Main Database Endpoints -------
 
 /**
  * @api {post} /api/post - Create a new post
@@ -410,7 +410,7 @@ app.delete("/api/comment", deleteComment);
  */
 app.delete("/api/post", deletePost);
 
-// ----- Backup Database Endpoints ------
+// ------ Backup Database Endpoints -------
 
 /**
  * @api {post} /api/backuppost - Create a new post in the backup database
@@ -881,7 +881,7 @@ function updatePostFromUpdateObj(id, updateInfo, req, res) {
             }
         )
         .then((post) => {
-            res.status(200).send();
+            res.json(post);
             updatePostBackup(id, post);
         })
         .catch((err) => {
@@ -890,11 +890,6 @@ function updatePostFromUpdateObj(id, updateInfo, req, res) {
         });
 }
 
-// TODO: Differentiate better between functions that deal with the backups 
-// stored on this database, and the backups of the main data from this server
-// Consider solving this issue by moving the backup api to a different file
-// Also, you should pass the response object into these functions to send back
-// a status code when done
 // ========== Backup Utilities ==========
 
 function updatePostBackup(_id, updatedPostFields) {
