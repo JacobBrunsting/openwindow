@@ -8,26 +8,26 @@
 
 // ============== Imports ===============
 
-var bodyParser = require('body-parser');
-var config = require('./config');
-var express = require('express');
-var ipAddr = require('ip').address();
-var mongoose = require('mongoose');
-var util = require('util');
-var networkUtils = require('./network_utils');
+const bodyParser = require('body-parser');
+const config = require('./config');
+const express = require('express');
+const ipAddr = require('ip').address();
+const mongoose = require('mongoose');
+const util = require('util');
+const networkUtils = require('./network_utils');
 
 // ============== Settings ==============
 
-var PORT_KEY = "port";
-var BOUND_IP_KEY = "boundIp";
-var MONGO_DB_ADDRESS_KEY = "mongoDbAddress";
-var SECONDS_BETWEEN_CLEANUP_KEY = "secondsBetweenCleanup";
-var CACHE_EXPIRY_TIME_KEY = "cacheExpiryTime";
-var UPVOTE_INC_KEY = "upvoteInc";
-var DOWNVOTE_INC_KEY = "downvoteInc";
-var INITIAL_SECONDS_TO_SHOW_FOR = "initialSecondsToShowFor";
-var SITE_POST_MODEL_KEY = "postModelName";
-var BACKUP_POST_MODEL_KEY = "backupPostModelName";
+const PORT_KEY = "port";
+const BOUND_IP_KEY = "boundIp";
+const MONGO_DB_ADDRESS_KEY = "mongoDbAddress";
+const SECONDS_BETWEEN_CLEANUP_KEY = "secondsBetweenCleanup";
+const CACHE_EXPIRY_TIME_KEY = "cacheExpiryTime";
+const UPVOTE_INC_KEY = "upvoteInc";
+const DOWNVOTE_INC_KEY = "downvoteInc";
+const INITIAL_SECONDS_TO_SHOW_FOR = "initialSecondsToShowFor";
+const SITE_POST_MODEL_KEY = "postModelName";
+const BACKUP_POST_MODEL_KEY = "backupPostModelName";
 
 var settings = {};
 settings[PORT_KEY] = 8080;
@@ -72,19 +72,19 @@ process.argv.forEach(function (val, index) {
 
 // ============= Constants ==============
 
-var UPVOTE = 2;
-var DOWNVOTE = 1;
-var NONE = 0;
-var MAX_LNG = 180;
-var MIN_LNG = -180;
-var MAX_LAT = 90;
-var MIN_LAT = -90;
+const UPVOTE = 2;
+const DOWNVOTE = 1;
+const NONE = 0;
+const MAX_LNG = 180;
+const MIN_LNG = -180;
+const MAX_LAT = 90;
+const MIN_LAT = -90;
 
 // ================ Setup ================
 
 mongoose.Promise = require('bluebird');
 mongoose.connect(settings[MONGO_DB_ADDRESS_KEY]);
-var app = express();
+const app = express();
 app.use(bodyParser.json());
 app.use(express.static('./public'));
 var backupAddr;

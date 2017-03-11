@@ -36,12 +36,12 @@ function removeServerInfo(req, res) {
                     return;
                 }
                 replaceServer(DatabaseServerInfo.convertObjToClass(server));
-                resolve();
                 res.status(200).send();
+                resolve();
             })
             .catch((err) => {
-                reject();
                 res.status(500).send();
+                reject();
                 console.log("server_manager:removeServerInfo:" + err);
             });
     });
