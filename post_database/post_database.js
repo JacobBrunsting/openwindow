@@ -189,14 +189,13 @@ setInterval(() => {
         .catch((err) => {
             console.log("post_database:old post cleanup:" + err);
         });
-
 }, cleanupInterval);
 
 function removeExpiredPosts(model) {
     return new Promise((resolve, reject) => {
         model
             .find()
-            .$where(() => {
+            .$where(function() {
                 return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;
             })
             .remove((err, data) => {
