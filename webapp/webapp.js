@@ -84,7 +84,7 @@ app.post('/director/newserver', (req, res) => {
     trafficDirector.generateServerInfo(req, res)
         .then((server) => {
             console.log("added server " + JSON.stringify(server));
-            // call /director/serverinfo on all web servers
+            webServerManager.notifyOtherServers('POST', '/director/serverinfo', server);
         });
 });
 
@@ -139,13 +139,15 @@ app.delete('/director/serverinfo', (req, res) => {
 });
 
 /**
- * @api {get} /webserver/allserverinfo - Get the information about all of the
- *  web servers
- * @apiSuccess {Object[]} servers
- * @apiSuccess {string} servers.baseAddr
+ * @api {post} /webserver/newserver - Add server info to the database server
+ *  info collection, and add it to all other servers in the network
+ * @apiParam {string} baseAddr
  */
-app.get('/webserver/allserverinfo', (req, res) => {
-    webServerManager.getAllServerInfo(req, res);
+app.post('/webserver/newserver', (req, res) => {
+    webServerManager.addServerInfo(req, res)
+        .then((server) => {
+            webServerManager.notifyOtherServers('POST', '/webserver/serverinfo', server);
+        });
 });
 
 /**
@@ -158,11 +160,28 @@ app.post('/webserver/serverinfo', (req, res) => {
 });
 
 /**
+ * @api {get} /webserver/allserverinfo - Get the information about all of the
+ *  web servers
+ * @apiSuccess {Object[]} servers
+ * @apiSuccess {string} servers.baseAddr
+ */
+app.get('/webserver/allserverinfo', (req, res) => {
+    webServerManager.getAllServerInfo(req, res);
+});
+
+/**
  * @api {delete} /webserver/serverinfo - Remove a web server from the database
  * @apiParam {string} baseAddr - The address of the web server
  */
 app.delete('/webserver/serverinfo', (req, res) => {
     webServerManager.removeServerInfo(req, res);
 });
+
+webServerManager.setupSelf()
+    .catch((err) => {
+        console.log("webapp:" + err);
+        console.log("error connecting to server network. exiting.");
+        process.exit(1);
+    });
 
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);

@@ -21,11 +21,31 @@ const MIN_LAT = -90;
  * @param {number} targLoc.longitude
  * @param {number} targRad - The query radius in meters (a negative radius 
  *  redirects to all available servers)
+ * @param {string} reqMethod - The request method being used for the request
+ *  being redirected, can be one of GET, POST, PUT, DELETE
  * @returns {Object} A mongoose query object
  */
-function getServerSearchQuery(targLoc, targRad) {
+function getServerSearchQuery(targLoc, targRad, reqMethod) {
     if (!targRad || targRad < 0) {
         return {};
+    }
+
+    let minLngKey;
+    let maxLngKey;
+    let minLatKey;
+    let maxLatKey;
+    switch (reqMethod) {
+        case 'POST':
+            minLngKey = 'writeRng.minLng';
+            maxLngKey = 'writeRng.maxLng';
+            minLatKey = 'writeRng.minLat';
+            maxLatKey = 'writeRng.maxLat';
+            break;
+        default:
+            minLngKey = 'readRng.minLng';
+            maxLngKey = 'readRng.maxLng';
+            minLatKey = 'readRng.minLat';
+            maxLatKey = 'readRng.maxLat';
     }
 
     const lat = Number(targLoc.latitude);
@@ -67,12 +87,12 @@ function getServerSearchQuery(targLoc, targRad) {
     // Find all servers within the correct latitude
     let query = {
         $and: [{
-                'readRng.maxLat': {
+                [maxLatKey]: {
                     $gte: minValidMaxLat
                 }
             },
             {
-                'readRng.minLat': {
+                [minLatKey]: {
                     $lte: maxValidMinLat
                 }
             }
@@ -86,12 +106,12 @@ function getServerSearchQuery(targLoc, targRad) {
         // point for the longitude
         query.$and.push({
             $or: [{
-                    'readRng.maxLng': {
+                    [maxLngKey]: {
                         $gte: MIN_LNG
                     }
                 },
                 {
-                    'readRng.maxLng': {
+                    [maxLngKey]: {
                         $gte: minValidMaxLng + (MAX_LNG - MIN_LNG)
                     }
                 }
@@ -99,7 +119,7 @@ function getServerSearchQuery(targLoc, targRad) {
         });
     } else {
         query.$and.push({
-            'readRng.maxLng': {
+            [maxLngKey]: {
                 $gte: minValidMaxLng
             }
         });
@@ -112,12 +132,12 @@ function getServerSearchQuery(targLoc, targRad) {
         // point for the longitude
         query.$and.push({
             $or: [{
-                    'readRng.minLng': {
+                    [minLngKey]: {
                         $lte: MAX_LNG
                     }
                 },
                 {
-                    'readRng.minLng': {
+                    [minLngKey]: {
                         $lte: maxValidMinLng - (MAX_LNG - MIN_LNG)
                     }
                 }
@@ -125,7 +145,7 @@ function getServerSearchQuery(targLoc, targRad) {
         });
     } else {
         query.$and.push({
-            'readRng.minLng': {
+            [minLngKey]: {
                 $lte: maxValidMinLng
             }
         });
