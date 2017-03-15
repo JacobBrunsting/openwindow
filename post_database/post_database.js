@@ -951,4 +951,5 @@ function clearBackups() {
         );
 }
 
+console.log("post database listening on port " + settings[PORT_KEY]);
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);

@@ -184,4 +184,5 @@ webServerManager.setupSelf()
         process.exit(1);
     });
 
+console.log("webapp listening on port " + settings[PORT_KEY]);
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
