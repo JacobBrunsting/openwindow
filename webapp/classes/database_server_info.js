@@ -1,4 +1,4 @@
-var SqrGeoRng = require('./sqr_geo_rng');
+var SqrGeoRng = require(__dirname + '/sqr_geo_rng');
 var mongoose = require('mongoose');
 
 /** Class representing a database server */

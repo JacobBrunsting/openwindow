@@ -4,7 +4,7 @@
  * originates from
  */
 
-var DatabaseServerInfo = require('../classes/database_server_info');
+var DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
 
 var SERVER_INFO_MODEL_NAME = 'DatabaseServerInfo';
 
@@ -22,8 +22,8 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
 
     var serverInfoModel = mongoose.model(SERVER_INFO_MODEL_NAME, serverInfoSchema);
 
-    var requestRedirector = require('./request_redirector')(serverInfoModel);
-    var serverManager = require('./server_manager')(serverInfoModel);
+    var requestRedirector = require(__dirname + '/request_redirector')(serverInfoModel);
+    var serverManager = require(__dirname + '/server_manager')(serverInfoModel);
 
     return {
         redirectRequest: requestRedirector.redirectRequest,

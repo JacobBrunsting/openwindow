@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
-const WebServerInfo = require('./classes/web_server_info');
-const ipAddr = require('ip').address();
-const baseAddr = "http://" + ipAddr;
+const request = require('request');
+const WebServerInfo = require(__dirname + '/classes/web_server_info');
 
 const SERVER_INFO_MODEL_NAME = 'WebServerInfo';
 

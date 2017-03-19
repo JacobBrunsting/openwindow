@@ -7,7 +7,7 @@
 
 // ============== Settings ==============
 
-const config = require('./config');
+const config = require(__dirname + '/config');
 
 const PORT_KEY = "port";
 const BOUND_IP_KEY = "boundIp";
@@ -39,11 +39,12 @@ const express = require('express');
 const app = express();
 const mongoose = require('mongoose');
 const request = require('request');
-const trafficDirector = require('./traffic_director/traffic_director')
+const trafficDirector = require(__dirname + '/traffic_director/traffic_director')
     (app, mongoose, settings[DATABASE_SERVERS_INFO_COLLECTION_KEY]);
 const util = require('util');
-const webServerManager = require('./web_server_manager')
-    (settings[WEB_SERVERS_INFO_COLLECTION_KEY]);
+const baseAddr = "http://" + ipAddr + ":" + settings[PORT_KEY];
+const webServerManager = require(__dirname + '/web_server_manager')
+    (settings[WEB_SERVERS_INFO_COLLECTION_KEY], baseAddr);
 
 // ================ Setup ================
 
@@ -55,7 +56,7 @@ app.use(bodyParser.urlencoded({
     extended: false
 }));
 app.set('json spaces', 1);
-app.use(express.static('./public'));
+app.use(express.static(__dirname + '/public'));
 
 var millsBetweenSizeUpdates = 1000 * settings[SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY];
 setInterval(trafficDirector.recalculateServersRanges, millsBetweenSizeUpdates);

@@ -1,6 +1,6 @@
 var request = require('request');
-var DatabaseServerInfo = require('../classes/database_server_info');
-var SqrGeoRng = require('../classes/sqr_geo_rng');
+var DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
+var SqrGeoRng = require(__dirname + '/../classes/sqr_geo_rng');
 
 var serverInfoModel;
 

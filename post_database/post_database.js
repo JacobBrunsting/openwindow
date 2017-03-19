@@ -9,12 +9,12 @@
 // ============== Imports ===============
 
 const bodyParser = require('body-parser');
-const config = require('./config');
+const config = require(__dirname + '/config');
 const express = require('express');
 const ipAddr = require('ip').address();
 const mongoose = require('mongoose');
 const util = require('util');
-const networkUtils = require('./network_utils');
+const networkUtils = require(__dirname + '/network_utils');
 
 // ============== Settings ==============
 
