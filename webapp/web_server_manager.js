@@ -1,3 +1,4 @@
+const log = require(__dirname + '/utils/log');
 const mongoose = require('mongoose');
 const request = require('request');
 const WebServerInfo = require(__dirname + '/classes/web_server_info');
@@ -62,7 +63,7 @@ function notifyOtherServers(method, path, body, qs) {
                 requestParams.url = server.baseAddr + path;
                 request(requestParams, (err) => {
                     if (err) {
-                        console.log("web_server_manager:notifyOtherServers:" + err);
+                        log("web_server_manager:notifyOtherServers:" + err);
                     }
                 });
             });

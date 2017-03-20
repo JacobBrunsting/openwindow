@@ -1,5 +1,6 @@
 var request = require('request');
 var DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
+const log = require(__dirname + '/../utils/log');
 var SqrGeoRng = require(__dirname + '/../classes/sqr_geo_rng');
 
 var serverInfoModel;
@@ -16,7 +17,6 @@ function addServerInfo(req, res) {
         })
         .catch((err) => {
             res.json(500).send();
-            console.log("server_manager:addServerInfo:" + err);
         });
 }
 
@@ -32,7 +32,7 @@ function removeServerInfo(req, res) {
                 if (!server) {
                     res.status(500).send();
                     reject();
-                    console.log("server_manager:removeServerInfo:" + err);
+                    log("server_manager:removeServerInfo:" + err);
                     return;
                 }
                 replaceServer(DatabaseServerInfo.convertObjToClass(server));
@@ -42,7 +42,7 @@ function removeServerInfo(req, res) {
             .catch((err) => {
                 res.status(500).send();
                 reject();
-                console.log("server_manager:removeServerInfo:" + err);
+                log("server_manager:removeServerInfo:" + err);
             });
     });
 }
@@ -81,7 +81,7 @@ function replaceServer(oldServer) {
             onBorderingServerRetrieval(formattedServers);
         })
         .catch((err) => {
-            console.log("server_manager:replaceServer:" + err);
+            log("server_manager:replaceServer:" + err);
         });
 
     function onBorderingServerRetrieval(server) {
@@ -106,17 +106,17 @@ function replaceServer(oldServer) {
         let url = getApiCallURL(serverToMerge.backupAddr, "allposts");
         request.get(url, (err, res) => {
             if (err) {
-                console.log("server_manager:mergeServers:" + err);
+                log("server_manager:mergeServers:" + err);
                 return;
             } else if (!res) {
-                console.log("server_manager:mergeServers:empty response");
+                log("server_manager:mergeServers:empty response");
                 return;
             }
             let posts = res.body;
             let url = getApiCallURL(serverToMergeWith.baseAddr, "posts");
             request.post(url, (err, res) => {
                 if (err) {
-                    console.log("server_manager:mergeServers:" + err);
+                    log("server_manager:mergeServers:" + err);
                 }
             });
         });
@@ -137,7 +137,7 @@ function recalculateServersRanges() {
             });
         })
         .catch((err) => {
-            console.log("traffic_director:server range calculations:" + err);
+            log("traffic_director:server range calculations:" + err);
         });
 }
 
@@ -151,10 +151,10 @@ function recalculateServerRanges(server) {
     };
     request(requestParams, function (err, res) {
         if (err) {
-            console.log("server_manager:recalculateServerRanges:" + err);
+            log("server_manager:recalculateServerRanges:" + err);
             return;
         } else if (!res) {
-            console.log("server_manager:recalculateServerRanges:empty response");
+            log("server_manager:recalculateServerRanges:empty response");
             return;
         }
         let serverPostArea = res.body;

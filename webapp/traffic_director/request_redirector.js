@@ -4,6 +4,7 @@
  * that request to the correct server
  */
 
+const log = require(__dirname + '/../utils/log');
 const request = require('request');
 const util = require('util');
 var serverInfoModel;
@@ -172,7 +173,7 @@ function redirectRequest(req, res, targLoc, targRad) {
             sendRequestToServers(req, res, servers);
         })
         .catch((err) => {
-            console.log("request_redirector:redirectRequest:" + err);
+            log("request_redirector:redirectRequest:" + err);
         });
 }
 
@@ -198,7 +199,7 @@ function sendRequestToServers(req, res, servers) {
         request(requestParams, (err, reqRes) => {
             numCallsRemaining -= 1;
             if (err) {
-                console.log("request_redirector:sendRequestToServers:" + err);
+                log("request_redirector:sendRequestToServers:" + err);
             } else {
                 Object.assign(mergedRspBody, reqRes.body);
             }

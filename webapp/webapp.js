@@ -28,15 +28,39 @@ for (var key in settings) {
     if (config[key]) {
         settings[key] = config[key];
     } else {
-        console.log(key + " not set in config file, defaulting to " + settings[key]);
+        log(key + " not set in config file, defaulting to " + settings[key]);
     }
 }
+
+process.argv.forEach(function (val, index) {
+    if (index >= 2) {
+        var splitVal = val.split("=");
+        if (splitVal.length > 1) {
+            switch (splitVal[0]) {
+                case PORT_KEY:
+                    settings[PORT_KEY] = parseInt(splitVal[1]);
+                    break;
+                case DATABASE_SERVERS_INFO_COLLECTION_KEY:
+                    settings[DATABASE_SERVERS_INFO_COLLECTION_KEY] = splitVal[1];
+                    break;
+                case WEB_SERVERS_INFO_COLLECTION_KEY:
+                    settings[WEB_SERVERS_INFO_COLLECTION_KEY] = splitVal[1];
+                    break;
+                case FIRST_SETUP_KEY:
+                    settings[FIRST_SETUP_KEY] = splitVal[1];
+                    break;
+            }
+        }
+    }
+});
 
 // ============== Imports ===============
 
 const bodyParser = require('body-parser');
 const express = require('express');
+const ipAddr = require('ip').address();
 const app = express();
+const log = require(__dirname + '/utils/log');
 const mongoose = require('mongoose');
 const request = require('request');
 const trafficDirector = require(__dirname + '/traffic_director/traffic_director')
@@ -63,7 +87,15 @@ setInterval(trafficDirector.recalculateServersRanges, millsBetweenSizeUpdates);
 
 // ============= Endpoints ==============
 
-app.use('/api/*', (req, res) => {
+app.use('*', (req, res, next) => {
+    log(req.method + " " + req.originalUrl);
+    if (req.body && JSON.stringify(req.body) !== "{}") {
+        console.log(JSON.stringify(req.body));
+    }
+    next();
+});
+
+app.all('/api/*', (req, res) => {
     var radius = 0;
     if (req.query.radius) {
         radius = req.query.radius;
@@ -180,8 +212,8 @@ app.delete('/webserver/serverinfo', (req, res) => {
 
 webServerManager.setupSelf()
     .catch((err) => {
-        console.log("webapp:" + err);
-        console.log("error connecting to server network. exiting.");
+        log("webapp:" + err);
+        log("error connecting to server network. exiting.");
         process.exit(1);
     });
 
