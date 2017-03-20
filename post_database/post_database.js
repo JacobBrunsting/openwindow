@@ -182,6 +182,8 @@ const backupPostModel = mongoose.model(settings[BACKUP_POST_MODEL_KEY], postSche
 
 const cleanupInterval = 1000 * settings[SECONDS_BETWEEN_CLEANUP_KEY];
 setInterval(() => {
+    // TODO: Just remove the same ones that were removed here instead of 
+    // preforming a whole cleanup operation
     removeExpiredPosts(postModel)
         .then(() => {
             removeExpiredPostsFromBackup();
@@ -195,7 +197,8 @@ function removeExpiredPosts(model) {
     return new Promise((resolve, reject) => {
         model
             .find()
-            .$where(() => {
+            // DO NOT change to an arrow function, it is important to bind 'this'
+            .$where(function () {
                 return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;
             })
             .remove((err, data) => {
