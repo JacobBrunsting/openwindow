@@ -47,7 +47,7 @@ module.exports = class DatabaseServerInfo {
         const backupAddr = obj.backupAddr;
         const writeRng = SqrGeoRng.convertObjToClass(obj.writeRng);
         const readRng = SqrGeoRng.convertObjToClass(obj.readRng);
-        return new DatabaseServerInfo(baseAddr, backupAddr, writeRng);
+        return new DatabaseServerInfo(baseAddr, backupAddr, writeRng, readRng);
     }
 
     /**
