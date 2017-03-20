@@ -5,7 +5,9 @@ angular.module('openwindow').service('request_maker', ['$http', function ($http)
             .then(function (res) {
                     callback(res.data);
                 },
-                function (err) {});
+                function (err) {
+                    console.log("request_maker:getPostFromServer:" + err);
+                });
     }
 
     this.addComment = function (postId, serverAddress, comment, callback) {

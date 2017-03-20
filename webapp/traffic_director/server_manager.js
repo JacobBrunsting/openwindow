@@ -206,21 +206,21 @@ function expandServerToMatchOldServer(server, oldServer) {
         });
 }
 
-function resizeServer(newServer) {
+function resizeServer(updatedServer) {
     return new Promise((resolve, reject) => {
         serverInfoModel
             .findOneAndUpdate({
-                    baseAddr: newServer.baseAddr
+                    baseAddr: updatedServer.baseAddr
                 }, {
                     $set: {
-                        'writeRng.maxLat': newServer.writeRng.maxLat,
-                        'writeRng.minLat': newServer.writeRng.minLat,
-                        'writeRng.maxLng': newServer.writeRng.maxLng,
-                        'writeRng.minLng': newServer.writeRng.minLng,
-                        'readRng.maxLat': newServer.readRng.maxLat,
-                        'readRng.minLat': newServer.readRng.minLat,
-                        'readRng.maxLng': newServer.readRng.maxLng,
-                        'readRng.minLng': newServer.readRng.minLng
+                        'writeRng.maxLat': updatedServer.writeRng.maxLat,
+                        'writeRng.minLat': updatedServer.writeRng.minLat,
+                        'writeRng.maxLng': updatedServer.writeRng.maxLng,
+                        'writeRng.minLng': updatedServer.writeRng.minLng,
+                        'readRng.maxLat': updatedServer.readRng.maxLat,
+                        'readRng.minLat': updatedServer.readRng.minLat,
+                        'readRng.maxLng': updatedServer.readRng.maxLng,
+                        'readRng.minLng': updatedServer.readRng.minLng
                     }
                 }, {
                     new: true

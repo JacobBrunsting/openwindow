@@ -121,7 +121,7 @@ app.post('/director/newserver', (req, res) => {
     }
     trafficDirector.generateAndStoreServerInfo(req.body)
         .then((server) => {
-            res.json(server);
+            res.json(server.backupAddr);
             return webServerManager.notifyOtherServers('POST', 'director/serverinfo', server);
         })
         .catch((err) => {
