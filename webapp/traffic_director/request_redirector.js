@@ -27,7 +27,7 @@ const MIN_LAT = -90;
  * @returns {Object} A mongoose query object
  */
 function getServerSearchQuery(targLoc, targRad, reqMethod) {
-    if (!targRad || targRad < 0) {
+    if (targRad !== 0 && (!targRad || targRad < 0)) {
         return {};
     }
 
@@ -89,7 +89,7 @@ function getServerSearchQuery(targLoc, targRad, reqMethod) {
     let query = {
         $and: [{
                 [maxLatKey]: {
-                    $gte: minValidMaxLat
+                    $gt: minValidMaxLat
                 }
             },
             {
@@ -108,12 +108,12 @@ function getServerSearchQuery(targLoc, targRad, reqMethod) {
         query.$and.push({
             $or: [{
                     [maxLngKey]: {
-                        $gte: MIN_LNG
+                        $gt: MIN_LNG
                     }
                 },
                 {
                     [maxLngKey]: {
-                        $gte: minValidMaxLng + (MAX_LNG - MIN_LNG)
+                        $gt: minValidMaxLng + (MAX_LNG - MIN_LNG)
                     }
                 }
             ]
@@ -121,7 +121,7 @@ function getServerSearchQuery(targLoc, targRad, reqMethod) {
     } else {
         query.$and.push({
             [maxLngKey]: {
-                $gte: minValidMaxLng
+                $gt: minValidMaxLng
             }
         });
     }
@@ -166,48 +166,72 @@ function getServerSearchQuery(targLoc, targRad, reqMethod) {
  *  redirects to all available servers)
  */
 function redirectRequest(req, res, targLoc, targRad) {
-    var query = getServerSearchQuery(targLoc, targRad);
-    serverInfoModel
-        .find(query)
-        .then((servers) => {
-            sendRequestToServers(req, res, servers);
-        })
-        .catch((err) => {
-            log("request_redirector:redirectRequest:" + err);
-        });
+    const query = getServerSearchQuery(targLoc, targRad, req.method);
+    let searchPromise;
+    if (req.method === 'POST') {
+        serverInfoModel
+            .findOne(query)
+            .then(server => sendRequestToServer(req, server))
+            .then(reqRes => {
+                res.json({
+                    statusCode: 200,
+                    body: reqRes
+                });
+            })
+            .catch(err => {
+                res.status(500).send(err);
+                log("request_redirector:redirectRequest:" + err);
+            });
+    } else {
+        serverInfoModel
+            .find(query)
+            .then(servers => sendRequestToServers(req, servers))
+            .then(reqRes => {
+                res.json({
+                    statusCode: 200,
+                    body: reqRes
+                });
+            })
+            .catch(err => {
+                res.status(500).send(err);
+                log("request_redirector:redirectRequest:" + err);
+            });
+    }
 }
 
 /**
  * Make a request to multiple servers, and then merge the response
  * @param {Object} req - The Express request object
- * @param {Object} res - The Express response object
  * @param {Object[]} - The servers to redirect the request to, where each server
  *  was retrieved from the server database
  */
-function sendRequestToServers(req, res, servers) {
-    let numCallsRemaining = servers.length;
-    let mergedRspBody = {};
+function sendRequestToServers(req, servers) {
+    return new Promise((resolve, reject) => {
+        Promise.all(servers.map(server => sendRequestToServer(req, server)))
+            .then(results => resolve(results.reduce(Object.assign)))
+            .catch(reject);
+    });
+}
 
+/**
+ * Make a request to a server
+ * @param {Object[]} - The server to send the request to
+ * @param {Object} req - The Express request object
+ * @return {Promise}
+ */
+function sendRequestToServer(req, server) {
     var requestParams = {
+        url: server.baseAddr + req.originalUrl,
         method: req.method,
         body: req.body,
         json: true
     };
-
-    servers.forEach((server) => {
-        requestParams.url = server.baseAddr + req.originalUrl;
-        request(requestParams, (err, reqRes) => {
-            numCallsRemaining -= 1;
+    return new Promise((resolve, reject) => {
+        request(requestParams, (err, res) => {
             if (err) {
-                log("request_redirector:sendRequestToServers:" + err);
+                reject(err);
             } else {
-                Object.assign(mergedRspBody, reqRes.body);
-            }
-            if (numCallsRemaining === 0) {
-                res.json({
-                    statusCode: 200,
-                    body: mergedRspBody
-                });
+                resolve(res.body);
             }
         });
     });
