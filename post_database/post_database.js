@@ -10,6 +10,7 @@
 
 const bodyParser = require('body-parser');
 const config = require(__dirname + '/config');
+const constants = require(__dirname + '/constants');
 const express = require('express');
 const ipAddr = require('ip').address();
 const log = require(__dirname + '/utils/log');
@@ -91,8 +92,7 @@ app.use(express.static('./public'));
 var backupAddr;
 
 // ========= Add Server to List =========
-// TEMP ONLY - Replace 'localhost:8080' with the actual website name later
-networkUtils.serverCall('http://localhost:8080/director/newserver',
+networkUtils.serverCall(constants.apiAddress + 'director/newserver',
         networkUtils.POST, {
             baseAddr: "http://" + ipAddr + ":" + settings[PORT_KEY]
         })
