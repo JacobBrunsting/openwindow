@@ -127,6 +127,8 @@ function replaceServer(oldServer) {
  * For every server on the network, shrink the 'read range' of the server if 
  * possible so that when the traffic director is determining which servers 
  * to send location-based requests to, it makes less unnecesary server calls
+ * TODO: Every web server is going to be doing this - look into avoiding needless
+ * repition (although avoiding extra calls is also nice)
  */
 function recalculateServersRanges() {
     serverInfoModel
@@ -188,9 +190,12 @@ function recalculateServerRanges(server) {
             shouldUpdate = true;
         }
         if (shouldUpdate) {
-            console.log("updating read area for a database server, updated info is:");
-            console.log(JSON.stringify(server));
-            resizeServer(server);
+            log("updating read area for a database server, updated info is:");
+            log(JSON.stringify(server));
+            resizeServer(server)
+                .catch((err) => {
+                    log("server_manager:recalculateServerRanges:" + err);
+                });
         }
     });
 }

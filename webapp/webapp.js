@@ -71,7 +71,6 @@ const webServerManager = require(__dirname + '/web_server_manager')
     (settings[WEB_SERVERS_INFO_COLLECTION_KEY], baseAddr);
 
 // ================ Setup ================
-
 mongoose.Promise = require('bluebird');
 mongoose.connect(settings[MONGO_DB_ADDRESS_KEY]);
 

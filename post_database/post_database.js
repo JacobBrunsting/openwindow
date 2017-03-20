@@ -196,7 +196,7 @@ function removeExpiredPosts(model) {
     return new Promise((resolve, reject) => {
         model
             .find()
-            .$where(function() {
+            .$where(() => {
                 return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;
             })
             .remove((err, data) => {
@@ -281,7 +281,6 @@ app.post("/api/settime", postSetTime);
 /**
  * @api {get} /api/allposts - Get all posts stored in the main database
  * @apiSuccess {Object[]} posts
- * @apiSuccess {String} posts.id
  * @apiSuccess {String} posts.body
  * @apiSuccess {Number} posts.posterId
  * @apiSuccess {Number} posts.postTime
@@ -301,7 +300,6 @@ app.get("/api/allposts", getAllPosts);
  * @api {get} /api/post - Get a specific post by id
  * @apiParam {mongoose.Types.ObjectId} id
  * @apiSuccess {Object[]} post
- * @apiSuccess {String} post.id
  * @apiSuccess {String} post.body
  * @apiSuccess {Number} post.posterId
  * @apiSuccess {Number} post.postTime
@@ -325,7 +323,6 @@ app.get("/api/post", getPost);
  * @apiParam {Number} radius - The maximum distance from the provided longitude
  *  and latitude for a post returned by this endpoint
  * @apiSuccess {Object[]} post
- * @apiSuccess {String} post.id
  * @apiSuccess {String} post.body
  * @apiSuccess {Number} post.posterId
  * @apiSuccess {Number} post.postTime
@@ -377,7 +374,6 @@ app.put("/api/downvote", putDownvote);
  * @api {put} /api/post - Update a post, undefined post parameters will not be
  *  modified
  * @apiParam {Object[]} posts - The posts being created
- * @apiParam {String} posts.id
  * @apiParam {String} posts.body
  * @apiParam {Number} posts.posterId
  * @apiParam {Number} posts.postTime
@@ -419,7 +415,6 @@ app.delete("/api/post", deletePost);
 /**
  * @api {post} /api/backuppost - Create a new post in the backup database
  * @apiParam {Object} post - The post being created
- * @apiParam {String} post.id
  * @apiParam {String} post.body
  * @apiParam {Number} post.posterId
  * @apiParam {Number} post.postTime
@@ -438,7 +433,6 @@ app.post("/api/backuppost", postBackupPost);
 /**
  * @api {post} /api/backupposts - Create new posts in the backup database
  * @apiParam {Object[]} posts - The posts being created
- * @apiParam {String} posts.id
  * @apiParam {String} posts.body
  * @apiParam {Number} posts.posterId
  * @apiParam {Number} posts.postTime
@@ -457,7 +451,6 @@ app.post("/api/backupposts", postBackupPosts);
 /**
  * @api {get} /api/allbackupposts - Get all posts stored in the backup database
  * @apiSuccess {Object[]} posts
- * @apiSuccess {String} posts.id
  * @apiSuccess {String} posts.body
  * @apiSuccess {Number} posts.posterId
  * @apiSuccess {Number} posts.postTime
@@ -477,7 +470,6 @@ app.get("/api/allbackupposts", getAllBackupPosts);
  * @api {put} /api/backuppost - Update a post stored in the backup database, 
  *  undefined post parameters will not be modified
  * @apiParam {Object[]} posts - The posts being created
- * @apiParam {String} posts.id
  * @apiParam {String} posts.body
  * @apiParam {Number} posts.posterId
  * @apiParam {Number} posts.postTime
