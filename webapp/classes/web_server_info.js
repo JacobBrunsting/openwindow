@@ -10,6 +10,17 @@ module.exports = class WebServerInfo {
     }
 
     /**
+     * Convert a javascript object with the same fields as a WebServerInfo into 
+     * a WebServerInfo object
+     * @param {Object} obj
+     * @param {number} obj.baseAddr
+     */
+    static convertObjToClass(obj) {
+        const baseAddr = obj.baseAddr;
+        return new DatabaseServerInfo(baseAddr);
+    }
+
+    /**
      * Get the structure of this class in the format required for a Mongoose 
      * Schema
      * @returns {Object} - The class structure

@@ -96,11 +96,10 @@ networkUtils.serverCall(constants.apiAddress + 'director/newserver',
         networkUtils.POST, {
             baseAddr: "http://" + ipAddr + ":" + settings[PORT_KEY]
         })
-    .then((res) => {
-        if (res.backupAddr) {
-            backupAddr = res.backupAddr;
+    .then((_backupAddr) => {
+        if (_backupAddr) {
+            backupAddr = _backupAddr;
         } else {
-            process.exit(1);
             log("did not receive backup database address. exiting.");
         }
     })

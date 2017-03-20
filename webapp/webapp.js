@@ -15,6 +15,7 @@ const MONGO_DB_ADDRESS_KEY = "mongoDbAddress";
 const SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY = 'secondsBetweenServerSizeCalculations';
 const DATABASE_SERVERS_INFO_COLLECTION_KEY = 'databaseServersInfoCollection';
 const WEB_SERVERS_INFO_COLLECTION_KEY = 'webServersInfoCollection';
+const FIRST_SETUP_KEY = "firstSetup";
 
 var settings = {};
 settings[PORT_KEY] = 8080;
@@ -113,10 +114,19 @@ app.all('/api/*', (req, res) => {
  * @apiParam {string} baseAddr - The address of the database server
  */
 app.post('/director/newserver', (req, res) => {
-    trafficDirector.generateServerInfo(req, res)
+    if (!req.body.baseAddr) {
+        log("webapp:/director/newserver:baseAddr body property not provided");
+        res.status(400).send("baseAddr body property required");
+        return;
+    }
+    trafficDirector.generateAndStoreServerInfo(req.body)
         .then((server) => {
-            console.log("added server " + JSON.stringify(server));
-            webServerManager.notifyOtherServers('POST', '/director/serverinfo', server);
+            res.json(server);
+            return webServerManager.notifyOtherServers('POST', 'director/serverinfo', server);
+        })
+        .catch((err) => {
+            res.status(500).send(err);
+            log("webapp:/director/newserver:" + err);
         });
 });
 
@@ -137,7 +147,14 @@ app.post('/director/newserver', (req, res) => {
  * @apiParam {number} readRng.maxLng
  */
 app.post('/director/serverinfo', (req, res) => {
-    trafficDirector.addServerInfo(req, res);
+    trafficDirector.addServerInfo(req.body)
+        .then(() => {
+            res.status(200).send();
+        })
+        .catch((err) => {
+            res.status(500).send(err);
+            log("webapp:/director/serverinfo:" + err);
+        });
 });
 
 /**
@@ -159,7 +176,14 @@ app.post('/director/serverinfo', (req, res) => {
  * @apiSuccess {string} servers._id
  */
 app.get('/director/allserverinfo', (req, res) => {
-    trafficDirector.getAllServerInfo(req, res);
+    trafficDirector.getAllServerInfo(req.query.excludeId)
+        .then((serverInfo) => {
+            res.json(serverInfo);
+        })
+        .catch((err) => {
+            res.status(500).send(err);
+            log("webapp:/director/allserverinfo:" + err);
+        });
 });
 
 /**
@@ -167,7 +191,14 @@ app.get('/director/allserverinfo', (req, res) => {
  * @apiParam {string} baseAddr - The base address of the server to remove
  */
 app.delete('/director/serverinfo', (req, res) => {
-    trafficDirector.removeServerInfo(req, res);
+    trafficDirector.removeServerInfo(req.query.baseAddr)
+        .then(() => {
+            res.status(200).send()
+        })
+        .catch((err) => {
+            res.status(500).send(err);
+            log("webapp:/director/serverinfo:" + err);
+        });
 });
 
 /**
@@ -176,9 +207,21 @@ app.delete('/director/serverinfo', (req, res) => {
  * @apiParam {string} baseAddr
  */
 app.post('/webserver/newserver', (req, res) => {
-    webServerManager.addServerInfo(req, res)
-        .then((server) => {
-            webServerManager.notifyOtherServers('POST', '/webserver/serverinfo', server);
+    function addToDatabase() {
+        webServerManager.addServerInfo(req.body)
+            .then(() => {
+                res.status(200).send();
+            })
+            .catch((err) => {
+                res.status(500).send(err);
+                log("webapp:/webserver/newserver:" + err);
+            });
+    }
+    webServerManager.notifyOtherServers('POST', 'webserver/serverinfo', req.body)
+        .then(addToDatabase)
+        .catch((err) => {
+            addToDatabase();
+            log("webapp:/webserver/newserver:" + err);
         });
 });
 
@@ -188,17 +231,32 @@ app.post('/webserver/newserver', (req, res) => {
  * @apiParam {string} baseAddr - The address of the web server
  */
 app.post('/webserver/serverinfo', (req, res) => {
-    webServerManager.addServerInfo(req, res);
+    webServerManager.addServerInfo(req.body)
+        .then(() => {
+            res.status(200).send();
+        })
+        .catch((err) => {
+            res.status(500).send(err);
+            log("webapp:/webserver/serverinfo:" + err);
+        });
 });
 
 /**
  * @api {get} /webserver/allserverinfo - Get the information about all of the
- *  web servers
+ *  web servers, in ascending order by IP address
+ * @apiParam {boolean} excludeId
  * @apiSuccess {Object[]} servers
  * @apiSuccess {string} servers.baseAddr
  */
 app.get('/webserver/allserverinfo', (req, res) => {
-    webServerManager.getAllServerInfo(req, res);
+    webServerManager.getAllServerInfo(req.query.excludeId)
+        .then((serverInfo) => {
+            res.json(serverInfo);
+        })
+        .catch((err) => {
+            res.status(500).send(err);
+            log("webapp:/webserver/allserverinfo:" + err);
+        });
 });
 
 /**
@@ -206,15 +264,29 @@ app.get('/webserver/allserverinfo', (req, res) => {
  * @apiParam {string} baseAddr - The address of the web server
  */
 app.delete('/webserver/serverinfo', (req, res) => {
-    webServerManager.removeServerInfo(req, res);
+    webServerManager.removeServerInfo(req.query.baseAddr)
+        .then(() => {
+            res.status(200).send();
+        })
+        .catch((err) => {
+            res.status(500).send(err);
+            log("webapp:/webserver/serverinfo:" + err);
+        });
 });
 
-webServerManager.setupSelf()
+// the first server in the network needs to be set up differently, so we have
+// this setting (which can be passed in from the command line) to account for that
+const setupAsFirst = settings[FIRST_SETUP_KEY] === "true";
+Promise.all([
+        webServerManager.setupSelf(setupAsFirst),
+        trafficDirector.setupSelf(setupAsFirst)
+    ])
+    .then(() => {
+        log("webapp listening on port " + settings[PORT_KEY]);
+        app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
+    })
     .catch((err) => {
         log("webapp:" + err);
         log("error connecting to server network. exiting.");
         process.exit(1);
     });
-
-console.log("webapp listening on port " + settings[PORT_KEY]);
-app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);

@@ -4,7 +4,9 @@
  * originates from
  */
 
-var DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
+const DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
+const constants = require(__dirname + '/../constants');
+const request = require('request');
 
 var SERVER_INFO_MODEL_NAME = 'DatabaseServerInfo';
 
@@ -20,17 +22,52 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
         collection: serverInfoCollectionName
     });
 
+    serverInfoSchema.index({
+        baseAddr: 1
+    }, {
+        unique: true
+    });
+
     var serverInfoModel = mongoose.model(SERVER_INFO_MODEL_NAME, serverInfoSchema);
 
     var requestRedirector = require(__dirname + '/request_redirector')(serverInfoModel);
     var serverManager = require(__dirname + '/server_manager')(serverInfoModel);
 
+    function setupSelf(isFirstServer) {
+        return new Promise((resolve, reject) => {
+            if (isFirstServer && isFirstServer === true) {
+                resolve();
+                return;
+            }
+            const requestParams = {
+                url: constants.apiAddress + 'director/allserverinfo?excludeId=true',
+                method: 'GET',
+                json: true
+            }
+            request(requestParams, (err, res) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    serverManager.addAllServerInfo(res.body)
+                        .then(() => {
+                            resolve();
+                        })
+                        .catch((err) => {
+                            reject("traffic_director:setupSelf:" + err);
+                        });
+                }
+            });
+        });
+    }
+
     return {
+        setupSelf,
         redirectRequest: requestRedirector.redirectRequest,
-        generateServerInfo: serverManager.generateServerInfo,
+        generateAndStoreServerInfo: serverManager.generateAndStoreServerInfo,
         removeServerInfo: serverManager.removeServerInfo,
         getAllServerInfo: serverManager.getAllServerInfo,
         addServerInfo: serverManager.addServerInfo,
+        addAllServerInfo: serverManager.addAllServerInfo,
         recalculateServersRanges: serverManager.recalculateServersRanges
     };
 };
