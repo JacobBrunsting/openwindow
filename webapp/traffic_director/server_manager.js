@@ -123,18 +123,26 @@ function replaceServer(oldServer) {
  * possible so that when the traffic director is determining which servers 
  * to send location-based requests to, it makes less unnecesary server calls
  * TODO: Every web server is going to be doing this - look into avoiding needless
- * repition (although avoiding extra calls is also nice)
+ * repition (although avoiding extra calls is also nice). Also, only make the 
+ * call if the read range is larger than the write range
  */
 function recalculateServersRanges() {
     serverInfoModel
         .find()
-        .then((servers) => {
-            servers.forEach((server) => {
-                recalculateServerRanges(DatabaseServerInfo.convertObjToClass(server));
+        .then(servers => {
+            const formattedServers = DatabaseServerInfo.convertObjsToClasses(servers);
+            formattedServers.forEach((server) => {
+                // the read range can never be smaller than the write range, so
+                // if the read range is already equal to the write range, we 
+                // do not need to try and resize it, as it is already as small
+                // as possible
+                if (!server.readRng.equals(server.writeRng)) {
+                    recalculateServerRanges(server);
+                }
             });
         })
         .catch((err) => {
-            log("traffic_director:server range calculations:" + err);
+            log("server_manager:server range calculations:" + err);
         });
 }
 

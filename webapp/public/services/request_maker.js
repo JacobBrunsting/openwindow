@@ -6,7 +6,7 @@ angular.module('openwindow').service('request_maker', ['$http', function ($http)
                     callback(res.data);
                 },
                 function (err) {
-                    console.log("request_maker:getPostFromServer:" + err);
+                    console.log("request_maker:getPostFromServer:" + JSON.stringify(err));
                 });
     }
 
@@ -20,7 +20,7 @@ angular.module('openwindow').service('request_maker', ['$http', function ($http)
                     callback(res.data);
                 },
                 function (err) {
-                    console.log("request_maker:addComment:" + err);
+                    console.log("request_maker:addComment:" + JSON.stringify(err));
                 });
     }
 }]);

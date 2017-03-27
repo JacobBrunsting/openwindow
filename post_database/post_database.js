@@ -607,7 +607,8 @@ function getPostsSecondsToShowFor(req, res) {
             res.json(postsSecondsToShowForCache);
         })
         .catch((err) => {
-            res.json("post_database:getPostsSecondsToShowFor:" + err);
+            res.status(500).send(err);
+            log("post_database:getPostsSecondsToShowFor:" + err);
         });
 }
 
@@ -631,7 +632,8 @@ function getPostRange(req, res) {
             });
         })
         .catch((err) => {
-            res.json("post_database:getPostRange:" + err);
+            res.status(500).send(err);
+            log("post_database:getPostRange:" + err);
         });
 
     function updateRange(post) {
@@ -720,11 +722,15 @@ function putPost(req, res) {
 }
 
 function putBackupAddr(req, res) {
+    const newBackupAddr = req.body.newBackupAddr
     clearBackups();
-    backupAddr = req.body.newbackupAddr;
+    backupAddr = newBackupAddr;
     postModel
         .find()
         .then((posts) => {
+            posts.forEach(post => {
+                post.backupDatabaseAddr = newBackupAddr;
+            });
             res.status(200).send();
             addPostsToBackup(posts);
         })
@@ -860,7 +866,7 @@ function deleteBackups(req, res) {
 function addExtraPostProperties(post) {
     post.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
     post.postTime = Date.now();
-    post.mainDatabaseAddr = ipAddr + ":" + settings[PORT_KEY];
+    post.mainDatabaseAddr = "http://" + ipAddr + ":" + settings[PORT_KEY];
     post.backupDatabaseAddr = backupAddr;
     post._id = mongoose.Types.ObjectId();
 }
@@ -951,6 +957,7 @@ function clearBackups() {
             }
         );
 }
-
+console.log("");
 log("post database listening on port " + settings[PORT_KEY]);
+console.log("");
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);

@@ -181,8 +181,8 @@ app.get('/director/allserverinfo', (req, res) => {
             res.json(serverInfo);
         })
         .catch((err) => {
-            res.status(500).send(err);
             log("webapp:/director/allserverinfo:" + err);
+            res.status(500).send(err);
         });
 });
 
@@ -282,7 +282,9 @@ Promise.all([
         trafficDirector.setupSelf(setupAsFirst)
     ])
     .then(() => {
+        console.log("");
         log("webapp listening on port " + settings[PORT_KEY]);
+        console.log("");
         app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
     })
     .catch((err) => {
