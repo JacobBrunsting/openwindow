@@ -68,6 +68,8 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
         getAllServerInfo: serverManager.getAllServerInfo,
         addServerInfo: serverManager.addServerInfo,
         addAllServerInfo: serverManager.addAllServerInfo,
+        updateServerInfo: serverManager.updateServerInfo,
+        updateServersInfo: serverManager.updateServersInfo,
         recalculateServersRanges: serverManager.recalculateServersRanges
     };
 };

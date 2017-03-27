@@ -4,6 +4,7 @@
  * of database servers, and each post is backed up so that is not lost in the 
  * event of a server failure or disconnection.
  */
+// TODO: Split servers based on how many posts they store
 
 // ============== Settings ==============
 
@@ -120,9 +121,15 @@ app.post('/director/newserver', (req, res) => {
         return;
     }
     trafficDirector.generateAndStoreServerInfo(req.body)
-        .then((server) => {
-            res.json(server.backupAddr);
-            return webServerManager.notifyOtherServers('POST', 'director/serverinfo', server);
+        .then((updatedServersInfo) => {
+            const newServer = updatedServersInfo[0];
+            updatedServersInfo.splice(0, 1);
+            const updatedServers = updatedServersInfo;
+            res.json(newServer.backupAddr);
+            return Promise.all([
+                webServerManager.notifyOtherServers('POST', 'director/serverinfo', newServer),
+                webServerManager.notifyOtherServers('PUT', 'director/serversinfo', updatedServers)
+            ]);
         })
         .catch((err) => {
             res.status(500).send(err);
@@ -184,6 +191,34 @@ app.get('/director/allserverinfo', (req, res) => {
             log("webapp:/director/allserverinfo:" + err);
             res.status(500).send(err);
         });
+});
+
+/**
+ * @api {put} director/serversinfo - Update several server infos in the database 
+ *  server info collection
+ * @apiParam {Object[]} servers
+ * @apiParam {string} servers.baseAddr
+ * @apiParam {string} servers.backupAddr
+ * @apiParam {Object} servers.writeRng
+ * @apiParam {number} servers.writeRng.minLat
+ * @apiParam {number} servers.writeRng.maxLat
+ * @apiParam {number} servers.writeRng.minLng
+ * @apiParam {number} servers.writeRng.maxLng
+ * @apiParam {Object} servers.readRng
+ * @apiParam {number} servers.readRng.minLat
+ * @apiParam {number} servers.readRng.maxLat
+ * @apiParam {number} servers.readRng.minLng
+ * @apiParam {number} servers.readRng.maxLng
+ */
+app.put('/director/serversinfo', (req, res) => {
+    trafficDirector.updateServersInfo(req.body)
+        .then((result) => {
+            res.status(200).send();
+        })
+        .catch(err => {
+            log("webapp:/director/serversinfo:" + err);
+            res.status(500).send(err);
+        })
 });
 
 /**
