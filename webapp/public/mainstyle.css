@@ -235,3 +235,28 @@ canvas.serverdisplay {
     height: 500px;
     background-color: white;
 }
+
+table {
+    overflow: scroll;
+}
+
+th, td {
+    padding: 20px;
+    text-align: center;
+    border: 1px solid black;
+}
+
+div.tableContainer {
+    overflow: auto;
+}
+
+div.mapGraphicWrapper {
+    overflow: auto;
+}
+
+canvas.serverDisplay {
+    width: 1000px;
+    height: 800px;
+    background: url("https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Mercator_projection_SW.jpg/1280px-Mercator_projection_SW.jpg");
+    background-size: 1000px 800px;
+}

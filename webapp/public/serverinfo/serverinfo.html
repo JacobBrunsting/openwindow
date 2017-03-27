@@ -1,13 +1,80 @@
 <html>
-<h1>
-    Server write areas
-</h1>
-<canvas id="serverWriteAreaCanvas" width="1000" height="500" class="serverdisplay">
-</canvas>
-<h1>
-    Server read areas
-</h1>
-<canvas id="serverReadAreaCanvas" width="1000" height="500" class="serverdisplay">
-</canvas>
+<h2>
+    Database server write areas
+</h2>
+<div class="mapGraphicWrapper">
+    <canvas id="serverWriteAreaCanvas" class="serverDisplay">
+    </canvas>
+</div>
+<h2>
+    Database server read areas
+</h2>
+<div class="mapGraphicWrapper">
+    <canvas id="serverReadAreaCanvas" class="serverDisplay">
+    </canvas>
+</div>
+<h2>
+    Web servers info
+</h2>
+<div class="tableContainer">
+    <table>
+        <tr>
+            <th>Base Address</th>
+        </tr>
+        <tr ng-repeat="server in webservers track by $index">
+            <td>{{server.baseAddr.replace('http://','')}}</td>
+        </tr>
+    </table>
+</div>
+<h2>
+    Database servers info
+</h2>
+<div class="tableContainer">
+    <table>
+        <tr>
+            <th>Base Address</th>
+            <th>Backup Server Address</th>
+            <th>Min Read Latitude</th>
+            <th>Max Read Latitude</th>
+            <th>Min Read Longitude</th>
+            <th>Max Read Longitude</th>
+            <th>Min Write Latitude</th>
+            <th>Max Write Latitude</th>
+            <th>Min Read Longitude</th>
+            <th>Max Read Longitude</th>
+        </tr>
+        <tr ng-repeat="server in databaseservers track by $index">
+            <td>{{server.baseAddr.replace('http://','')}}</td>
+            <td>{{server.backupAddr.replace('http://','')}}</td>
+            <td>{{server.readRng.minLat}}</td>
+            <td>{{server.readRng.maxLat}}</td>
+            <td>{{server.readRng.minLng}}</td>
+            <td>{{server.readRng.maxLng}}</td>
+            <td>{{server.writeRng.minLat}}</td>
+            <td>{{server.writeRng.maxLat}}</td>
+            <td>{{server.writeRng.minLng}}</td>
+            <td>{{server.writeRng.maxLng}}</td>
+        </tr>
+    </table>
+</div>
+<h2>
+    Posts
+</h2>
+<div class="tableContainer">
+    <table>
+        <tr>
+            <th>Address of Database Storing</th>
+            <th>Address of Backup Database</th>
+            <th>Title</th>
+            <th>Body</th>
+        </tr>
+        <tr ng-repeat="post in posts track by $index">
+            <td>{{post.mainDatabaseAddr.replace('http://', '')}}</td>
+            <td>{{post.backupDatabaseAddr.replace('http://', '')}}</td>
+            <td>{{post.title}}</td>
+            <td>{{post.body}}</td>
+        </tr>
+    </table>
+</div>
 
 </html>
