@@ -30,6 +30,7 @@ const DOWNVOTE_INC_KEY = "downvoteInc";
 const INITIAL_SECONDS_TO_SHOW_FOR = "initialSecondsToShowFor";
 const SITE_POST_MODEL_KEY = "postModelName";
 const BACKUP_POST_MODEL_KEY = "backupPostModelName";
+const SERVER_POWER_CONSTANT_KEY = "serverPowerConstant";
 
 var settings = {};
 settings[PORT_KEY] = 8080;
@@ -42,6 +43,7 @@ settings[DOWNVOTE_INC_KEY] = -150;
 settings[INITIAL_SECONDS_TO_SHOW_FOR] = 1000;
 settings[SITE_POST_MODEL_KEY] = 'Post';
 settings[BACKUP_POST_MODEL_KEY] = 'BackupPost';
+settings[SERVER_POWER_CONSTANT_KEY] = 1;
 
 for (var key in settings) {
     if (config[key]) {
@@ -66,6 +68,9 @@ process.argv.forEach(function (val, index) {
                     break;
                 case BACKUP_POST_MODEL_KEY:
                     settings[BACKUP_POST_MODEL_KEY] = splitVal[1];
+                    break;
+                case SERVER_POWER_CONSTANT_KEY:
+                    settings[SERVER_POWER_CONSTANT_KEY] = splitVal[1];
                     break;
             }
         }
@@ -359,6 +364,15 @@ app.get("/api/postssecondstoshowfor", getPostsSecondsToShowFor);
 app.get("/api/postrange", getPostRange);
 
 /**
+ * @api {get} /api/amountused - Get a number representing the amount of the 
+ *  server's total capacity that is used
+ * @apiSuccess {Number} amountFull - The total amount of the server that is used, 
+ *  porportionate to the number of posts stored on the server, and a server
+ *  speed constant specified by the server creator
+ */
+app.get("/api/amountfull", getAmountFull);
+
+/**
  * @api {put} /api/upvote - Upvote a post
  * @apiParam {mongoose.Type.ObjectId} id - The id of the upvoted post
  * @apiParam {number} oldVote - The previous vote on the post
@@ -610,6 +624,20 @@ function getPostsSecondsToShowFor(req, res) {
             res.status(500).send(err);
             log("post_database:getPostsSecondsToShowFor:" + err);
         });
+}
+
+function getAmountFull(req, res) {
+    postModel
+        .count()
+        .then(count => {
+            res.json({
+                amountFull: count * settings[SERVER_POWER_CONSTANT_KEY]
+            });
+        })
+        .catch(err => {
+            res.status(500).send(err);
+            log("post_database:getAmountFull:" + err);
+        })
 }
 
 function getPostRange(req, res) {
