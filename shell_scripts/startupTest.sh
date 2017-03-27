@@ -22,3 +22,10 @@ node --use-strict ../post_database/post_database.js postModelName=Posts2 backupP
 echo "\n\nEND OF EXECUTION"
 sleep infinity
 '
+sleep 2
+gnome-terminal --window-with-profile=solarized-dark-small -x sh -c '
+node --use-strict ../post_database/post_database.js postModelName=Posts2 backupPostModelName=BackupPosts2 port=5000
+echo "\n\nEND OF EXECUTION"
+sleep infinity
+'
+
