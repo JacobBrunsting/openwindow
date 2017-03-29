@@ -4,8 +4,6 @@
  * of database servers, and each post is backed up so that is not lost in the 
  * event of a server failure or disconnection.
  */
-// TODO: Split servers based on how many posts they store
-
 // ============== Settings ==============
 
 const config = require(__dirname + '/config');
@@ -97,15 +95,11 @@ app.use('*', (req, res, next) => {
 });
 
 app.all('/api/*', (req, res) => {
-    var radius = 0;
-    if (req.query.radius) {
-        radius = req.query.radius;
-    }
     var loc = {
         longitude: req.query.longitude,
         latitude: req.query.latitude
     };
-    trafficDirector.redirectRequest(req, res, loc, radius);
+    trafficDirector.redirectRequest(req, res, loc, req.query.radius);
 });
 
 /**

@@ -15,8 +15,7 @@ const MAX_LAT = 90;
 const MIN_LAT = -90;
 
 /**
- * Get the search query that should be used to find the servers the request 
- * should be routed to
+ * Get a search query to find all servers servicing the provided range
  * @param {Object} targLoc - The center of the search range
  * @param {number} targLoc.latitude
  * @param {number} targLoc.longitude
@@ -26,15 +25,12 @@ const MIN_LAT = -90;
  *  being redirected, can be one of GET, POST, PUT, DELETE
  * @returns {Object} A mongoose query object
  */
-function getServerSearchQuery(targLoc, targRad, reqMethod) {
-    if (targRad !== 0 && (!targRad || targRad < 0)) {
-        return {};
-    }
-
+function getRangeBasedServerSearchQuery(targLoc, targRad, reqMethod) {
     let minLngKey;
     let maxLngKey;
     let minLatKey;
     let maxLatKey;
+
     switch (reqMethod) {
         case 'POST':
             minLngKey = 'writeRng.minLng';
@@ -51,8 +47,8 @@ function getServerSearchQuery(targLoc, targRad, reqMethod) {
 
     const lat = Number(targLoc.latitude);
     const lng = Number(targLoc.longitude);
-    const oneLatDegInMeters = Math.cos(lat * Math.PI / 180) * 111000;
-    const oneLngDegInMeters = Math.cos(lng * Math.PI / 180) * 111000;
+    const oneLatDegInMeters = 111000;
+    const oneLngDegInMeters = Math.cos(lat * Math.PI / 180) * 111000;
 
     // To avoid creating complex queries, we make a query to find all the
     // servers storing posts within the square surrounding the query location 
@@ -162,41 +158,28 @@ function getServerSearchQuery(targLoc, targRad, reqMethod) {
  * @param {Object} targLoc - The target location for the query
  * @param {number} targLoc.latitude
  * @param {number} targLoc.longitude
- * @param {number} targRad - The query radius in meters (a negative radius 
- *  redirects to all available servers)
+ * @param {number} targRad - The query radius in meters (an undefined or 0 
+ *  radius redirects to the single server serving the target location)
  */
 function redirectRequest(req, res, targLoc, targRad) {
-    const query = getServerSearchQuery(targLoc, targRad, req.method);
-    let searchPromise;
-    if (req.method === 'POST') {
-        serverInfoModel
-            .findOne(query)
-            .then(server => sendRequestToServer(req, server))
-            .then(reqRes => {
-                res.json({
-                    statusCode: 200,
-                    body: reqRes
-                });
-            })
-            .catch(err => {
-                res.status(500).send(err);
-                log("request_redirector:redirectRequest:" + err);
-            });
-    } else {
-        serverInfoModel
-            .find(query)
-            .then(servers => sendRequestToServers(req, servers))
-            .then(reqRes => {
-                res.json({
-                    statusCode: 200,
-                    body: reqRes
-                });
-            })
-            .catch(err => {
-                res.status(500).send(err);
-                log("request_redirector:redirectRequest:" + err);
-            });
+    if (!targRad) {
+        targRad = 0;
     }
+    let query = getRangeBasedServerSearchQuery(targLoc, targRad, req.method);
+    let searchPromise;
+    serverInfoModel
+        .find(query)
+        .then(servers => sendRequestToServers(req, servers))
+        .then(reqRes => {
+            res.json({
+                statusCode: 200,
+                body: reqRes
+            });
+        })
+        .catch(err => {
+            res.status(500).send(err);
+            log("request_redirector:redirectRequest:" + err);
+        });
 }
 
 /**
