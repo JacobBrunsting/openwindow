@@ -78,9 +78,9 @@ var MIN_LAT = -90;
 function drawServerArea(canvas, minLng, minLat, maxLng, maxLat, serverAddr) {
     var ctx = canvas.getContext("2d");
     var minX = mapToNewRange(minLng, MIN_LNG, MAX_LNG, 0, canvas.width);
-    var minY = mapToNewRange(minLat, MIN_LAT, MAX_LAT, 0, canvas.height);
+    var minY = mapToNewRange(-maxLat, MIN_LAT, MAX_LAT, 0, canvas.height);
     var maxX = mapToNewRange(maxLng, MIN_LNG, MAX_LNG, 0, canvas.width);
-    var maxY = mapToNewRange(maxLat, MIN_LAT, MAX_LAT, 0, canvas.height);
+    var maxY = mapToNewRange(-minLat, MIN_LAT, MAX_LAT, 0, canvas.height);
     ctx.beginPath();
     ctx.lineWidth = "4";
     ctx.strokeStyle = "white";
