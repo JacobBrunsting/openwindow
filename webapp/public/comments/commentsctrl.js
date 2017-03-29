@@ -7,7 +7,7 @@ angular.module('openwindow').controller('commentsctrl', [
     'INT_CONSTANTS',
     function ($scope, $http, $location, post_creator, request_maker, INT_CONSTANTS) {
         var postId = $location.search().postId;
-        var postServerAddress = 'http://' + $location.search().postServerAddress;
+        var postServerAddress = $location.search().postServerAddress;
 
         $scope.page = "comments";
         $scope.post = post_creator.createPost("", "", "", false, false, "", "", "", "", "", "");
