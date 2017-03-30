@@ -3,10 +3,12 @@ angular.module('openwindow').controller('postctrl', [
     '$http',
     '$window',
     '$interval',
+    'request_maker',
     'geolocation',
     'post_creator',
     'INT_CONSTANTS',
-    function ($scope, $http, $window, $interval, geolocation, post_creator, INT_CONSTANTS) {
+    function ($scope, $http, $window, $interval, request_maker, geolocation,
+        post_creator, INT_CONSTANTS) {
         $scope.upvote = function () {
             $scope.vote(INT_CONSTANTS.UPVOTE);
         }
@@ -72,21 +74,15 @@ angular.module('openwindow').controller('postctrl', [
             $scope.updatePostTimeStr();
         }, POST_UPDATE_INTERVAL);
         $scope.updatePostVote = function (vote, callback) {
-            var call = "/api/" + getVoteCall(vote);
             var params = $scope.location;
-            params.radius = INT_CONSTANTS.POST_RADIUS;
-            $http.put(call, {
-                    id: $scope.post.id,
-                    oldVote: $scope.getPostStatus($scope.post)
-                }, {
-                    params: params
-                })
-                .success(function (response) {
-                    var post = post_creator.getFormattedPost(response.body);
+            request_maker
+                .voteOnPost($scope.post.id, $scope.post.mainDatabaseAddr, getVoteCall(vote))
+                .then(function (response) {
+                    var post = post_creator.getFormattedPost(response.data.body);
                     $scope.post.setSecondsToShowFor(post.getSecondsToShowFor());
                     callback(true);
                 })
-                .error(function (error) {
+                .catch(function (error) {
                     callback(false);
                 });
         }

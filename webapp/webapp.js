@@ -94,6 +94,18 @@ app.use('*', (req, res, next) => {
     next();
 });
 
+/**
+ * @api /api/* - Endpoing for all api requests, redirects the requests to the 
+ *  correct database server(s)
+ * @apiParam {Object} targLoc - The target location for the query
+ * @apiParam {number} targLoc.latitude
+ * @apiParam {number} targLoc.longitude
+ * @apiParam {number} targRad - The query radius in meters (an undefined or 0 
+ *  radius redirects to the single server serving the target location)
+ * @apiParam {string} databaseAddr - The database to redirect the request to,
+ *  if this parameter is specified in the query parameters, the request will 
+ *  only be sent to this database
+ */
 app.all('/api/*', (req, res) => {
     var loc = {
         longitude: req.query.longitude,

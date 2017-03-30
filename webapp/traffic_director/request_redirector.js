@@ -153,15 +153,32 @@ function getRangeBasedServerSearchQuery(targLoc, targRad, reqMethod) {
 
 /**
  * Redirect a location-based request to the correct database servers
- * @param {Object} req - The Express request object
- * @param {Object} res - The Express response object
- * @param {Object} targLoc - The target location for the query
- * @param {number} targLoc.latitude
- * @param {number} targLoc.longitude
- * @param {number} targRad - The query radius in meters (an undefined or 0 
+ * @apiParam {Object} req - The Express request object
+ * @apiParam {Object} res - The Express response object
+ * @apiParam {Object} targLoc - The target location for the query
+ * @apiParam {number} targLoc.latitude
+ * @apiParam {number} targLoc.longitude
+ * @apiParam {number} targRad - The query radius in meters (an undefined or 0 
  *  radius redirects to the single server serving the target location)
+ * @apiParam {string} databaseAddr - The database to redirect the request to,
+ *  if this parameter is specified in the query parameters, the request will 
+ *  only be sent to this database
  */
 function redirectRequest(req, res, targLoc, targRad) {
+    if (req.query.databaseAddress) {
+        sendRequestToAddress(req, req.query.databaseAddress)
+            .then(reqRes => {
+                res.json({
+                    statusCode: 200,
+                    body: reqRes
+                });
+            })
+            .catch(err => {
+                res.status(500).send(err);
+                log("request_redirector:redirectRequest:" + err);
+            });
+        return;
+    }
     if (!targRad) {
         targRad = 0;
     }
@@ -183,7 +200,8 @@ function redirectRequest(req, res, targLoc, targRad) {
 }
 
 /**
- * Make a request to multiple servers, and then merge the response
+ * Make a request to multiple servers, and then merge the response if the
+ * responses are arrays
  * @param {Object} req - The Express request object
  * @param {Object[]} - The servers to redirect the request to, where each server
  *  was retrieved from the server database
@@ -204,13 +222,14 @@ function sendRequestToServers(req, servers) {
 
 /**
  * Make a request to a server
- * @param {Object[]} - The server to send the request to
+ * @param {string} serverAddress - The base address of the server to send the 
+ *  request to
  * @param {Object} req - The Express request object
  * @return {Promise}
  */
-function sendRequestToServer(req, server) {
+function sendRequestToAddress(req, serverAddress) {
     var requestParams = {
-        url: server.baseAddr + req.originalUrl,
+        url: serverAddress + req.originalUrl,
         method: req.method,
         body: req.body,
         json: true
@@ -218,6 +237,7 @@ function sendRequestToServer(req, server) {
     return new Promise((resolve, reject) => {
         request(requestParams, (err, res) => {
             if (err) {
+                log("request_redirector:sendRequestToServer:" + err);
                 reject(err);
             } else {
                 resolve(res.body);
@@ -229,8 +249,6 @@ function sendRequestToServer(req, server) {
 module.exports = (nServerInfoModel) => {
     serverInfoModel = nServerInfoModel;
     return {
-        redirectRequest: (req, res, servers, targRad) => {
-            redirectRequest(req, res, servers, targRad);
-        }
+        redirectRequest
     };
 };

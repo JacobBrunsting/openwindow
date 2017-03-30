@@ -460,5 +460,5 @@ module.exports = (nServerInfoModel) => {
         addAllServerInfo,
         recalculateServersRanges,
         generateAndStoreServerInfo
-    }
+    };
 }

@@ -16,8 +16,8 @@ angular.module('openwindow').controller('commentsctrl', [
         // TODO: The add comment function should only be created after the post is retrieved
         request_maker.getPostFromServer(postId,
             postServerAddress,
-            function (post) {
-                $scope.post = post_creator.getFormattedPost(post);
+            function (response) {
+                $scope.post = post_creator.getFormattedPost(response.body);
                 $scope.comments = $scope.post.getComments();
             }
         );
@@ -28,8 +28,8 @@ angular.module('openwindow').controller('commentsctrl', [
             }
             var comment = post_creator.createComment($scope.body_box);
             request_maker.addComment($scope.post.getId(), postServerAddress, comment,
-                function (post) {
-                    $scope.comments = post_creator.getFormattedCommentList(post.comments);
+                function (response) {
+                    $scope.comments = post_creator.getFormattedCommentList(response.body.comments);
                 }
             );
             $scope.body_box = "";
