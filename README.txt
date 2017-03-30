@@ -1,3 +1,5 @@
+The easiest way to start up the website is to run the startup script located in the 'shell_scripts' directory. It will start up a couple of web servers and a few database servers (assuming you are on linux), and give them each their own mongodb collection to work with. Mongo needs to be set up before doing this, but I will finish the readme later.
+
 Ensure that at least one instance of webapp.js is running before starting up the post_database
 
 Starting up webapp.js:
