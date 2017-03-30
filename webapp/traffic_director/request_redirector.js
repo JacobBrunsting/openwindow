@@ -190,8 +190,14 @@ function redirectRequest(req, res, targLoc, targRad) {
  */
 function sendRequestToServers(req, servers) {
     return new Promise((resolve, reject) => {
-        Promise.all(servers.map(server => sendRequestToServer(req, server)))
-            .then(results => resolve(results.reduce(Object.assign)))
+        Promise.all(servers.map(server => sendRequestToAddress(req, server.baseAddr)))
+            .then(results => {
+                if (results.every(item => item && item.constructor === Array)) {
+                    resolve([].concat.apply([], results));
+                } else {
+                    resolve(results);
+                }
+            })
             .catch(reject);
     });
 }
