@@ -188,6 +188,7 @@ function redirectRequest(req, res, targLoc, targRad) {
         .find(query)
         .then(servers => sendRequestToServers(req, servers))
         .then(reqRes => {
+            console.log("req res is " + util.inspect(reqRes));
             res.json({
                 statusCode: 200,
                 body: reqRes
@@ -200,8 +201,7 @@ function redirectRequest(req, res, targLoc, targRad) {
 }
 
 /**
- * Make a request to multiple servers, and then merge the response if the
- * responses are arrays
+ * Make a request to multiple servers, and then merge the responses
  * @param {Object} req - The Express request object
  * @param {Object[]} - The servers to redirect the request to, where each server
  *  was retrieved from the server database
@@ -210,14 +210,44 @@ function sendRequestToServers(req, servers) {
     return new Promise((resolve, reject) => {
         Promise.all(servers.map(server => sendRequestToAddress(req, server.baseAddr)))
             .then(results => {
-                if (results.every(item => item && item.constructor === Array)) {
-                    resolve([].concat.apply([], results));
-                } else {
-                    resolve(results);
-                }
+                resolve(results.reduce(mergeObjects));
             })
             .catch(reject);
     });
+
+    function mergeObjects(a, b) {
+        if (a.constructor === Array && b.constructor === Array) {
+            return a.concat(b);
+        } else if (isObject(a) && isObject(b)) {
+            // merge all shared properties
+            for (let key in a) {
+                if (b[key]) {
+                    a[key] = mergeObjects(a[key], b[key]);
+                }
+            }
+            // insert properties from b not in a
+            for (let key in b) {
+                if (!a[key]) {
+                    a[key] = b[key];
+                }
+            }
+            if (Object.keys(a) > 0) {
+                return a;
+            } else if (!b) {
+                return a;
+            } else if (!a) {
+                return b;
+            } else {
+                return [a, b];
+            }
+        } else {
+            return [a, b];
+        }
+
+        function isObject(a) {
+            return a === Object(a);
+        }
+    }
 }
 
 /**

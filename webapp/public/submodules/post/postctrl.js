@@ -107,7 +107,7 @@ angular.module('openwindow').controller('postctrl', [
                 return undefined;
             }
             var millsSincePosting = Date.now() - $scope.post.getPostTime();
-            return $scope.post.getSecondsToShowFor() - (millsSincePosting / 1000);
+            return $scope.post.secondsToShowFor - (millsSincePosting / 1000);
         }
     }
 ]);

@@ -348,7 +348,8 @@ app.get("/api/posts", getPosts);
 /**
  * @api {get} /api/postssecondstoshowfor - Get the total time a post should be
  *  shown for, measured from the time it was first created
- * @apiSuccess {Object[]} postTimesToShowFor
+ * @apiSuccess {Object[]} postTimesToShowFor.{id} - The total number of seconds
+ *  the post with the specified ID should be shown for
  */
 app.get("/api/postssecondstoshowfor", getPostsSecondsToShowFor);
 
