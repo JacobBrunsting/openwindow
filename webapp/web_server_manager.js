@@ -43,7 +43,7 @@ function notifyOtherServers(method, path, body, qs) {
         method: method,
         json: true
     }
-    log("web_server_manager:notifyOtherServers:making a request to URL " + path + " to all servers, params are:");
+    log.msg("web_server_manager:notifyOtherServers:making a request to URL " + path + " to all servers, params are:");
     console.log(JSON.stringify(requestParams));
     return new Promise((resolve, reject) => {
         serverInfoModel
@@ -54,13 +54,13 @@ function notifyOtherServers(method, path, body, qs) {
             })
             .then(notifyServerFromList)
             .catch((err) => {
-                log("web_server_manager:notifyOtherServers:" + err);
+                log.err("web_server_manager:notifyOtherServers:" + err);
                 reject(err);
             });
 
         function notifyServerFromList(servers) {
             if (!servers || servers.length === 0) {
-                log("web_server_manager:notifyOtherServers:No servers to notify");
+                log.msg("web_server_manager:notifyOtherServers:No servers to notify");
                 resolve();
                 return;
             }
@@ -71,7 +71,7 @@ function notifyOtherServers(method, path, body, qs) {
                 request(requestParams, (err) => {
                     --requestsWaitingForResponse;
                     if (err) {
-                        log("web_server_manager:notifyOtherServers:" + err);
+                        log.err("web_server_manager:notifyOtherServers:" + err);
                         reject(err);
                     }
                     if (requestsWaitingForResponse === 0) {
@@ -108,7 +108,7 @@ function setupSelf(isFirstServer) {
                 servers.push(self);
                 Promise
                     .all([
-                        serverInfoModel.create(servers),
+                        serverInfoModel.cresyncWithNetworkate(servers),
                         addSelfToNetwork()
                     ])
                     .then(resolve)
@@ -126,7 +126,7 @@ function setupSelf(isFirstServer) {
                 }
                 request(requestParams, (err, res) => {
                     if (err) {
-                        log("web_server_manager:setupSelf:" + err);
+                        log.err("web_server_manager:setupSelf:" + err);
                         reject(err);
                     } else {
                         resolve();

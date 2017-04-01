@@ -49,7 +49,7 @@ for (var key in settings) {
     if (config[key]) {
         settings[key] = config[key];
     } else {
-        log(key + " not set in config file, defaulting to " + settings[key]);
+       log.msg(key + " not set in config file, defaulting to " + settings[key]);
     }
 }
 
@@ -105,11 +105,11 @@ networkUtils.serverCall(constants.apiAddress + 'director/newserver',
         if (_backupAddr) {
             backupAddr = _backupAddr;
         } else {
-            log("did not receive backup database address. exiting.");
+           log.msg("did not receive backup database address. exiting.");
         }
     })
     .catch((err) => {
-        log("error connecting to server network: " + err);
+       log.err("error connecting to server network: " + err);
         process.exit(1);
     });
 
@@ -194,7 +194,7 @@ setInterval(() => {
             removeExpiredPostsFromBackup();
         })
         .catch((err) => {
-            log("post_database:old post cleanup:" + err);
+           log.err("post_database:old post cleanup:" + err);
         });
 }, cleanupInterval);
 
@@ -208,7 +208,7 @@ function removeExpiredPosts(model) {
             })
             .remove((err, data) => {
                 if (err) {
-                    log("post_database:removeExpiredPosts:" + err);
+                   log.err("post_database:removeExpiredPosts:" + err);
                     reject(err);
                 } else {
                     resolve();
@@ -221,7 +221,7 @@ function removeExpiredPosts(model) {
 
 // allow access to external database servers directly from the frontend
 app.use('*', (req, res, next) => {
-    log(req.method + " " + req.originalUrl);
+   log.msg(req.method + " " + req.originalUrl);
     if (req.body && JSON.stringify(req.body) !== "{}") {
         console.log(JSON.stringify(req.body));
     }
@@ -526,7 +526,7 @@ app.delete("/api/backups", deleteBackups);
 function postPost(req, res) {
     let post = req.body;
     addExtraPostProperties(post);
-    log("adding post " + JSON.stringify(post));
+   log.msg("adding post " + JSON.stringify(post));
     postModel
         .create(post)
         .then(() => {
@@ -535,7 +535,7 @@ function postPost(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:postPost:" + err);
+           log.err("post_database:postPost:" + err);
         });
 }
 
@@ -550,7 +550,7 @@ function postPosts(req, res) {
         })
         .catch((err) => {
             req.status(500).send(err);
-            log("post_database:postPosts:" + err);
+           log.err("post_database:postPosts:" + err);
         });
 }
 
@@ -562,7 +562,7 @@ function getAllPosts(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:getAllPosts:" + err);
+           log.err("post_database:getAllPosts:" + err);
         });
 }
 
@@ -574,7 +574,7 @@ function getPost(req, res) {
             function (err, data) {
                 if (err || data === null) {
                     res.status(500).send(err);
-                    log("post_database:getPost:" + JSON.stringify(err));
+                   log.err("post_database:getPost:" + JSON.stringify(err));
                 } else {
                     res.json(data);
                 }
@@ -601,7 +601,7 @@ function getPosts(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:getPosts:" + err);
+           log.err("post_database:getPosts:" + err);
         });
 }
 
@@ -623,7 +623,7 @@ function getPostsSecondsToShowFor(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:getPostsSecondsToShowFor:" + err);
+           log.err("post_database:getPostsSecondsToShowFor:" + err);
         });
 }
 
@@ -637,7 +637,7 @@ function getAmountFull(req, res) {
         })
         .catch(err => {
             res.status(500).send(err);
-            log("post_database:getAmountFull:" + err);
+           log.err("post_database:getAmountFull:" + err);
         })
 }
 
@@ -662,7 +662,7 @@ function getPostRange(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:getPostRange:" + err);
+           log.err("post_database:getPostRange:" + err);
         });
 
     function updateRange(post) {
@@ -765,7 +765,7 @@ function putBackupAddr(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:changeBackupAddr:" + err);
+           log.err("post_database:changeBackupAddr:" + err);
         });
 }
 
@@ -789,7 +789,7 @@ function deletePost(req, res) {
             function (err, data) {
                 if (err) {
                     res.status(500).send(err);
-                    log("post_database:deletePost:" + err);
+                   log.err("post_database:deletePost:" + err);
                 } else {
                     res.status(200).send();
                     removePostFromBackup(id);
@@ -808,7 +808,7 @@ function postBackupPost(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:postBackupPost:" + err);
+           log.err("post_database:postBackupPost:" + err);
         });
 }
 
@@ -820,7 +820,7 @@ function postBackupPosts(req, res) {
         })
         .catch((err) => {
             req.status(500).send(err);
-            log("post_database:postPosts:" + err);
+           log.err("post_database:postPosts:" + err);
         });
 }
 
@@ -832,7 +832,7 @@ function getAllBackupPosts(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:getAllBackupPosts:" + err);
+           log.err("post_database:getAllBackupPosts:" + err);
         });
 }
 
@@ -846,7 +846,7 @@ function putBackupPost(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:putBackupPost:" + err);
+           log.err("post_database:putBackupPost:" + err);
         });
 }
 
@@ -859,7 +859,7 @@ function deleteBackupPost(req, res) {
             function (err, data) {
                 if (err) {
                     res.status(500).send(err);
-                    log("post_database:deleteBackupPost:" + err);
+                   log.err("post_database:deleteBackupPost:" + err);
                 } else {
                     res.status(200).send();
                 }
@@ -874,7 +874,7 @@ function deleteExpiredBackupPosts(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:deleteExpiredBackupPosts:" + err);
+           log.err("post_database:deleteExpiredBackupPosts:" + err);
         });
 }
 
@@ -883,7 +883,7 @@ function deleteBackups(req, res) {
         .remove({}, function (err) {
             if (err) {
                 res.status(500).send(err);
-                log("post_database:deleteBackups:" + err);
+               log.err("post_database:deleteBackups:" + err);
             } else {
                 res.status(200).send();
             }
@@ -921,7 +921,7 @@ function updatePostFromUpdateObj(id, updateInfo, req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("post_database:updatePostFromUpdateObj:" + err);
+           log.err("post_database:updatePostFromUpdateObj:" + err);
         });
 }
 
@@ -935,7 +935,7 @@ function updatePostBackup(_id, updatedPostFields) {
     networkUtils.apiCall(backupAddr, "backuppost", networkUtils.PUT, body)
         .catch(
             (err) => {
-                log("post_database:updatePostBackup:" + err);
+               log.err("post_database:updatePostBackup:" + err);
             }
         );
 }
@@ -944,7 +944,7 @@ function addPostToBackup(post) {
     networkUtils.apiCall(backupAddr, "backuppost", networkUtils.POST, post)
         .catch(
             (err) => {
-                log("post_database:addPostToBackup:" + err);
+               log.err("post_database:addPostToBackup:" + err);
             }
         );
 }
@@ -953,7 +953,7 @@ function addPostsToBackup(posts) {
     networkUtils.apiCall(backupAddr, "backupposts", networkUtils.POST, posts)
         .catch(
             (err) => {
-                log("post_database:addPostsToBackup:" + err);
+               log.err("post_database:addPostsToBackup:" + err);
             }
         );
 }
@@ -964,7 +964,7 @@ function removePostFromBackup(_id) {
         })
         .catch(
             (err) => {
-                log("post_database:removePostFromBackup:" + err);
+               log.err("post_database:removePostFromBackup:" + err);
             }
         );
 }
@@ -973,7 +973,7 @@ function removeExpiredPostsFromBackup() {
     networkUtils.apiCall(backupAddr, "expiredbackupposts", networkUtils.DELETE)
         .catch(
             (err) => {
-                log("post_database:removeExpiredPostsFromBackup:" + err);
+               log.err("post_database:removeExpiredPostsFromBackup:" + err);
             }
         );
 }
@@ -982,11 +982,11 @@ function clearBackups() {
     networkUtils.apiCall(backupAddr, "backups", networkUtils.DELETE)
         .catch(
             (err) => {
-                log("post_database:clearBackups:" + err);
+               log.err("post_database:clearBackups:" + err);
             }
         );
 }
 console.log("");
-log("post database listening on port " + settings[PORT_KEY]);
+log.msg("post database listening on port " + settings[PORT_KEY]);
 console.log("");
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);

@@ -10,7 +10,7 @@ function getApiCallURL(baseAddr, path) {
 }
 
 function addServerInfo(serverInfo) {
-    log("server_manager:addServerInfo:Adding server " + JSON.stringify(serverInfo));
+    log.msg("server_manager:addServerInfo:Adding server " + JSON.stringify(serverInfo));
     return serverInfoModel.create(serverInfo);
 }
 
@@ -25,7 +25,7 @@ function updateServersInfo(updatedServersInfo) {
 }
 
 function addAllServerInfo(serversInfo) {
-    log("server_manager:addAllServerInfo:Adding servers " + JSON.stringify(serversInfo));
+    log.msg("server_manager:addAllServerInfo:Adding servers " + JSON.stringify(serversInfo));
     return serverInfoModel.create(serversInfo);
 }
 
@@ -39,7 +39,7 @@ function removeServerInfo(baseAddr) {
             .then((server) => {
                 if (!server) {
                     reject();
-                    log("server_manager:removeServerInfo:" + err);
+                    log.err("server_manager:removeServerInfo:" + err);
                     return;
                 }
                 replaceServer(DatabaseServerInfo.convertObjToClass(server));
@@ -47,7 +47,7 @@ function removeServerInfo(baseAddr) {
             })
             .catch((err) => {
                 reject();
-                log("server_manager:removeServerInfo:" + err);
+                log.err("server_manager:removeServerInfo:" + err);
             });
     });
 }
@@ -86,7 +86,7 @@ function replaceServer(oldServer) {
             onBorderingServerRetrieval(formattedServers);
         })
         .catch((err) => {
-            log("server_manager:replaceServer:" + err);
+            log.err("server_manager:replaceServer:" + err);
         });
 
     function onBorderingServerRetrieval(server) {
@@ -114,7 +114,7 @@ function replaceServer(oldServer) {
                 mergeServers(oldServer, server)
             })
             .catch((err) => {
-                log("server_manager:expandServerToMatchOldServer:" + err);
+                log.err("server_manager:expandServerToMatchOldServer:" + err);
             });
     }
 
@@ -122,17 +122,17 @@ function replaceServer(oldServer) {
         let url = getApiCallURL(serverToMerge.backupAddr, "allposts");
         request.get(url, (err, res) => {
             if (err) {
-                log("server_manager:mergeServers:" + err);
+                log.err("server_manager:mergeServers:" + err);
                 return;
             } else if (!res) {
-                log("server_manager:mergeServers:empty response");
+                log.msg("server_manager:mergeServers:empty response");
                 return;
             }
             let posts = res.body;
             let url = getApiCallURL(serverToMergeWith.baseAddr, "posts");
             request.post(url, (err, res) => {
                 if (err) {
-                    log("server_manager:mergeServers:" + err);
+                    log.err("server_manager:mergeServers:" + err);
                 }
             });
         });
@@ -163,7 +163,7 @@ function recalculateServersRanges() {
             });
         })
         .catch((err) => {
-            log("server_manager:server range calculations:" + err);
+            log.err("server_manager:server range calculations:" + err);
         });
 }
 
@@ -177,10 +177,10 @@ function recalculateServerRanges(server) {
     };
     request(requestParams, function (err, res) {
         if (err) {
-            log("server_manager:recalculateServerRanges:" + err);
+            log.err("server_manager:recalculateServerRanges:" + err);
             return;
         } else if (!res) {
-            log("server_manager:recalculateServerRanges:empty response");
+            log.msg("server_manager:recalculateServerRanges:empty response");
             return;
         }
         const serverPostArea = SqrGeoRng.convertObjToClass(res.body);
@@ -189,11 +189,11 @@ function recalculateServerRanges(server) {
         // no matter where a post is created, it will be within the read range 
         // and will be read by the web server
         server.readRng.expandToContainOther(server.writeRng);
-        log("updating read area for a database server, updated info is:");
-        log(JSON.stringify(server));
+        log.msg("updating read area for a database server, updated info is:");
+        log.msg(JSON.stringify(server));
         resizeServer(server)
             .catch((err) => {
-                log("server_manager:recalculateServerRanges:" + err);
+                log.err("server_manager:recalculateServerRanges:" + err);
             });
     });
 }
@@ -219,7 +219,7 @@ function resizeServer(updatedServer) {
                 },
                 (err) => {
                     if (err) {
-                        log("server_manager:resizeServer:" + err);
+                        log.err("server_manager:resizeServer:" + err);
                         reject(err);
                     } else {
                         resolve();
@@ -294,17 +294,17 @@ function generateAndStoreServerInfo(serverInfo) {
                         if (updatedServerInfos) {
                             resolve(updatedServerInfos);
                         } else {
-                            log("server_creator:generateAndStoreServerInfo:Could not create a space for the new server");
+                           log.msg("server_creator:generateAndStoreServerInfo:Could not create a space for the new server");
                             reject("Could not create a space for the new server");
                         }
                     })
                     .catch(err => {
-                        log("server_creator:generateAndStoreServerInfo:" + err);
+                       log.err("server_creator:generateAndStoreServerInfo:" + err, "error");
                         reject(err);
                     });
             })
             .catch(err => {
-                log("server_creator:generateAndStoreServerInfo:" + err);
+               log.err("server_creator:generateAndStoreServerInfo:" + err, "error");
                 reject(err);
             });
     });
@@ -350,7 +350,7 @@ function getMostFilledServer(servers) {
         Promise.all(servers.map(getServerFilledAmount))
             .then(serverFilledAmounts => {
                 if (serverFilledAmounts.length <= 0) {
-                    log("server_manager:getFilledServer:No server capacity information retrieved");
+                    log.msg("server_manager:getFilledServer:No server capacity information retrieved");
                     reject("No server capacity information retrieved")
                     return;
                 }
@@ -365,7 +365,7 @@ function getMostFilledServer(servers) {
                 resolve(servers[index]);
             })
             .catch(err => {
-                log("server_manager:getMostFilledServer:" + err);
+                log.err("server_manager:getMostFilledServer:" + err);
                 reject(err);
             });
     });
@@ -378,7 +378,7 @@ function getMostFilledServer(servers) {
             };
             request.get(requestParams, (err, res) => {
                 if (err) {
-                    log("server_manager:getMostFilledServer:" + err);
+                    log.err("server_manager:getMostFilledServer:" + err);
                     reject(err);
                 } else {
                     resolve(res.body.amountFull);
@@ -395,7 +395,7 @@ function clearBackupsAtServer(serverAddress) {
     };
     request.delete(requestParams, (err) => {
         if (err) {
-            log("server_creator:clearBackupsAtServer:" + err);
+            log.err("server_manager:clearBackupsAtServer:" + err);
         }
     });
 }
@@ -411,7 +411,7 @@ function changeServerbackupAddr(serverInfo, newBackupAddr) {
             },
             (err, data) => {
                 if (err) {
-                    log("server_creator:changeServerbackupAddr:" + err);
+                    log.err("server_manager:changeServerbackupAddr:" + err);
                 } else {
                     notifyServerOfChange();
                 }
@@ -427,7 +427,7 @@ function changeServerbackupAddr(serverInfo, newBackupAddr) {
         };
         request.put(requestParams, function (err) {
             if (err) {
-                log("server_creator:changeServerbackupAddr:notifyServerOfChange:" + err);
+                log.err("server_manager:changeServerbackupAddr:notifyServerOfChange:" + err);
             }
         });
     }

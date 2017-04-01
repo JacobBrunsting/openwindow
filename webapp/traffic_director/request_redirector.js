@@ -175,7 +175,7 @@ function redirectRequest(req, res, targLoc, targRad) {
             })
             .catch(err => {
                 res.status(500).send(err);
-                log("request_redirector:redirectRequest:" + err);
+               log.err("request_redirector:redirectRequest:" + err);
             });
         return;
     }
@@ -196,7 +196,7 @@ function redirectRequest(req, res, targLoc, targRad) {
         })
         .catch(err => {
             res.status(500).send(err);
-            log("request_redirector:redirectRequest:" + err);
+           log.err("request_redirector:redirectRequest:" + err);
         });
 }
 
@@ -267,7 +267,7 @@ function sendRequestToAddress(req, serverAddress) {
     return new Promise((resolve, reject) => {
         request(requestParams, (err, res) => {
             if (err) {
-                log("request_redirector:sendRequestToServer:" + err);
+               log.err("request_redirector:sendRequestToServer:" + err);
                 reject(err);
             } else {
                 resolve(res.body);

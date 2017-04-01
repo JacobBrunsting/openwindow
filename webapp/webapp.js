@@ -28,7 +28,7 @@ for (var key in settings) {
     if (config[key]) {
         settings[key] = config[key];
     } else {
-        log(key + " not set in config file, defaulting to " + settings[key]);
+        log.msg(key + " not set in config file, defaulting to " + settings[key]);
     }
 }
 
@@ -87,7 +87,7 @@ setInterval(trafficDirector.recalculateServersRanges, millsBetweenSizeUpdates);
 // ============= Endpoints ==============
 
 app.use('*', (req, res, next) => {
-    log(req.method + " " + req.originalUrl);
+    log.msg(req.method + " " + req.originalUrl);
     if (req.body && JSON.stringify(req.body) !== "{}") {
         console.log(JSON.stringify(req.body));
     }
@@ -122,7 +122,7 @@ app.all('/api/*', (req, res) => {
  */
 app.post('/director/newserver', (req, res) => {
     if (!req.body.baseAddr) {
-        log("webapp:/director/newserver:baseAddr body property not provided");
+        log.msg("webapp:/director/newserver:baseAddr body property not provided");
         res.status(400).send("baseAddr body property required");
         return;
     }
@@ -139,7 +139,7 @@ app.post('/director/newserver', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("webapp:/director/newserver:" + err);
+            log.err("webapp:/director/newserver:" + err);
         });
 });
 
@@ -166,7 +166,7 @@ app.post('/director/serverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("webapp:/director/serverinfo:" + err);
+            log.err("webapp:/director/serverinfo:" + err);
         });
 });
 
@@ -194,7 +194,7 @@ app.get('/director/allserverinfo', (req, res) => {
             res.json(serverInfo);
         })
         .catch((err) => {
-            log("webapp:/director/allserverinfo:" + err);
+            log.err("webapp:/director/allserverinfo:" + err);
             res.status(500).send(err);
         });
 });
@@ -222,7 +222,7 @@ app.put('/director/serversinfo', (req, res) => {
             res.status(200).send();
         })
         .catch(err => {
-            log("webapp:/director/serversinfo:" + err);
+            log.err("webapp:/director/serversinfo:" + err);
             res.status(500).send(err);
         })
 });
@@ -238,7 +238,7 @@ app.delete('/director/serverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("webapp:/director/serverinfo:" + err);
+            log.err("webapp:/director/serverinfo:" + err);
         });
 });
 
@@ -255,14 +255,14 @@ app.post('/webserver/newserver', (req, res) => {
             })
             .catch((err) => {
                 res.status(500).send(err);
-                log("webapp:/webserver/newserver:" + err);
+                log.err("webapp:/webserver/newserver:" + err);
             });
     }
     webServerManager.notifyOtherServers('POST', 'webserver/serverinfo', req.body)
         .then(addToDatabase)
         .catch((err) => {
             addToDatabase();
-            log("webapp:/webserver/newserver:" + err);
+            log.err("webapp:/webserver/newserver:" + err);
         });
 });
 
@@ -278,25 +278,25 @@ app.post('/webserver/serverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("webapp:/webserver/serverinfo:" + err);
+            log.err("webapp:/webserver/serverinfo:" + err);
         });
 });
 
 /**
  * @api {get} /webserver/allserverinfo - Get the information about all of the
  *  web servers, in ascending order by IP address
- * @apiParam {boolean} excludeId
+ * @apiParam {boolean} excludeid
  * @apiSuccess {Object[]} servers
  * @apiSuccess {string} servers.baseAddr
  */
 app.get('/webserver/allserverinfo', (req, res) => {
-    webServerManager.getAllServerInfo(req.query.excludeId)
+    webServerManager.getAllServerInfo(req.query.excludeid)
         .then((serverInfo) => {
             res.json(serverInfo);
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("webapp:/webserver/allserverinfo:" + err);
+            log.err("webapp:/webserver/allserverinfo:" + err);
         });
 });
 
@@ -311,7 +311,7 @@ app.delete('/webserver/serverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log("webapp:/webserver/serverinfo:" + err);
+            log.err("webapp:/webserver/serverinfo:" + err);
         });
 });
 
@@ -324,12 +324,12 @@ Promise.all([
     ])
     .then(() => {
         console.log("");
-        log("webapp listening on port " + settings[PORT_KEY]);
+        log.msg("webapp listening on port " + settings[PORT_KEY]);
         console.log("");
         app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
     })
     .catch((err) => {
-        log("webapp:" + err);
-        log("error connecting to server network. exiting.");
+        log.err("webapp:" + err);
+        log.msg("error connecting to server network. exiting.");
         process.exit(1);
     });
