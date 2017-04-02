@@ -7,7 +7,7 @@
 const DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
 const constants = require(__dirname + '/../constants');
 const request = require('request');
-
+const log = require(__dirname + '/../utils/log');
 var SERVER_INFO_MODEL_NAME = 'DatabaseServerInfo';
 
 module.exports = (app, mongoose, serverInfoCollectionName) => {
@@ -40,7 +40,7 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
                 return;
             }
             const requestParams = {
-                url: constants.apiAddress + 'director/allserverinfo?excludeId=true',
+                url: constants.apiAddress + 'director/allserverinfo?excludeid=true',
                 method: 'GET',
                 json: true
             }
@@ -67,6 +67,7 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
         removeServerInfo: serverManager.removeServerInfo,
         getAllServerInfo: serverManager.getAllServerInfo,
         addServerInfo: serverManager.addServerInfo,
+        addServersInfo: serverManager.addServersInfo,
         addAllServerInfo: serverManager.addAllServerInfo,
         updateServerInfo: serverManager.updateServerInfo,
         updateServersInfo: serverManager.updateServersInfo,

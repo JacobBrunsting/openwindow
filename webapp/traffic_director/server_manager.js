@@ -1,3 +1,4 @@
+// TODO: Rename to 'database_server_manager'
 var request = require('request');
 var DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
 const log = require(__dirname + '/../utils/log');
@@ -12,6 +13,10 @@ function getApiCallURL(baseAddr, path) {
 function addServerInfo(serverInfo) {
     log.msg("server_manager:addServerInfo:Adding server " + JSON.stringify(serverInfo));
     return serverInfoModel.create(serverInfo);
+}
+
+function addServersInfo(serversInfo) {
+    serversInfo.forEach(addServerInfo);
 }
 
 function updateServerInfo(updatedServerInfo) {
@@ -228,10 +233,10 @@ function resizeServer(updatedServer) {
     });
 }
 
-function getAllServerInfo(excludeId) {
+function getAllServerInfo(excludeid) {
     return new Promise((resolve, reject) => {
         serverInfoModel
-            .find(excludeId === "true" ? '-_id' : '')
+            .find(excludeid === "true" ? '-_id' : '')
             .sort({
                 baseAddr: 1
             })
@@ -248,86 +253,78 @@ var locationUtils = require(__dirname + '/server_location_utils');
 var serverInfoModel;
 
 function generateAndStoreServerInfo(serverInfo) {
-    // nesting for days
-    return new Promise((resolve, reject) => {
-        let serverInfos;
-        let updatedServerInfos;
-        serverInfoModel
-            .find()
-            .then((servers) => {
-                if (!servers || servers.length === 0) {
-                    const fullRange = new SqrGeoRng(-90, 90, -180, 180);
-                    const newServer = new DatabaseServerInfo(
+    let serverInfos;
+    let updatedServers = [];
+    let newServer;
+    return serverInfoModel
+        .find()
+        .then((servers) => {
+            if (!servers || servers.length === 0) {
+                const fullRange = new SqrGeoRng(-90, 90, -180, 180);
+                newServer = new DatabaseServerInfo(
+                    serverInfo.baseAddr,
+                    serverInfo.baseAddr,
+                    fullRange,
+                    fullRange
+                );
+                return serverInfoModel.create(newServer)
+            }
+            serverInfos = DatabaseServerInfo.convertObjsToClasses(servers);
+            return getMostFilledServer(serverInfos)
+                .then(server => {
+                    const updatedRanges = splitArea(server.writeRng);
+                    const newServerWriteRng = updatedRanges[0];
+                    const existingServerUpdatedWriteRng = updatedRanges[1];
+                    const splitServerUpdateInfo = {
+                        baseAddr: server.baseAddr,
+                        writeRng: existingServerUpdatedWriteRng
+                    };
+                    const backupAddr = setupNewBackupInfo(serverInfo.baseAddr, newServerWriteRng, serverInfos);
+                    newServer = new DatabaseServerInfo(
                         serverInfo.baseAddr,
-                        serverInfo.baseAddr,
-                        fullRange,
-                        fullRange
+                        backupAddr,
+                        newServerWriteRng,
+                        newServerWriteRng
                     );
-                    serverInfoModel.create(newServer).then(resolve).catch(reject);
-                    resolve([newServer]);
-                    return;
-                }
-                serverInfos = DatabaseServerInfo.convertObjsToClasses(servers);
-                getMostFilledServer(serverInfos)
-                    .then(server => {
-                        const updatedRanges = splitArea(server.writeRng);
-                        const newServerWriteRng = updatedRanges[0];
-                        const existingServerUpdatedWriteRng = updatedRanges[1];
-                        const splitServerUpdateInfo = {
-                            baseAddr: server.baseAddr,
-                            writeRng: existingServerUpdatedWriteRng
-                        };
-                        const backupAddr = getBackupAddr(serverInfo.baseAddr, newServerWriteRng, serverInfos);
-                        const newServer = new DatabaseServerInfo(
-                            serverInfo.baseAddr,
-                            backupAddr,
-                            newServerWriteRng,
-                            newServerWriteRng
-                        );
-                        updatedServerInfos = [newServer, splitServerUpdateInfo];
-                        return Promise.all([
-                            updateServerInfo(splitServerUpdateInfo),
-                            serverInfoModel.create(newServer)
-                        ]);
-                    })
-                    .then(() => {
-                        if (updatedServerInfos) {
-                            resolve(updatedServerInfos);
-                        } else {
-                           log.msg("server_creator:generateAndStoreServerInfo:Could not create a space for the new server");
-                            reject("Could not create a space for the new server");
-                        }
-                    })
-                    .catch(err => {
-                       log.err("server_creator:generateAndStoreServerInfo:" + err, "error");
-                        reject(err);
-                    });
-            })
-            .catch(err => {
-               log.err("server_creator:generateAndStoreServerInfo:" + err, "error");
-                reject(err);
-            });
-    });
-}
+                    updatedServers.push(splitServerUpdateInfo);
+                    return Promise.all([
+                        updateServerInfo(splitServerUpdateInfo),
+                        serverInfoModel.create(newServer)
+                    ]);
+                });
+        })
+        .then(() => ({
+            newServer: newServer,
+            updatedServers: updatedServers
+        }))
+        .catch(err => {
+            log.err("server_manager:generateAndStoreServerInfo:" + err);
+            throw err;
+        });
 
-function getBackupAddr(newBaseAddr, newWriteRng, otherServers) {
-    let farthestServer = findFarthestServer(newWriteRng, otherServers);
-    let backupAddr;
-    if (farthestServer) {
-        // make the farthest server back up to the new server, and make
-        // the new server backup to the server the farthest server was 
-        // previously backing up to
-        // we chose the farthest server because if there is ever logic
-        // implemented to have database servers store posts only from 
-        // their area, we want to avoid having servers back up other
-        // servers in the same area
-        clearBackupsAtServer(farthestServer.backupAddr);
-        backupAddr = farthestServer.backupAddr;
-        changeServerbackupAddr(farthestServer, newBaseAddr);
-    } else {
-        backupAddr = baseAddr;
+    function setupNewBackupInfo(newBaseAddr, newWriteRng, otherServers) {
+        let farthestServer = findFarthestServer(newWriteRng, otherServers);
+        let backupAddr;
+        if (farthestServer) {
+            // make the farthest server back up to the new server, and make
+            // the new server backup to the server the farthest server was 
+            // previously backing up to
+            // we chose the farthest server because if there is ever logic
+            // implemented to have database servers store posts only from 
+            // their area, we want to avoid having servers back up other
+            // servers in the same area
+            clearBackupsAtServer(farthestServer.backupAddr);
+            backupAddr = farthestServer.backupAddr;
+            changeServerbackupAddr(farthestServer, newBaseAddr);
+            updatedServers.push({
+                baseAddr: farthestServer.baseAddr,
+                backupAddr: newBaseAddr
+            });
+        } else {
+            backupAddr = baseAddr;
+        }
+        return backupAddr;
     }
-    return backupAddr;
 }
 
 function splitArea(area) {
@@ -455,6 +452,7 @@ module.exports = (nServerInfoModel) => {
         removeServerInfo,
         getAllServerInfo,
         addServerInfo,
+        addServersInfo,
         updateServerInfo,
         updateServersInfo,
         addAllServerInfo,

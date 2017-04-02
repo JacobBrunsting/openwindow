@@ -4,6 +4,16 @@
  * of database servers, and each post is backed up so that is not lost in the 
  * event of a server failure or disconnection.
  */
+
+const bodyParser = require('body-parser');
+const express = require('express');
+const ipAddr = require('ip').address();
+const app = express();
+const log = require(__dirname + '/utils/log');
+const mongoose = require('mongoose');
+const request = require('request');
+const util = require('util');
+
 // ============== Settings ==============
 
 const config = require(__dirname + '/config');
@@ -54,23 +64,14 @@ process.argv.forEach(function (val, index) {
     }
 });
 
-// ============== Imports ===============
-
-const bodyParser = require('body-parser');
-const express = require('express');
-const ipAddr = require('ip').address();
-const app = express();
-const log = require(__dirname + '/utils/log');
-const mongoose = require('mongoose');
-const request = require('request');
 const trafficDirector = require(__dirname + '/traffic_director/traffic_director')
     (app, mongoose, settings[DATABASE_SERVERS_INFO_COLLECTION_KEY]);
-const util = require('util');
 const baseAddr = "http://" + ipAddr + ":" + settings[PORT_KEY];
 const webServerManager = require(__dirname + '/web_server_manager')
     (settings[WEB_SERVERS_INFO_COLLECTION_KEY], baseAddr);
 
 // ================ Setup ================
+
 mongoose.Promise = require('bluebird');
 mongoose.connect(settings[MONGO_DB_ADDRESS_KEY]);
 
@@ -127,15 +128,14 @@ app.post('/director/newserver', (req, res) => {
         return;
     }
     trafficDirector.generateAndStoreServerInfo(req.body)
-        .then((updatedServersInfo) => {
-            const newServer = updatedServersInfo[0];
-            updatedServersInfo.splice(0, 1);
-            const updatedServers = updatedServersInfo;
-            res.json(newServer.backupAddr);
+        .then((newAndUpdatedServers) => {
             return Promise.all([
-                webServerManager.notifyOtherServers('POST', 'director/serverinfo', newServer),
-                webServerManager.notifyOtherServers('PUT', 'director/serversinfo', updatedServers)
-            ]);
+                    webServerManager.notifyOtherServers('POST', 'director/serverinfo', newAndUpdatedServers.newServer),
+                    webServerManager.notifyOtherServers('PUT', 'director/serversinfo', newAndUpdatedServers.updatedServers)
+                ])
+                .then(() => {
+                    res.json(newAndUpdatedServers.newServer.backupAddr);
+                });
         })
         .catch((err) => {
             res.status(500).send(err);
@@ -171,6 +171,34 @@ app.post('/director/serverinfo', (req, res) => {
 });
 
 /**
+ * @api {post} /director/serversinfo - Add an array of server info to the 
+ *  database server info collection
+ * @apiParam {Object[]} servers
+ * @apiParam {string} servers.baseAddr
+ * @apiParam {string} servers.backupAddr
+ * @apiParam {Object} servers.writeRng
+ * @apiParam {number} servers.writeRng.minLat
+ * @apiParam {number} servers.writeRng.maxLat
+ * @apiParam {number} servers.writeRng.minLng
+ * @apiParam {number} servers.writeRng.maxLng
+ * @apiParam {Object} servers.readRng
+ * @apiParam {number} servers.readRng.minLat
+ * @apiParam {number} servers.readRng.maxLat
+ * @apiParam {number} servers.readRng.minLng
+ * @apiParam {number} servers.readRng.maxLng
+ */
+app.post('/director/serverinfo', (req, res) => {
+    trafficDirector.addServersInfo(req.body)
+        .then(() => {
+            res.status(200).send();
+        })
+        .catch((err) => {
+            res.status(500).send(err);
+            log.err("webapp:/director/serverinfo:" + err);
+        });
+});
+
+/**
  * @api {get} /director/allserverinfo - Get the information about all of the
  *  database servers
  * @apiSuccess {Object[]} servers
@@ -189,7 +217,7 @@ app.post('/director/serverinfo', (req, res) => {
  * @apiSuccess {string} servers._id
  */
 app.get('/director/allserverinfo', (req, res) => {
-    trafficDirector.getAllServerInfo(req.query.excludeId)
+    trafficDirector.getAllServerInfo(req.query.excludeid)
         .then((serverInfo) => {
             res.json(serverInfo);
         })
@@ -258,10 +286,12 @@ app.post('/webserver/newserver', (req, res) => {
                 log.err("webapp:/webserver/newserver:" + err);
             });
     }
+    // TODO: If the server cannot be added to the network, notify the servers 
+    // that were already notified of the server addition of the failure
     webServerManager.notifyOtherServers('POST', 'webserver/serverinfo', req.body)
         .then(addToDatabase)
         .catch((err) => {
-            addToDatabase();
+            res.status(500).send(err);
             log.err("webapp:/webserver/newserver:" + err);
         });
 });

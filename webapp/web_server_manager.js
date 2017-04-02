@@ -20,10 +20,10 @@ function addServerInfo(serverInfo) {
     return serverInfoModel.create(serverInfo);
 }
 
-function getAllServerInfo(excludeId) {
+function getAllServerInfo(excludeid) {
     return serverInfoModel
         .find()
-        .select(excludeId === "true" ? '-_id' : '')
+        .select(excludeid === "true" ? '-_id' : '')
         .sort({
             baseAddr: 1
         });
@@ -90,7 +90,7 @@ function setupSelf(isFirstServer) {
     }
     return new Promise((resolve, reject) => {
         const requestParams = {
-            url: constants.apiAddress + 'webserver/allserverinfo?excludeId=true',
+            url: constants.apiAddress + 'webserver/allserverinfo?excludeid=true',
             method: 'GET',
             json: true
         }
@@ -108,7 +108,7 @@ function setupSelf(isFirstServer) {
                 servers.push(self);
                 Promise
                     .all([
-                        serverInfoModel.cresyncWithNetworkate(servers),
+                        serverInfoModel.create(servers),
                         addSelfToNetwork()
                     ])
                     .then(resolve)
