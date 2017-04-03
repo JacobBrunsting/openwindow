@@ -236,7 +236,7 @@ function resizeServer(updatedServer) {
 function getAllServerInfo(excludeid) {
     return new Promise((resolve, reject) => {
         serverInfoModel
-            .find(excludeid === "true" ? '-_id' : '')
+            .find({}, excludeid === "true" ? {_id:0, __v:0} : {__v:0})
             .sort({
                 baseAddr: 1
             })

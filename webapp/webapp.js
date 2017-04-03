@@ -22,6 +22,7 @@ const PORT_KEY = "port";
 const BOUND_IP_KEY = "boundIp";
 const MONGO_DB_ADDRESS_KEY = "mongoDbAddress";
 const SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY = 'secondsBetweenServerSizeCalculations';
+const SECONDS_BETWEEN_SERVER_VALIDATION_KEY = 'secondsBetweenServerValidation';
 const DATABASE_SERVERS_INFO_COLLECTION_KEY = 'databaseServersInfoCollection';
 const WEB_SERVERS_INFO_COLLECTION_KEY = 'webServersInfoCollection';
 const FIRST_SETUP_KEY = "firstSetup";
@@ -31,6 +32,7 @@ settings[PORT_KEY] = 8080;
 settings[BOUND_IP_KEY] = '0.0.0.0';
 settings[MONGO_DB_ADDRESS_KEY] = 'mongodb://localhost/openwindowdatabase';
 settings[SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY] = 20;
+settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] = 6000;
 settings[DATABASE_SERVERS_INFO_COLLECTION_KEY] = 'DatabaseServersInfo';
 settings[WEB_SERVERS_INFO_COLLECTION_KEY] = 'WebServersInfo';
 
@@ -344,6 +346,26 @@ app.delete('/webserver/serverinfo', (req, res) => {
             log.err("webapp:/webserver/serverinfo:" + err);
         });
 });
+
+// ======= Network Syncronization ========
+
+function validateDatabaseAndWebServerInfo() {
+    webServerManager
+        .getAllServerInfo(true)
+        .then(serversInfo => {
+            let serverAddresses = serversInfo.map(serverInfo => serverInfo.baseAddr);
+            trafficDirector.syncWithNetwork(serverAddresses);
+            webServerManager.syncWithNetwork(serverAddresses);
+        })
+        .catch(err => {
+            log.err("webapp:validateDatabaseAndWebServerInfo:" + err);
+        });
+}
+
+setInterval(validateDatabaseAndWebServerInfo, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
+setTimeout(validateDatabaseAndWebServerInfo, 5 * 1000);
+
+// =============== Startup ===============
 
 // the first server in the network needs to be set up differently, so we have
 // this setting (which can be passed in from the command line) to account for that

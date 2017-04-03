@@ -5,9 +5,9 @@
  */
 
 const constants = require(__dirname + '/constants');
-const deepEqual = require('deep-equal');
 const log = require(__dirname + '/utils/log');
 const mongoose = require('mongoose');
+const NetworkSyncronizationUtils = require(__dirname + '/utils/network_syncronization_utils');
 const request = require('request');
 const WebServerInfo = require(__dirname + '/classes/web_server_info');
 
@@ -22,8 +22,7 @@ function addServerInfo(serverInfo) {
 
 function getAllServerInfo(excludeid) {
     return serverInfoModel
-        .find()
-        .select(excludeid === "true" ? '-_id' : '')
+        .find({}, excludeid === "true" ? {_id:0, __v:0} : {__v:0})
         .sort({
             baseAddr: 1
         });
@@ -138,109 +137,24 @@ function setupSelf(isFirstServer) {
 }
 
 /**
- * syncWithNetwork - Syncronize the data stored at the provided model with the
- *  other servers in the network
- * @param {Object} model - The mongoose model used to store and retrieve the
- *  data being synced
- * @param {string} retrievalURI - The path used to get the data being synced 
- *  from other servers on the network
- * @param {boolean} compareIds - Determines if the _id fields should be included
- *  in the comparions (note that, if this is false, the retrievalURI must return
- *  data without _id fields)
+ * syncWithNetwork - Validate the web server info with the rest of the network, 
+ *  and update it if it is incorrect
+ * @param {string[]} otherServerAddresses - The addresses of the other
+ *  servers in the network used for data validation
  */
-function syncWithNetwork(model, retrievalURI, compareIds) {
-    model
-        .find()
-        .select('-_id')
-        .then((data) => {
-            return determineIfMatchesNetwork(data)
-        })
-        .then((matchesNetwork) => {
-            if (!matchesNetwork) {
-                getCorrectData();
-            }
+function syncWithNetwork(otherServerAddresses) {
+    return NetworkSyncronizationUtils.syncWithNetwork(
+            serverInfoModel,
+            otherServerAddresses,
+            '/webserver/allserverinfo?excludeid=true'
+        )
+        .then((res) => {
+            log.bright("successfully synced web server info with network");
         })
         .catch((err) => {
-            log("web_server_manager:syncWithNetwork:" + err);
-        });
-
-    function getCorrectData() {
-        log("server does not match network");
-    }
-}
-
-// retrieval URI must NOT include the _id in the data returned
-function determineIfMatchesNetwork(data, retrievalURI) {
-    return new Promise((resolve, reject) => {
-        serverInfoModel
-            .find()
-            .sort({
-                baseAddr: 1
-            })
-            .then((otherServers) => {
-                let selfPos = 0;
-                for (let i = 0; i < otherServers.length; ++i) {
-                    if (otherServers[i].baseAddr === baseAddr) {
-                        selfPos = i;
-                        break;
-                    }
-                }
-
-                // find two servers which have IP addresses lexographically far 
-                // away from the IP address of this server to avoid validating 
-                // data using servers on the same network
-                let offset = Math.floor(otherServers.length / 5) + 1;
-                let confServerOneIndex = selfPos + offset;
-                let confServerTwoIndex = selfPos - offset;
-                if (confServerOneIndex > otherServers.length) {
-                    confServerOne -= otherServers.length;
-                }
-                if (confServerTwoIndex < 0) {
-                    confServerTwoIndex += otherServers.length;
-                }
-                const addresses = [
-                    otherServers[confServerOneIndex].baseAddr,
-                    otherServers[confServerTwoIndex].baseAddr,
-                ];
-
-                // for every address, determine if the local data matches the
-                // data stored at the server using a promise, storing the 
-                // promises in an array which is used to merge the results of 
-                // each promise using Promise.all
-                const serverDataMatchesPromises = addresses.map((addr) => {
-                    return serverDataMatches(data, addr + retrievalURI);
-                });
-                return Promise.all(serverDataMatchesPromises);
-            })
-            .then((serversMatch) => {
-                resolve(serversMatch.reduceRight((a, b) => a & b));
-            })
-            .err((err) => {
-                reject(err);
-            });
-    });
-}
-
-function serverDataMatches(data, retrievalURL) {
-    return new Promise((resolve, reject) => {
-        const requestParams = {
-            url: retrievalURL,
-            method: 'GET',
-            json: true
-        }
-        request(requestParams, (err, res) => {
-            if (err) {
-                log("web_server_manager:serverDataMatches:" + err);
-                reject(err);
-            } else {
-                resolve(deepEqual(data, res.body));
-            }
-        });
-    });
-}
-
-function syncWebServerInfoWithNetwork() {
-    syncWithNetwork(serverInfoModel, '/webserver/serverinfo');
+            log.err("web_server_manager:syncWithNetwork:" + err);
+            throw err;
+        });;
 }
 
 module.exports = (serverInfoCollectionName, _baseAddr) => {
@@ -264,5 +178,6 @@ module.exports = (serverInfoCollectionName, _baseAddr) => {
         removeServerInfo,
         notifyOtherServers,
         setupSelf,
+        syncWithNetwork,
     }
 }

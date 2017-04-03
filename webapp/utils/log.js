@@ -14,6 +14,9 @@ module.exports = {
     err: (message) => {
         console.log("\x1b[31m", getTimestamp() + ": " + message, "\x1b[0m");
     },
+    bright: (message) => {
+        console.log("\x1b[32m", getTimestamp() + ": " + message, "\x1b[0m");
+    },
     msg: (message) => {
         console.log(getTimestamp() + ":" + message);
     }

@@ -8,6 +8,7 @@ const DatabaseServerInfo = require(__dirname + '/../classes/database_server_info
 const constants = require(__dirname + '/../constants');
 const request = require('request');
 const log = require(__dirname + '/../utils/log');
+const NetworkSyncronizationUtils = require(__dirname + '/../utils/network_syncronization_utils');
 var SERVER_INFO_MODEL_NAME = 'DatabaseServerInfo';
 
 module.exports = (app, mongoose, serverInfoCollectionName) => {
@@ -60,8 +61,29 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
         });
     }
 
+    /**
+     * syncWithNetwork - Validate the database server info with the rest of the
+     *  network, and update it if it is incorrect
+     * @param {string[]} otherServerAddresses - The addresses of the other
+     *  servers in the network used for data validation
+     */
+    function syncWithNetwork(otherServerAddresses) {
+        return NetworkSyncronizationUtils.syncWithNetwork(
+                serverInfoModel,
+                otherServerAddresses,
+                '/director/allserverinfo?excludeid=true')
+            .then((res) => {
+                log.bright("successfully synced database server info with network");
+            })
+            .catch((err) => {
+                log.err("traffic_director:syncWithNetwork:" + err);
+                throw err;
+            });
+    }
+
     return {
         setupSelf,
+        syncWithNetwork,
         redirectRequest: requestRedirector.redirectRequest,
         generateAndStoreServerInfo: serverManager.generateAndStoreServerInfo,
         removeServerInfo: serverManager.removeServerInfo,
