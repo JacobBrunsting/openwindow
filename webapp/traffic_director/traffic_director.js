@@ -71,9 +71,20 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
         return NetworkSyncronizationUtils.syncWithNetwork(
                 serverInfoModel,
                 otherServerAddresses,
-                '/director/allserverinfo?excludeid=true')
+                '/director/allserverinfo?excludeid=true',
+                'baseAddr')
             .then((res) => {
-                log.bright("successfully synced database server info with network");
+                if (res === true) {
+                    log.bright("successfully synced database server info with network, no changes made");
+                    return;
+                } else {
+                    log.bright("successfully synced database server info with network, new data is " + JSON.stringify(res));
+                    serverInfoModel
+                        .remove({})
+                        .then(() => {
+                            serverInfoModel.create(res);
+                        })
+                }
             })
             .catch((err) => {
                 log.err("traffic_director:syncWithNetwork:" + err);

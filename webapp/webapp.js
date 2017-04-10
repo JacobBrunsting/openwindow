@@ -117,6 +117,16 @@ app.all('/api/*', (req, res) => {
     trafficDirector.redirectRequest(req, res, loc, req.query.radius);
 });
 
+app.post('/sync', (req, res) => {
+    validateDatabaseAndWebServerInfo()
+        .then(reqRes => {
+            res.json(reqRes);
+        })
+        .catch(err => {
+            res.json(err);
+        });
+});
+
 /**
  * @api {post} /director/newserver - Add a new database server to the server
  *  info collection and assign it a geographic region so the traffic director
@@ -350,20 +360,28 @@ app.delete('/webserver/serverinfo', (req, res) => {
 // ======= Network Syncronization ========
 
 function validateDatabaseAndWebServerInfo() {
-    webServerManager
+    return webServerManager
         .getAllServerInfo(true)
         .then(serversInfo => {
-            let serverAddresses = serversInfo.map(serverInfo => serverInfo.baseAddr);
-            trafficDirector.syncWithNetwork(serverAddresses);
-            webServerManager.syncWithNetwork(serverAddresses);
-        })
-        .catch(err => {
-            log.err("webapp:validateDatabaseAndWebServerInfo:" + err);
+            let serverAddresses = [];
+            serversInfo.forEach(serverInfo => {
+                if (serverInfo.baseAddr !== baseAddr) {
+                    serverAddresses.push(serverInfo.baseAddr);
+                }
+            });
+            return Promise.all([
+                trafficDirector.syncWithNetwork(serverAddresses),
+                webServerManager.syncWithNetwork(serverAddresses)
+            ]);
         });
 }
 
-setInterval(validateDatabaseAndWebServerInfo, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
-setTimeout(validateDatabaseAndWebServerInfo, 5 * 1000);
+setInterval(() => {
+    validateDatabaseAndWebServerInfo()
+        .catch(err => {
+            log.err("webapp:" + err);
+        });
+}, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
 
 // =============== Startup ===============
 

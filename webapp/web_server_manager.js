@@ -22,7 +22,12 @@ function addServerInfo(serverInfo) {
 
 function getAllServerInfo(excludeid) {
     return serverInfoModel
-        .find({}, excludeid === "true" ? {_id:0, __v:0} : {__v:0})
+        .find({}, excludeid === "true" ? {
+            _id: 0,
+            __v: 0
+        } : {
+            __v: 0
+        })
         .sort({
             baseAddr: 1
         });
@@ -146,15 +151,25 @@ function syncWithNetwork(otherServerAddresses) {
     return NetworkSyncronizationUtils.syncWithNetwork(
             serverInfoModel,
             otherServerAddresses,
-            '/webserver/allserverinfo?excludeid=true'
-        )
-        .then((res) => {
-            log.bright("successfully synced web server info with network");
+            '/webserver/allserverinfo?excludeid=true',
+            'baseAddr')
+        .then(res => {
+            if (res === true) {
+                log.bright("successfully synced web server info with network, no changes made");
+                return;
+            } else {
+                log.bright("successfully synced web server info with network, new data is " + JSON.stringify(res));
+                serverInfoModel
+                    .remove({})
+                    .then(() => {
+                        serverInfoModel.create(res);
+                    })
+            }
         })
         .catch((err) => {
             log.err("web_server_manager:syncWithNetwork:" + err);
             throw err;
-        });;
+        });
 }
 
 module.exports = (serverInfoCollectionName, _baseAddr) => {
