@@ -86,6 +86,7 @@ function replaceServer(oldServer) {
 
     serverInfoModel
         .find(query)
+        .lean()
         .then((servers) => {
             const formattedServers = DatabaseServerInfo.convertObjsToClasses(servers);
             onBorderingServerRetrieval(formattedServers);
@@ -155,6 +156,7 @@ function replaceServer(oldServer) {
 function recalculateServersRanges() {
     serverInfoModel
         .find()
+        .lean()
         .then(servers => {
             const formattedServers = DatabaseServerInfo.convertObjsToClasses(servers);
             formattedServers.forEach((server) => {
@@ -237,6 +239,7 @@ function getAllServerInfo(excludeid) {
     return new Promise((resolve, reject) => {
         serverInfoModel
             .find({}, excludeid === "true" ? {_id:0, __v:0} : {__v:0})
+            .lean()
             .sort({
                 baseAddr: 1
             })
@@ -258,6 +261,7 @@ function generateAndStoreServerInfo(serverInfo) {
     let newServer;
     return serverInfoModel
         .find()
+        .lean()
         .then((servers) => {
             if (!servers || servers.length === 0) {
                 const fullRange = new SqrGeoRng(-90, 90, -180, 180);

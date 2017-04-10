@@ -202,6 +202,7 @@ function removeExpiredPosts(model) {
     return new Promise((resolve, reject) => {
         model
             .find()
+            .lean()
             // DO NOT change to an arrow function, it is important to bind 'this'
             .$where(function () {
                 return this.secondsToShowFor < (Date.now() - this.postTime) / 1000;
@@ -557,6 +558,7 @@ function postPosts(req, res) {
 function getAllPosts(req, res) {
     postModel
         .find()
+        .lean()
         .then((posts) => {
             res.json(posts);
         })
@@ -588,6 +590,7 @@ function getPosts(req, res) {
     const rad = req.query.radius;
     postModel
         .find()
+        .lean()
         .where('loc')
         .near({
             center: {
@@ -614,6 +617,7 @@ function getPostsSecondsToShowFor(req, res) {
     }
     postModel
         .find()
+        .lean()
         .then((posts) => {
             postsSecondsToShowForCache = {};
             posts.forEach((post) => {
@@ -649,6 +653,7 @@ function getPostRange(req, res) {
 
     postModel
         .find()
+        .lean()
         .then((posts) => {
             posts.forEach((post) => {
                 updateRange(post);
@@ -756,6 +761,7 @@ function putBackupAddr(req, res) {
     backupAddr = newBackupAddr;
     postModel
         .find()
+        .lean()
         .then((posts) => {
             posts.forEach(post => {
                 post.backupDatabaseAddr = newBackupAddr;
@@ -827,6 +833,7 @@ function postBackupPosts(req, res) {
 function getAllBackupPosts(req, res) {
     backupPostModel
         .find()
+        .lean()
         .then((reqRes) => {
             res.json(reqRes);
         })

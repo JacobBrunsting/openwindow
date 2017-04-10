@@ -186,6 +186,7 @@ function redirectRequest(req, res, targLoc, targRad) {
     let searchPromise;
     serverInfoModel
         .find(query)
+        .lean()
         .then(servers => sendRequestToServers(req, servers))
         .then(reqRes => {
             console.log("req res is " + util.inspect(reqRes));

@@ -28,6 +28,7 @@ function getAllServerInfo(excludeid) {
         } : {
             __v: 0
         })
+        .lean()
         .sort({
             baseAddr: 1
         });
@@ -56,6 +57,7 @@ function notifyOtherServers(method, path, body, qs) {
                     $ne: baseAddr
                 }
             })
+            .lean()
             .then(notifyServerFromList)
             .catch((err) => {
                 log.err("web_server_manager:notifyOtherServers:" + err);
