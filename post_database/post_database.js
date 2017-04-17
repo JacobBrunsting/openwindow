@@ -375,6 +375,12 @@ app.get("/api/postrange", getPostRange);
 app.get("/api/amountfull", getAmountFull);
 
 /**
+ * @api {get} /api/heartbeat - Get some response to verify that the server is 
+ *  still running
+ */
+app.get("/api/heartbeat", getHeartbeat);
+
+/**
  * @api {put} /api/upvote - Upvote a post
  * @apiParam {mongoose.Type.ObjectId} id - The id of the upvoted post
  * @apiParam {number} oldVote - The previous vote on the post
@@ -643,6 +649,10 @@ function getAmountFull(req, res) {
             res.status(500).send(err);
            log.err("post_database:getAmountFull:" + err);
         })
+}
+
+function getHeartbeat(req, res) {
+    res.status(200).send();
 }
 
 function getPostRange(req, res) {

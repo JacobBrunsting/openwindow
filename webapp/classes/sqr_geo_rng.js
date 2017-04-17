@@ -17,14 +17,14 @@ module.exports = class SqrGeoRng {
 
     /**
      * Expand the range to encompass the provided range
-     * @param {SqrGeoRng} rangeToEncompass - The range this range will be
+     * @param {SqrGeoRng} rangeToContain - The range this range will be
      *  expanded to contain
      */
-    expandToContainOther(rangeToEncompass) {
-        this.minLat = Math.min(rangeToEncompass.minLat, this.minLat);
-        this.maxLat = Math.max(rangeToEncompass.maxLat, this.maxLat);
-        this.minLng = Math.min(rangeToEncompass.minLng, this.minLng);
-        this.maxLng = Math.max(rangeToEncompass.maxLng, this.maxLng);
+    expandToContainOther(rangeToContain) {
+        this.minLat = Math.min(rangeToContain.minLat, this.minLat);
+        this.maxLat = Math.max(rangeToContain.maxLat, this.maxLat);
+        this.minLng = Math.min(rangeToContain.minLng, this.minLng);
+        this.maxLng = Math.max(rangeToContain.maxLng, this.maxLng);
     }
 
     /**

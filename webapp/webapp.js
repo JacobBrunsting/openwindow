@@ -383,6 +383,19 @@ setInterval(() => {
         });
 }, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
 
+trafficDirector.startHeartbeat(serverInfo => {
+    log.bright("heartbeat failed for server " + JSON.stringify(serverInfo));
+    trafficDirector
+        .removeServerAndAdjust(serverInfo, true)
+        .then(removedAndUpdatedServers => {
+            log.bright("removed and updated servers are " + JSON.stringify(removedAndUpdatedServers));
+            const removedServer = removedAndUpdatedServers.removedServer;
+            const updatedServers = removedAndUpdatedServers.updatedServers;
+            webServerManager.notifyOtherServers('DELETE', 'director/serverinfo', removedServer),
+            webServerManager.notifyOtherServers('PUT', 'director/serversinfo', updatedServers)
+        });
+});
+
 // =============== Startup ===============
 
 // the first server in the network needs to be set up differently, so we have

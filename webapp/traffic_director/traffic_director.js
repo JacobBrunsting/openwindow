@@ -5,6 +5,8 @@
  */
 
 const DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
+const HeartbeatManager = require(__dirname + '/heartbeat_manager');
+const ServerInfoWrapper = require(__dirname + '/server_info_wrapper');
 const constants = require(__dirname + '/../constants');
 const request = require('request');
 const log = require(__dirname + '/../utils/log');
@@ -92,11 +94,18 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
             });
     }
 
+    function startHeartbeat(onServerFailure) {
+        log.bright("starting heartbeat");
+        HeartbeatManager.startHeartbeat(new ServerInfoWrapper(serverInfoModel), onServerFailure);
+    }
+
     return {
         setupSelf,
         syncWithNetwork,
+        startHeartbeat,
         redirectRequest: requestRedirector.redirectRequest,
         generateAndStoreServerInfo: serverManager.generateAndStoreServerInfo,
+        removeServerAndAdjust: serverManager.removeServerAndAdjust,
         removeServerInfo: serverManager.removeServerInfo,
         getAllServerInfo: serverManager.getAllServerInfo,
         addServerInfo: serverManager.addServerInfo,
@@ -104,6 +113,6 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
         addAllServerInfo: serverManager.addAllServerInfo,
         updateServerInfo: serverManager.updateServerInfo,
         updateServersInfo: serverManager.updateServersInfo,
-        recalculateServersRanges: serverManager.recalculateServersRanges
+        recalculateServersRanges: serverManager.recalculateServersRanges,
     };
 };
