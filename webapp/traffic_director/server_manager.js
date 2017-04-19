@@ -243,15 +243,17 @@ function generateAndStoreServerInfo(serverInfo) {
 
 // function (list of removed servers, list of updated servers)
 function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
-    log.bright("removing " + serverToRemove.baseAddr);
     let serverUpdates = [];
     return serverInfoModel
         .findOneAndRemove({
             baseAddr: serverToRemove.baseAddr
         })
         .then(res => {
-            log.bright("res is " + JSON.stringify(res));
-            return res;
+            if (res) {
+                return res;
+            } else {
+                throw 'Server not found in database';
+            }
         })
         .then(DatabaseServerInfo.convertObjToClass)
         .then(removedServer => fillSpaceLeftByServer(removedServer, useBackupServerForData))
@@ -262,7 +264,6 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
                 .then(() => serverInfoModel.find())
                 .then(servers => {
                     serverUpdates = generateUpdates(servers, updatedServers);
-                    log.bright("server updates are " + JSON.stringify(serverUpdates));
                     // find the server that was previously backing up to the
                     //  removed server, and make it back up to the server 
                     //  the removed server was backing up to
@@ -275,10 +276,6 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
                         removedServerBackupAddr
                     )
                 );
-        })
-        .then(() => {
-            console.log("server to remove is " + JSON.stringify(serverToRemove));
-            console.log("server updates is " + JSON.stringify(serverUpdates));
         })
         .then(() => ({
             removedServer: serverToRemove,
@@ -304,7 +301,6 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
                 }
             }
             updateInfo["baseAddr"] = originalServer["baseAddr"];
-            log.bright("adding updated server " + JSON.stringify(updateInfo));
             updates.push(updateInfo);
         });
         return updates;
@@ -314,7 +310,6 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
 // Fills in the area previously covered by the provided server by expanding an
 // existing server
 function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
-    log.bright("filling space left by " + JSON.stringify(oldServer));
     let serverUpdates = [];
     let query = {
         $or: [{
@@ -352,7 +347,6 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
 
     // returns an array of the servers that were modified
     function onBorderingServerRetrieval(servers) {
-        log.bright("got bordering servers: " + JSON.stringify(servers));
         for (let i = 0; i < servers.length; ++i) {
             const server = servers[i];
             let minLngMatch = server.writeRng.minLng == oldServer.writeRng.minLng;
@@ -373,8 +367,6 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
     }
 
     function expandServerToMatchOldServer(server, oldServer) {
-        log.bright("expanding server " + JSON.stringify(server));
-        log.bright("old server is " + JSON.stringify(oldServer));
         server.expandToContainOther(oldServer);
         return resizeServer(server)
             .then(() => mergeServers(oldServer, server))
@@ -382,7 +374,6 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
     }
 
     function mergeServers(serverToMerge, serverToMergeWith) {
-        log.bright("mergin " + JSON.stringify(serverToMerge) + ", " + JSON.stringify(serverToMergeWith));
         let fromUrl;
         if (useBackupServerForData) {
             fromUrl = getApiCallURL(serverToMerge.backupAddr, "allbackupposts");
@@ -406,7 +397,6 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
                 console.log("response is " + JSON.stringify(res.body));
                 const posts = res.body;
                 const toUrl = getApiCallURL(serverToMergeWith.baseAddr, "posts");
-                log.bright("to url is " + toUrl);
                 const requestParams = {
                     url: toUrl,
                     method: 'POST',

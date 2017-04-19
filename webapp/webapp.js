@@ -14,6 +14,10 @@ const mongoose = require('mongoose');
 const request = require('request');
 const util = require('util');
 
+// ============= Constants ==============
+
+const DATABASE_SERVER_HEARTBEAT_PATH = '/api/heartbeat'
+
 // ============== Settings ==============
 
 const config = require(__dirname + '/config');
@@ -210,6 +214,17 @@ app.post('/director/serverinfo', (req, res) => {
         });
 });
 
+app.post('/director/servermaybedown', (req, res) => {
+    const serverInfo = req.body;
+    const url = serverInfo.baseAddr + DATABASE_SERVER_HEARTBEAT_PATH;
+    request.get(url, (err, res) => {
+        if (err) { // TODO: Consider only running the server failure function for certain errors
+            log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
+            onServerFailure(serverInfo);
+        }
+    })
+});
+
 /**
  * @api {get} /director/allserverinfo - Get the information about all of the
  *  database servers
@@ -383,17 +398,46 @@ setInterval(() => {
         });
 }, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
 
-trafficDirector.startHeartbeat(serverInfo => {
-    log.bright("heartbeat failed for server " + JSON.stringify(serverInfo));
+function onServerFailure(serverInfo) {
     trafficDirector
         .removeServerAndAdjust(serverInfo, true)
         .then(removedAndUpdatedServers => {
-            log.bright("removed and updated servers are " + JSON.stringify(removedAndUpdatedServers));
+            log.bright("removed server from network after failure, removed and updated servers are " + JSON.stringify(removedAndUpdatedServers));
             const removedServer = removedAndUpdatedServers.removedServer;
             const updatedServers = removedAndUpdatedServers.updatedServers;
-            webServerManager.notifyOtherServers('DELETE', 'director/serverinfo', removedServer),
-            webServerManager.notifyOtherServers('PUT', 'director/serversinfo', updatedServers)
+            const removalQueryParams = { baseAddr: removedServer.baseAddr };
+            webServerManager.notifyOtherServers('DELETE', 'director/serverinfo', undefined, removalQueryParams);
+            webServerManager.notifyOtherServers('PUT', 'director/serversinfo', updatedServers);
         });
+}
+
+trafficDirector.startHeartbeat(serverInfo => {
+    webServerManager
+        .getAllServerInfo()
+        .then(servers => {
+            let nextServerAddress;
+            for (let i = 0; i < servers.length; ++i) {
+                if (servers[i].baseAddr === baseAddr) {
+                    let nextServerPos = i + 1;
+                    if (nextServerPos >= servers.length) {
+                        nextServerPos = 0;
+                    }
+                    if (servers[nextServerPos]) {
+                        nextServerAddress = servers[nextServerPos].baseAddr;
+                    }
+                    break;
+                }
+            }
+            if (nextServerAddress) {
+                const requestParams = {
+                    url: nextServerAddress + '/director/servermaybedown',
+                    body: serverInfo,
+                    method: 'POST',
+                    json: true
+                }
+                request(requestParams);
+            }
+        })
 });
 
 // =============== Startup ===============

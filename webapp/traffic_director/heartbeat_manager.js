@@ -1,18 +1,17 @@
 const log = require(__dirname + '/../utils/log');
-const heartbeatPath = '/api/heartbeat'
+const heartbeatPath = '/api/heartbeat';
 
 const MISSED_BEATS_FOR_FAILURE = 4;
 const HEARTBEAT_INTERVAL = 5;
 
-function startHeartbeat(serverInfoWrapper, onServerFailure) {
+function startHeartbeat(serverInfoWrapper, onHeartbeatFailure) {
     let missedBeatsByServer = {};
     setInterval(() => {
-        runHeartbeat(serverInfoWrapper, missedBeatsByServer, onServerFailure);
+        runHeartbeat(serverInfoWrapper, missedBeatsByServer, onHeartbeatFailure);
     }, HEARTBEAT_INTERVAL * 1000);
-
 }
 
-function runHeartbeat(serverInfoWrapper, missedBeatsByServer, onServerFailure) {
+function runHeartbeat(serverInfoWrapper, missedBeatsByServer, onHeartbeatFailure) {
     serverInfoWrapper.getAllServers().then(servers => servers.map(server => {
         serverInfoWrapper.sendRequestToServer(server, serverInfoWrapper.GET, heartbeatPath)
             .then(() => {
@@ -26,7 +25,7 @@ function runHeartbeat(serverInfoWrapper, missedBeatsByServer, onServerFailure) {
                 }
                 if (missedBeatsByServer[server.baseAddr] >= MISSED_BEATS_FOR_FAILURE) {
                     delete missedBeatsByServer[server.baseAddr];
-                    onServerFailure(server);
+                    onHeartbeatFailure(server);
                 }
             });
     }))

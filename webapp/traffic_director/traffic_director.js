@@ -94,9 +94,8 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
             });
     }
 
-    function startHeartbeat(onServerFailure) {
-        log.bright("starting heartbeat");
-        HeartbeatManager.startHeartbeat(new ServerInfoWrapper(serverInfoModel), onServerFailure);
+    function startHeartbeat(onHeartbeatFailure) {
+        HeartbeatManager.startHeartbeat(new ServerInfoWrapper(serverInfoModel), onHeartbeatFailure);
     }
 
     return {
