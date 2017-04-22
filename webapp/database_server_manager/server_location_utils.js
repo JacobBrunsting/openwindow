@@ -1,5 +1,5 @@
-var DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
-var SqrGeoRng = require(__dirname + '/../classes/sqr_geo_rng');
+var DatabaseServerInfo = require(__dirname + '/database_server_info');
+var SqrGeoRng = require(__dirname + '/sqr_geo_rng');
 
 // returns the index of insertion, or undefined if it was not inserted
 function insertEntryInOrderNoDuplicates(arr, val) {

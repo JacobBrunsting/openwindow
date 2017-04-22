@@ -1,10 +1,10 @@
 // TODO: Rename to 'database_server_manager'
 const request = require('request');
-const DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
+const DatabaseServerInfo = require(__dirname + '/database_server_info');
 const log = require(__dirname + '/../utils/log');
-const SqrGeoRng = require(__dirname + '/../classes/sqr_geo_rng');
+const SqrGeoRng = require(__dirname + '/sqr_geo_rng');
 
-var serverInfoModel;
+let serverInfoModelWrapper;
 
 function getApiCallURL(baseAddr, path) {
     return baseAddr + "/api/" + path;
@@ -12,7 +12,7 @@ function getApiCallURL(baseAddr, path) {
 
 function addServerInfo(serverInfo) {
     log.msg("server_manager:addServerInfo:Adding server " + JSON.stringify(serverInfo));
-    return serverInfoModel.create(serverInfo);
+    return serverInfoModelWrapper.create(serverInfo);
 }
 
 function addServersInfo(serversInfo) {
@@ -20,7 +20,7 @@ function addServersInfo(serversInfo) {
 }
 
 function updateServerInfo(updatedServerInfo) {
-    return serverInfoModel.findOneAndUpdate({
+    return serverInfoModelWrapper.updateOne({
         baseAddr: updatedServerInfo.baseAddr
     }, updatedServerInfo);
 }
@@ -30,38 +30,29 @@ function updateServersInfo(updatedServersInfo) {
 }
 
 function addAllServerInfo(serversInfo) {
-    log.msg("server_manager:addAllServerInfo:Adding servers " + JSON.stringify(serversInfo));
-    return serverInfoModel.create(serversInfo);
+    return serverInfoModelWrapper.create(serversInfo);
 }
 
 function removeServerInfo(baseAddr) {
-    return new Promise((resolve, reject) => {
-        serverInfoModel
-            .findOneAndRemove({
-                baseAddr: baseAddr
-            })
-            .then((server) => {
-                resolve();
-            })
+    return serverInfoModelWrapper
+            .removeOne({baseAddr})
             .catch((err) => {
-                reject();
                 log.err("server_manager:removeServerInfo:" + err);
+                throw err;
             });
-    });
 }
 
 /**
  * For every server on the network, shrink the 'read range' of the server if 
- * possible so that when the traffic director is determining which servers 
+ * possible so that when the database server manager is determining which servers 
  * to send location-based requests to, it makes less unnecesary server calls
  * TODO: Every web server is going to be doing this - look into avoiding needless
  * repition (although avoiding extra calls is also nice). Also, only make the 
  * call if the read range is larger than the write range
  */
 function recalculateServersRanges() {
-    serverInfoModel
+    serverInfoModelWrapper
         .find()
-        .lean()
         .then(servers => {
             const formattedServers = DatabaseServerInfo.convertObjsToClasses(servers);
             formattedServers.forEach((server) => {
@@ -111,67 +102,51 @@ function recalculateServerRanges(server) {
 }
 
 function resizeServer(updatedServer) {
-    return new Promise((resolve, reject) => {
-        serverInfoModel
-            .findOneAndUpdate({
-                    baseAddr: updatedServer.baseAddr
-                }, {
-                    $set: {
-                        'writeRng.maxLat': updatedServer.writeRng.maxLat,
-                        'writeRng.minLat': updatedServer.writeRng.minLat,
-                        'writeRng.maxLng': updatedServer.writeRng.maxLng,
-                        'writeRng.minLng': updatedServer.writeRng.minLng,
-                        'readRng.maxLat': updatedServer.readRng.maxLat,
-                        'readRng.minLat': updatedServer.readRng.minLat,
-                        'readRng.maxLng': updatedServer.readRng.maxLng,
-                        'readRng.minLng': updatedServer.readRng.minLng
-                    }
-                }, {
-                    new: true
-                },
-                (err) => {
-                    if (err) {
-                        log.err("server_manager:resizeServer:" + err);
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                });
-    });
+    return serverInfoModelWrapper
+        .updateOne({
+            baseAddr: updatedServer.baseAddr
+        }, {
+            $set: {
+                'writeRng.maxLat': updatedServer.writeRng.maxLat,
+                'writeRng.minLat': updatedServer.writeRng.minLat,
+                'writeRng.maxLng': updatedServer.writeRng.maxLng,
+                'writeRng.minLng': updatedServer.writeRng.minLng,
+                'readRng.maxLat': updatedServer.readRng.maxLat,
+                'readRng.minLat': updatedServer.readRng.minLat,
+                'readRng.maxLng': updatedServer.readRng.maxLng,
+                'readRng.minLng': updatedServer.readRng.minLng
+            }
+        }, {
+            new: true
+        })
+        .catch(err => {
+            log.err("server_manager:resizeServer:" + err);
+            throw err;
+        });
 }
 
 function getAllServerInfo(excludeid) {
-    return new Promise((resolve, reject) => {
-        serverInfoModel
-            .find({}, excludeid === "true" ? {
-                _id: 0,
-                __v: 0
-            } : {
-                __v: 0
-            })
-            .lean()
-            .sort({
-                baseAddr: 1
-            })
-            .then((servers) => {
-                resolve(DatabaseServerInfo.convertObjsToClasses(servers));
-            })
-            .catch(reject);
-    });
+    return serverInfoModelWrapper
+        .find({}, excludeid === "true" ? {
+            _id: 0,
+            __v: 0
+        } : {
+            __v: 0
+        })
+        .then(servers => 
+            servers.sort((a, b) => a.baseAddr.localeCompare(b.baseAddr)))
+        .then(servers => DatabaseServerInfo.convertObjsToClasses(servers));
 }
 
 
 var locationUtils = require(__dirname + '/server_location_utils');
 
-var serverInfoModel;
-
 function generateAndStoreServerInfo(serverInfo) {
     let serverInfos;
     let updatedServers = [];
     let newServer;
-    return serverInfoModel
+    return serverInfoModelWrapper
         .find()
-        .lean()
         .then((servers) => {
             if (!servers || servers.length === 0) {
                 const fullRange = new SqrGeoRng(-90, 90, -180, 180);
@@ -181,7 +156,7 @@ function generateAndStoreServerInfo(serverInfo) {
                     fullRange,
                     fullRange
                 );
-                return serverInfoModel.create(newServer)
+                return serverInfoModelWrapper.create(newServer)
             }
             serverInfos = DatabaseServerInfo.convertObjsToClasses(servers);
             return getMostFilledServer(serverInfos)
@@ -203,7 +178,7 @@ function generateAndStoreServerInfo(serverInfo) {
                     updatedServers.push(splitServerUpdateInfo);
                     return Promise.all([
                         updateServerInfo(splitServerUpdateInfo),
-                        serverInfoModel.create(newServer)
+                        serverInfoModelWrapper.create(newServer)
                     ]);
                 });
         })
@@ -244,8 +219,8 @@ function generateAndStoreServerInfo(serverInfo) {
 // function (list of removed servers, list of updated servers)
 function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
     let serverUpdates = [];
-    return serverInfoModel
-        .findOneAndRemove({
+    return serverInfoModelWrapper
+        .removeOne({
             baseAddr: serverToRemove.baseAddr
         })
         .then(res => {
@@ -261,7 +236,7 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
             const removedServerBackupAddr = serverToRemove.backupAddr;
             log.bright("clearing backups at server " + removedServerBackupAddr);
             return clearBackupsAtServer(removedServerBackupAddr)
-                .then(() => serverInfoModel.find())
+                .then(() => serverInfoModelWrapper.getAllServers())
                 .then(servers => {
                     serverUpdates = generateUpdates(servers, updatedServers);
                     // find the server that was previously backing up to the
@@ -335,9 +310,8 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
         ]
     };
 
-    return serverInfoModel
+    return serverInfoModelWrapper
         .find(query)
-        .lean()
         .then(DatabaseServerInfo.convertObjsToClasses)
         .then(onBorderingServerRetrieval)
         .catch(err => {
@@ -382,9 +356,7 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
         }
         console.log("from url is " + fromUrl);
         return new Promise((resolve, reject) => {
-            console.log("returning promise");
             request.get(fromUrl, (err, res) => {
-                console.log("got response");
                 if (err) {
                     log.err("server_manager:mergeServers:" + err);
                     reject(err);
@@ -394,7 +366,6 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
                     reject("empty response");
                     return;
                 }
-                console.log("response is " + JSON.stringify(res.body));
                 const posts = res.body;
                 const toUrl = getApiCallURL(serverToMergeWith.baseAddr, "posts");
                 const requestParams = {
@@ -492,21 +463,20 @@ function clearBackupsAtServer(serverAddress) {
 }
 
 function changeServerbackupAddr(serverInfo, newBackupAddr) {
-    serverInfoModel
-        .findOneAndUpdate({
-                baseAddr: serverInfo.baseAddr
-            }, {
-                $set: {
-                    backupAddr: newBackupAddr,
-                }
-            },
-            (err, data) => {
-                if (err) {
-                    log.err("server_manager:changeServerbackupAddr:" + err);
-                } else {
-                    notifyServerOfChange();
-                }
-            });
+    serverInfoModelWrapper
+        .updateOne({
+            baseAddr: serverInfo.baseAddr
+        }, {
+            $set: {
+                backupAddr: newBackupAddr,
+            }
+        })
+        .then(data => {
+            notifyServerOfChange();
+        })
+        .catch(err => {
+            log.err("server_manager:changeServerbackupAddr:" + err);
+        });
 
     function notifyServerOfChange() {
         const requestParams = {
@@ -539,8 +509,8 @@ function findFarthestServer(serverRng, otherServers) {
     return farthestServer;
 }
 
-module.exports = (nServerInfoModel) => {
-    serverInfoModel = nServerInfoModel;
+module.exports = (nserverInfoModelWrapper) => {
+    serverInfoModelWrapper = nserverInfoModelWrapper;
 
     return {
         removeServerInfo,

@@ -4,14 +4,14 @@
  * originates from
  */
 
-const DatabaseServerInfo = require(__dirname + '/../classes/database_server_info');
+const DatabaseServerInfo = require(__dirname + '/database_server_info');
 const HeartbeatManager = require(__dirname + '/heartbeat_manager');
-const ServerInfoWrapper = require(__dirname + '/server_info_wrapper');
+const ServerInfoModelWrapper = require(__dirname + '/server_info_model_wrapper');
 const constants = require(__dirname + '/../constants');
 const request = require('request');
 const log = require(__dirname + '/../utils/log');
 const NetworkSyncronizationUtils = require(__dirname + '/../utils/network_syncronization_utils');
-var SERVER_INFO_MODEL_NAME = 'DatabaseServerInfo';
+const SERVER_INFO_MODEL_NAME = 'DatabaseServerInfo';
 
 module.exports = (app, mongoose, serverInfoCollectionName) => {
     // We have seperate longitudes for reading and writting because when we get
@@ -21,7 +21,7 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
     // old server, and write new ones to the new server until all the posts from
     // that area have been removed from the old server, meaning we can restrict
     // the read distance further.
-    var serverInfoSchema = mongoose.Schema(DatabaseServerInfo.getStructure(), {
+    const serverInfoSchema = mongoose.Schema(DatabaseServerInfo.getStructure(), {
         collection: serverInfoCollectionName
     });
 
@@ -31,10 +31,11 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
         unique: true
     });
 
-    var serverInfoModel = mongoose.model(SERVER_INFO_MODEL_NAME, serverInfoSchema);
+    const serverInfoModel = mongoose.model(SERVER_INFO_MODEL_NAME, serverInfoSchema);
+    const serverInfoModelWrapper = new ServerInfoModelWrapper(serverInfoModel);
 
-    var requestRedirector = require(__dirname + '/request_redirector')(serverInfoModel);
-    var serverManager = require(__dirname + '/server_manager')(serverInfoModel);
+    const requestRedirector = require(__dirname + '/request_redirector')(serverInfoModelWrapper);
+    const serverInfoManager = require(__dirname + '/server_info_manager')(serverInfoModelWrapper);
 
     function setupSelf(isFirstServer) {
         return new Promise((resolve, reject) => {
@@ -51,12 +52,12 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
                 if (err) {
                     reject(err);
                 } else {
-                    serverManager.addAllServerInfo(res.body)
+                    serverInfoManager.addAllServerInfo(res.body)
                         .then(() => {
                             resolve();
                         })
                         .catch((err) => {
-                            reject("traffic_director:setupSelf:" + err);
+                            reject("database_server_manager:setupSelf:" + err);
                         });
                 }
             });
@@ -89,13 +90,13 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
                 }
             })
             .catch((err) => {
-                log.err("traffic_director:syncWithNetwork:" + err);
+                log.err("database_server_manager:syncWithNetwork:" + err);
                 throw err;
             });
     }
 
     function startHeartbeat(onHeartbeatFailure) {
-        HeartbeatManager.startHeartbeat(new ServerInfoWrapper(serverInfoModel), onHeartbeatFailure);
+        HeartbeatManager.startHeartbeat(serverInfoModelWrapper, onHeartbeatFailure);
     }
 
     return {
@@ -103,15 +104,15 @@ module.exports = (app, mongoose, serverInfoCollectionName) => {
         syncWithNetwork,
         startHeartbeat,
         redirectRequest: requestRedirector.redirectRequest,
-        generateAndStoreServerInfo: serverManager.generateAndStoreServerInfo,
-        removeServerAndAdjust: serverManager.removeServerAndAdjust,
-        removeServerInfo: serverManager.removeServerInfo,
-        getAllServerInfo: serverManager.getAllServerInfo,
-        addServerInfo: serverManager.addServerInfo,
-        addServersInfo: serverManager.addServersInfo,
-        addAllServerInfo: serverManager.addAllServerInfo,
-        updateServerInfo: serverManager.updateServerInfo,
-        updateServersInfo: serverManager.updateServersInfo,
-        recalculateServersRanges: serverManager.recalculateServersRanges,
+        generateAndStoreServerInfo: serverInfoManager.generateAndStoreServerInfo,
+        removeServerAndAdjust: serverInfoManager.removeServerAndAdjust,
+        removeServerInfo: serverInfoManager.removeServerInfo,
+        getAllServerInfo: serverInfoManager.getAllServerInfo,
+        addServerInfo: serverInfoManager.addServerInfo,
+        addServersInfo: serverInfoManager.addServersInfo,
+        addAllServerInfo: serverInfoManager.addAllServerInfo,
+        updateServerInfo: serverInfoManager.updateServerInfo,
+        updateServersInfo: serverInfoManager.updateServersInfo,
+        recalculateServersRanges: serverInfoManager.recalculateServersRanges,
     };
 };

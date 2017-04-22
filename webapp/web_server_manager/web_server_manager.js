@@ -4,12 +4,12 @@
  *  ensure that the data stored at this server is accurate
  */
 
-const constants = require(__dirname + '/constants');
-const log = require(__dirname + '/utils/log');
+const constants = require(__dirname + '/../constants');
+const log = require(__dirname + '/../utils/log');
 const mongoose = require('mongoose');
-const NetworkSyncronizationUtils = require(__dirname + '/utils/network_syncronization_utils');
+const NetworkSyncronizationUtils = require(__dirname + '/../utils/network_syncronization_utils');
 const request = require('request');
-const WebServerInfo = require(__dirname + '/classes/web_server_info');
+const WebServerInfo = require(__dirname + '/web_server_info');
 
 const SERVER_INFO_MODEL_NAME = 'WebServerInfo';
 const HEARTBEAT_INTERVAL = 5;
@@ -196,10 +196,6 @@ function validateServerFailure(failedServer) {
 }
 
 function validateServerFailureWithServers(failedServer, servers) {
-    if (servers.length === 1) {
-        removeServerInfo(failedServer);
-        return;
-    }
     log.bright("Validating server failure for server " + JSON.stringify(failedServer));
     servers.sort((a, b) => a < b ? -1 : 1);
     let thisServerIndex;
@@ -293,9 +289,10 @@ function startHeartbeat() {
                 numSequentialFailures = 0;
             })
             .catch(() => {
-                log.bright('Heartbeat failed for server ' + JSON.stringify(serverBeingChecked));
+                log.bright('Heartbeat failed for web server ' + JSON.stringify(serverBeingChecked));
                 ++numSequentialFailures;
                 if (numSequentialFailures >= 3) {
+                    log.bright('Full failure of database server ' + JSON.stringify(serverBeingChecked));
                     validateServerFailure(serverBeingChecked);
                     serverBeingChecked = undefined;
                     numSequentialFailures = 0;

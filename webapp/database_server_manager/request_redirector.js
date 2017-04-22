@@ -7,7 +7,7 @@
 const log = require(__dirname + '/../utils/log');
 const request = require('request');
 const util = require('util');
-var serverInfoModel;
+let serverInfoModelWrapper;
 
 const MAX_LNG = 180;
 const MIN_LNG = -180;
@@ -184,12 +184,10 @@ function redirectRequest(req, res, targLoc, targRad) {
     }
     let query = getRangeBasedServerSearchQuery(targLoc, targRad, req.method);
     let searchPromise;
-    serverInfoModel
+    serverInfoModelWrapper
         .find(query)
-        .lean()
         .then(servers => sendRequestToServers(req, servers))
         .then(reqRes => {
-            console.log("req res is " + util.inspect(reqRes));
             res.json({
                 statusCode: 200,
                 body: reqRes
@@ -211,7 +209,11 @@ function sendRequestToServers(req, servers) {
     return new Promise((resolve, reject) => {
         Promise.all(servers.map(server => sendRequestToAddress(req, server.baseAddr)))
             .then(results => {
-                resolve(results.reduce(mergeObjects));
+                if (results.length === 0) {
+                    resolve([]);
+                } else {
+                    resolve(results.reduce(mergeObjects));
+                }
             })
             .catch(reject);
     });
@@ -268,7 +270,7 @@ function sendRequestToAddress(req, serverAddress) {
     return new Promise((resolve, reject) => {
         request(requestParams, (err, res) => {
             if (err) {
-               log.err("request_redirector:sendRequestToServer:" + err);
+               log.err("request_redirector:sendRequestToAddress:" + err);
                 reject(err);
             } else {
                 resolve(res.body);
@@ -277,8 +279,8 @@ function sendRequestToAddress(req, serverAddress) {
     });
 }
 
-module.exports = (nServerInfoModel) => {
-    serverInfoModel = nServerInfoModel;
+module.exports = (nserverInfoModelWrapper) => {
+    serverInfoModelWrapper = nserverInfoModelWrapper;
     return {
         redirectRequest
     };

@@ -74,10 +74,10 @@ process.argv.forEach(function (val, index) {
     }
 });
 
-const trafficDirector = require(__dirname + '/traffic_director/traffic_director')
+const databaseServerManager = require(__dirname + '/database_server_manager/database_server_manager')
     (app, mongoose, settings[DATABASE_SERVERS_INFO_COLLECTION_KEY]);
 const baseAddr = "http://" + ipAddr + ":" + settings[PORT_KEY];
-const webServerManager = require(__dirname + '/web_server_manager')
+const webServerManager = require(__dirname + '/web_server_manager/web_server_manager')
     (settings[WEB_SERVERS_INFO_COLLECTION_KEY], baseAddr);
 
 // ================ Setup ================
@@ -93,7 +93,7 @@ app.set('json spaces', 1);
 app.use(express.static(__dirname + '/public'));
 
 var millsBetweenSizeUpdates = 1000 * settings[SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY];
-setInterval(trafficDirector.recalculateServersRanges, millsBetweenSizeUpdates);
+setInterval(databaseServerManager.recalculateServersRanges, millsBetweenSizeUpdates);
 
 // ============= Endpoints ==============
 
@@ -122,7 +122,7 @@ app.all('/api/*', (req, res) => {
         longitude: req.query.longitude,
         latitude: req.query.latitude
     };
-    trafficDirector.redirectRequest(req, res, loc, req.query.radius);
+    databaseServerManager.redirectRequest(req, res, loc, req.query.radius);
 });
 
 app.post('/sync', (req, res) => {
@@ -143,8 +143,8 @@ app.get("/heartbeat", (req, res) => { res.status(200).send() });
 
 /**
  * @api {post} /director/newserver - Add a new database server to the server
- *  info collection and assign it a geographic region so the traffic director
- *  can start reading from it and storing posts in it
+ *  info collection and assign it a geographic region so the database server 
+ *  manager can start reading from it and storing posts in it
  * @apiParam {string} baseAddr - The address of the database server
  */
 app.post('/director/newserver', (req, res) => {
@@ -153,7 +153,7 @@ app.post('/director/newserver', (req, res) => {
         res.status(400).send("baseAddr body property required");
         return;
     }
-    trafficDirector.generateAndStoreServerInfo(req.body)
+    databaseServerManager.generateAndStoreServerInfo(req.body)
         .then((newAndUpdatedServers) => {
             return Promise.all([
                     webServerManager.notifyOtherServers('POST', 'director/serverinfo', newAndUpdatedServers.newServer),
@@ -186,7 +186,7 @@ app.post('/director/newserver', (req, res) => {
  * @apiParam {number} readRng.maxLng
  */
 app.post('/director/serverinfo', (req, res) => {
-    trafficDirector.addServerInfo(req.body)
+    databaseServerManager.addServerInfo(req.body)
         .then(() => {
             res.status(200).send();
         })
@@ -214,7 +214,7 @@ app.post('/director/serverinfo', (req, res) => {
  * @apiParam {number} servers.readRng.maxLng
  */
 app.post('/director/serverinfo', (req, res) => {
-    trafficDirector.addServersInfo(req.body)
+    databaseServerManager.addServersInfo(req.body)
         .then(() => {
             res.status(200).send();
         })
@@ -241,13 +241,13 @@ app.post('/director/serverinfo', (req, res) => {
  * @apiParam {number} readRng.maxLng
  */
 app.post('/director/servermaybedown', (req, res) => {
-    const serverBaseAddr = req.body.baseAddr;
+    const serverInfo = req.body;
+    const serverBaseAddr = serverInfo.baseAddr;
     const url = serverBaseAddr + DATABASE_SERVER_HEARTBEAT_PATH;
-    request.get(url, (err, res) => {
-        if (err) { // TODO: Consider only running the server failure function for certain errors
-            log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
-            onWebServerFailure(serverInfo);
-        }
+    request.get(url).on('error', err => {
+        // TODO: Consider only running the server failure function for certain errors
+        log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
+        onDatabaseServerFailure(serverInfo);
     })
 });
 
@@ -270,7 +270,7 @@ app.post('/director/servermaybedown', (req, res) => {
  * @apiSuccess {string} servers._id
  */
 app.get('/director/allserverinfo', (req, res) => {
-    trafficDirector.getAllServerInfo(req.query.excludeid)
+    databaseServerManager.getAllServerInfo(req.query.excludeid)
         .then((serverInfo) => {
             res.json(serverInfo);
         })
@@ -298,7 +298,7 @@ app.get('/director/allserverinfo', (req, res) => {
  * @apiParam {number} servers.readRng.maxLng
  */
 app.put('/director/serversinfo', (req, res) => {
-    trafficDirector.updateServersInfo(req.body)
+    databaseServerManager.updateServersInfo(req.body)
         .then((result) => {
             res.status(200).send();
         })
@@ -313,7 +313,7 @@ app.put('/director/serversinfo', (req, res) => {
  * @apiParam {string} baseAddr - The base address of the server to remove
  */
 app.delete('/director/serverinfo', (req, res) => {
-    trafficDirector.removeServerInfo(req.query.baseAddr)
+    databaseServerManager.removeServerInfo(req.query.baseAddr)
         .then(() => {
             res.status(200).send()
         })
@@ -427,7 +427,7 @@ function validateDatabaseAndWebServerInfo() {
                 }
             });
             return Promise.all([
-                trafficDirector.syncWithNetwork(serverAddresses),
+                databaseServerManager.syncWithNetwork(serverAddresses),
                 webServerManager.syncWithNetwork(serverAddresses)
             ]);
         });
@@ -436,12 +436,12 @@ function validateDatabaseAndWebServerInfo() {
 setInterval(() => {
     validateDatabaseAndWebServerInfo()
         .catch(err => {
-            log.err("webapp:" + err);
+            log.err("webapp:validateDatabaseAndWebServerInfo:" + err);
         });
 }, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
 
 function onDatabaseServerFailure(serverInfo) {
-    trafficDirector
+    databaseServerManager
         .removeServerAndAdjust(serverInfo, true)
         .then(removedAndUpdatedServers => {
             log.bright("removed server from network after failure, removed and updated servers are " + JSON.stringify(removedAndUpdatedServers));
@@ -463,11 +463,15 @@ function onWebServerFailure(serverInfo) {
         })
 }
 
-// TODO: Move this into setup function in traffic_director
-trafficDirector.startHeartbeat(serverInfo => {
+// TODO: Move this into setup function in database_server_manager
+databaseServerManager.startHeartbeat(serverInfo => {
     webServerManager
         .getAllServerInfo()
         .then(servers => {
+            // TODO: This should preform similar logic to the web server
+            // heartbeat, where servers are continuously tried until on is
+            // found that successfully recieves the request (maybe it can be a 
+            // utilities function)
             let nextServerAddress;
             for (let i = 0; i < servers.length; ++i) {
                 if (servers[i].baseAddr === baseAddr) {
@@ -488,7 +492,9 @@ trafficDirector.startHeartbeat(serverInfo => {
                     method: 'POST',
                     json: true
                 }
-                request(requestParams);
+                request(requestParams).on('error', err => {
+                    log.err('webapp:onHeartbeatFailure:' + err);
+                });
             }
         })
 });
@@ -500,7 +506,7 @@ trafficDirector.startHeartbeat(serverInfo => {
 const setupAsFirst = settings[FIRST_SETUP_KEY] === "true";
 Promise.all([
         webServerManager.setupSelf(setupAsFirst),
-        trafficDirector.setupSelf(setupAsFirst)
+        databaseServerManager.setupSelf(setupAsFirst)
     ])
     .then(() => {
         console.log("");

@@ -1,7 +1,7 @@
 const request = require('request');
 const stableStringify = require('json-stable-stringify');
 const log = require(__dirname + '/log');
-const GeneralUtils = require('./general_utils');
+const GeneralUtils = require(__dirname + '/general_utils');
 
 /**
  * syncWithNetwork - Syncronize the data stored at the provided model with the
