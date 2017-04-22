@@ -5,6 +5,9 @@
  * event of a server failure or disconnection.
  */
 
+// TODO TODO TODO: Make all 'request' calls use .on('error'...) and
+//  .on('request'...) to improve error handling
+
 const bodyParser = require('body-parser');
 const express = require('express');
 const ipAddr = require('ip').address();
@@ -16,7 +19,8 @@ const util = require('util');
 
 // ============= Constants ==============
 
-const DATABASE_SERVER_HEARTBEAT_PATH = '/api/heartbeat'
+const DATABASE_SERVER_HEARTBEAT_PATH = '/api/heartbeat';
+const WEB_SERVER_HEARTBEAT_PATH = '/heartbeat';
 
 // ============== Settings ==============
 
@@ -132,6 +136,12 @@ app.post('/sync', (req, res) => {
 });
 
 /**
+ * @api {get} /api/heartbeat - Get some response to verify that the server is 
+ *  still running
+ */
+app.get("/heartbeat", (req, res) => { res.status(200).send() });
+
+/**
  * @api {post} /director/newserver - Add a new database server to the server
  *  info collection and assign it a geographic region so the traffic director
  *  can start reading from it and storing posts in it
@@ -214,13 +224,29 @@ app.post('/director/serverinfo', (req, res) => {
         });
 });
 
+/**
+ * @api {post} /director/servermaybedown - Check if the provided server is down,
+ *  and if it is, remove it from the network
+ * @apiParam {string} baseAddr
+ * @apiParam {string} backupAddr
+ * @apiParam {Object} writeRng
+ * @apiParam {number} writeRng.minLat
+ * @apiParam {number} writeRng.maxLat
+ * @apiParam {number} writeRng.minLng
+ * @apiParam {number} writeRng.maxLng
+ * @apiParam {Object} readRng
+ * @apiParam {number} readRng.minLat
+ * @apiParam {number} readRng.maxLat
+ * @apiParam {number} readRng.minLng
+ * @apiParam {number} readRng.maxLng
+ */
 app.post('/director/servermaybedown', (req, res) => {
-    const serverInfo = req.body;
-    const url = serverInfo.baseAddr + DATABASE_SERVER_HEARTBEAT_PATH;
+    const serverBaseAddr = req.body.baseAddr;
+    const url = serverBaseAddr + DATABASE_SERVER_HEARTBEAT_PATH;
     request.get(url, (err, res) => {
         if (err) { // TODO: Consider only running the server failure function for certain errors
             log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
-            onServerFailure(serverInfo);
+            onWebServerFailure(serverInfo);
         }
     })
 });
@@ -340,6 +366,22 @@ app.post('/webserver/serverinfo', (req, res) => {
 });
 
 /**
+ * @api {post} /webserver/servermaybedown - Check if the provided server is down,
+ *  and if it is, remove it from the network
+ * @apiParam {string} baseAddr
+ */
+app.post('/webserver/servermaybedown', (req, res) => {
+    const serverInfo = req.body;
+    const url = serverInfo.baseAddr + WEB_SERVER_HEARTBEAT_PATH;
+    request.get(url, (err, res) => {
+        if (err) { // TODO: Consider only running the server failure function for certain errors
+            log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
+            onWebServerFailure(serverInfo);
+        }
+    })
+});
+
+/**
  * @api {get} /webserver/allserverinfo - Get the information about all of the
  *  web servers, in ascending order by IP address
  * @apiParam {boolean} excludeid
@@ -398,7 +440,7 @@ setInterval(() => {
         });
 }, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
 
-function onServerFailure(serverInfo) {
+function onDatabaseServerFailure(serverInfo) {
     trafficDirector
         .removeServerAndAdjust(serverInfo, true)
         .then(removedAndUpdatedServers => {
@@ -411,6 +453,17 @@ function onServerFailure(serverInfo) {
         });
 }
 
+function onWebServerFailure(serverInfo) {
+    const serverBaseAddr = serverInfo.baseAddr;
+    webServerManager
+        .removeServerInfo(serverBaseAddr)
+        .then(() => {
+            const removalQueryParams = { baseAddr: serverBaseAddr };
+            webServerManager.notifyOtherServers('DELETE', 'webserver/serverinfo', undefined, removalQueryParams);
+        })
+}
+
+// TODO: Move this into setup function in traffic_director
 trafficDirector.startHeartbeat(serverInfo => {
     webServerManager
         .getAllServerInfo()

@@ -1,6 +1,7 @@
 const request = require('request');
 const stableStringify = require('json-stable-stringify');
 const log = require(__dirname + '/log');
+const GeneralUtils = require('./general_utils');
 
 /**
  * syncWithNetwork - Syncronize the data stored at the provided model with the
@@ -39,7 +40,7 @@ function syncWithNetwork(model, otherServers, retrievalURI, documentIdProperty) 
         });
 
     function getCorrectData() {
-        return mergePromisesIgnoreErrors(otherServers.map(server =>
+        return GeneralUtils.mergePromisesIgnoreErrors(otherServers.map(server =>
                 makeGetCall(server, retrievalURI)
             )).then(dataArr => {
                 return getCorrectDataFromArrays(dataArr, documentIdProperty);
@@ -49,30 +50,6 @@ function syncWithNetwork(model, otherServers, retrievalURI, documentIdProperty) 
                 throw err;
             });
     }
-}
-
-function mergePromisesIgnoreErrors(promises) {
-    return new Promise((resolve, reject) => {
-        let responsesRemaining = promises.length;
-        let mergedResponses = [];
-        promises.forEach(promise => {
-            promise
-                .then(response => {
-                    responsesRemaining -= 1;
-                    mergedResponses.push(response);
-                    if (responsesRemaining <= 0) {
-                        resolve(mergedResponses);
-                    }
-                })
-                .catch(err => {
-                    responsesRemaining -= 1;
-                    log.err("web_server_manager:mergePromisesIgnoreErrors:" + err);
-                    if (responsesRemaining <= 0) {
-                        resolve(mergedResponses);
-                    }
-                });
-        })
-    });
 }
 
 /**

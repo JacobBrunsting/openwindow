@@ -26,20 +26,7 @@ module.exports = class ServerInfoWrapper {
             method: method
         }
         return new Promise((resolve, reject) => {
-            request(requestParams, (err, res) => {
-                if (err) {
-                    log.err("server_info_wrapper:sendRequestToServer (path:" + path + "):" + err);
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
-        })
-    }
-
-    sendRequestToAllServers(method, path, queries, body) {
-        return getAllServerInfo()
-            .then((servers) => Promise.all([servers.map(server =>
-                sendRequestToServer(server, method, path, queries, body))]));
+            request(requestParams).on('error', reject).on('response', resolve);
+        });
     }
 }

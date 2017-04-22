@@ -197,7 +197,7 @@ function redirectRequest(req, res, targLoc, targRad) {
         })
         .catch(err => {
             res.status(500).send(err);
-           log.err("request_redirector:redirectRequest:" + err);
+            log.err("request_redirector:redirectRequest:" + err);
         });
 }
 

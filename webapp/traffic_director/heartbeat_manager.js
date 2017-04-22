@@ -1,3 +1,9 @@
+/**
+ * @file Provides a 'startHeartbeat' function which will make a request to all
+ * of the database servers in the network periodically to check if they are
+ * running, and if they are not run the provided callback function
+ */
+
 const log = require(__dirname + '/../utils/log');
 const heartbeatPath = '/api/heartbeat';
 
