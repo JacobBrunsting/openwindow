@@ -5,7 +5,8 @@
  * event of a server failure or disconnection.
  */
 
-// TODO TODO TODO: Use lower case for the start of all imports
+// TODO TODO TODO: Use lower case for the start of all imports and do all single
+// quotes, rename 'director' endpoints to 'database'
 
 const bodyParser = require('body-parser');
 const express = require('express');
@@ -247,7 +248,7 @@ app.post('/director/servermaybedown', (req, res) => {
     request.get(url).on('error', err => {
         // TODO: Consider only running the server failure function for certain errors
         log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
-        onDatabaseServerFailure(serverInfo);
+        removeDatabaseServerFromNetwork(serverInfo);
     })
 });
 
@@ -324,6 +325,21 @@ app.delete('/director/serverinfo', (req, res) => {
 });
 
 /**
+ * @api {delete} /director/serverfromnetwork - Remove a database server from 
+ *  the network
+ * @apiParam {string} baseAddr - The base address of the server to remove
+ */
+app.delete('/director/serverfromnetwork', (req, res) => {
+    databaseServerManager.getServerInfo(req.query.baseAddr)
+        .then(removeDatabaseServerFromNetwork)
+        .then(() => { res.status(200).send(); })
+        .catch(err => {
+            res.status(500).send(err);
+            log.err('webapp:/director/deleteserverfromnetwork:' + err);
+        })
+});
+
+/**
  * @api {post} /webserver/newserver - Add server info to the database server
  *  info collection, and add it to all other servers in the network
  * @apiParam {string} baseAddr
@@ -376,7 +392,7 @@ app.post('/webserver/servermaybedown', (req, res) => {
     request.get(url, (err, res) => {
         if (err) { // TODO: Consider only running the server failure function for certain errors
             log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
-            onWebServerFailure(serverInfo);
+            removeWebServerFromNetwork(serverInfo.baseAddr);
         }
     })
 });
@@ -414,6 +430,20 @@ app.delete('/webserver/serverinfo', (req, res) => {
         });
 });
 
+/**
+ * @api {delete} /webserver/serverinfofromnetwork - Remove a web server from the
+ *  network
+ * @apiParam {string} baseAddr - The address of the web server
+ */
+app.delete('/webserver/serverfromnetwork', (req, res) => {
+    removeWebServerFromNetwork(req.query.baseAddr)
+        .then(() => { res.status(200).send(); })
+        .catch((err) => {
+            res.status(500).send(err);
+            log.err('webapp:/webserver/serverinfofromnetwork:' + err);
+        });
+});
+
 // ======= Network Syncronization ========
 
 function validateDatabaseAndWebServerInfo() {
@@ -440,11 +470,11 @@ setInterval(() => {
         });
 }, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
 
-function onDatabaseServerFailure(serverInfo) {
-    databaseServerManager
+function removeDatabaseServerFromNetwork(serverInfo) {
+    return databaseServerManager
         .removeServerAndAdjust(serverInfo, true)
         .then(removedAndUpdatedServers => {
-            log.bright("removed server from network after failure, removed and updated servers are " + JSON.stringify(removedAndUpdatedServers));
+            log.bright('removed database server from network, removed and updated servers are ' + JSON.stringify(removedAndUpdatedServers));
             const removedServer = removedAndUpdatedServers.removedServer;
             const updatedServers = removedAndUpdatedServers.updatedServers;
             const removalQueryParams = { baseAddr: removedServer.baseAddr };
@@ -453,11 +483,11 @@ function onDatabaseServerFailure(serverInfo) {
         });
 }
 
-function onWebServerFailure(serverInfo) {
-    const serverBaseAddr = serverInfo.baseAddr;
-    webServerManager
+function removeWebServerFromNetwork(serverBaseAddr) {
+    return webServerManager
         .removeServerInfo(serverBaseAddr)
         .then(() => {
+            log.bright('removed web server from network, removed server address is ' + serverBaseAddr);
             const removalQueryParams = { baseAddr: serverBaseAddr };
             webServerManager.notifyOtherServers('DELETE', 'webserver/serverinfo', undefined, removalQueryParams);
         })
@@ -474,7 +504,7 @@ databaseServerManager.startHeartbeat(failedServerInfo => {
                     }
                     // if we could not notify another server about the potential
                     //  server failure, assume the server has failed
-                    onDatabaseServerFailure(failedServerInfo);
+                    removeDatabaseServerFromNetwork(failedServerInfo);
                 })
         })
 });

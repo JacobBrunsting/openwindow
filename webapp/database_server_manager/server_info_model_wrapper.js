@@ -25,6 +25,13 @@ module.exports = class ServerInfoWrapper {
             .then(DatabaseServerInfo.convertObjsToClasses);
     }
 
+    findOne(query, params) {
+        return this.serverInfoModel
+            .findOne(query, params)
+            .lean()
+            .then(DatabaseServerInfo.convertObjToClass);
+    }
+
     create(data) {
         return this.serverInfoModel
             .create(data)
@@ -41,9 +48,17 @@ module.exports = class ServerInfoWrapper {
     }
 
     removeOne(query) {
+        console.log("removing with query " + JSON.stringify(query));
         return this.serverInfoModel
             .findOneAndRemove(query)
             .lean()
+            .then(res => {
+                if (!res) {
+                    throw 'could not find server to remove';
+                } else {
+                    return res;
+                }
+            })
             .then(DatabaseServerInfo.convertObjToClass);
     }
 

@@ -108,6 +108,7 @@ module.exports = (mongoose, serverInfoCollectionName) => {
         removeServerAndAdjust: serverInfoManager.removeServerAndAdjust,
         removeServerInfo: serverInfoManager.removeServerInfo,
         getAllServerInfo: serverInfoManager.getAllServerInfo,
+        getServerInfo: serverInfoManager.getServerInfo,
         addServerInfo: serverInfoManager.addServerInfo,
         addServersInfo: serverInfoManager.addServersInfo,
         addAllServerInfo: serverInfoManager.addAllServerInfo,

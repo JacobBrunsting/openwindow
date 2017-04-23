@@ -138,6 +138,9 @@ function getAllServerInfo(excludeid) {
         .then(servers => DatabaseServerInfo.convertObjsToClasses(servers));
 }
 
+function getServerInfo(targetAddr) {
+    return serverInfoModelWrapper.findOne({baseAddr: targetAddr});
+}
 
 var locationUtils = require(__dirname + '/server_location_utils');
 
@@ -225,6 +228,7 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
         })
         .then(res => {
             if (res) {
+                console.log('res is ' + JSON.stringify(res));
                 return res;
             } else {
                 throw 'Server not found in database';
@@ -514,6 +518,7 @@ module.exports = (nserverInfoModelWrapper) => {
     return {
         removeServerInfo,
         getAllServerInfo,
+        getServerInfo,
         addServerInfo,
         addServersInfo,
         updateServerInfo,
