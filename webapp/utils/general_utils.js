@@ -1,3 +1,5 @@
+const request = require('request');
+
 function mergePromisesIgnoreErrors(promises) {
     return new Promise((resolve, reject) => {
         let responsesRemaining = promises.length;
@@ -24,17 +26,18 @@ function mergePromisesIgnoreErrors(promises) {
 
 /**
  * Sort the list of servers by their address, and find the first server 
- *  following the current server in the list, making a request to it with the 
- *  required path
+ *  following the current server in the list, making a POST request to it with 
+ *  the specified path and body
  * @param {Object[]} servers - The list of web servers in the network
- * @param {string} curServerAddr - The address of this server
+ * @param {string} thisServerAddr - The address of this server
  * @param {string} path - The path of the request being made to the server
+ * @param {Object} body - The body of the request
  */
-function notifyNextAliveServer(servers, curServerAddr, path) {
-    servers.sort((a, b) => a.baseAddr < b.baseAddr ? 1 : -1);
+function notifyNextAliveServer(servers, thisServerAddr, path, body) {
+    const sortedServers = servers.sort((a, b) => a.baseAddr < b.baseAddr ? 1 : -1);
     let thisServerIndex;
-    for (let i = 0; i < servers.length; ++i) {
-        if (servers[i].baseAddr === baseAddr) {
+    for (let i = 0; i < sortedServers.length; ++i) {
+        if (sortedServers[i].baseAddr === thisServerAddr) {
             thisServerIndex = i;
             break;
         }
@@ -47,8 +50,8 @@ function notifyNextAliveServer(servers, curServerAddr, path) {
     return new Promise((resolve, reject) => {
         notifyNextServer();
         function notifyNextServer() {
-            while (curServerIndex >= servers.length) {
-                curServerIndex -= servers.length;
+            while (curServerIndex >= sortedServers.length) {
+                curServerIndex -= sortedServers.length;
             }
             if (curServerIndex === thisServerIndex) {
                 // If we have reached the current server in the list of all of the
@@ -57,14 +60,10 @@ function notifyNextAliveServer(servers, curServerAddr, path) {
                 reject();
                 return;
             }
-            if (servers[curServerIndex].baseAddr === failedServer.baseAddr) {
-                next();
-                return;
-            }
             const requestParams = {
-                url: servers[curServerIndex].baseAddr + path,
+                url: sortedServers[curServerIndex].baseAddr + path,
                 method: 'POST',
-                body: failedServer,
+                body: body,
                 json: true,
             }
             request(requestParams, (err, res) => {
@@ -74,7 +73,8 @@ function notifyNextAliveServer(servers, curServerAddr, path) {
                         resolve();
                     }
                 })
-                .on('error', () => {
+                .on('error', err => {
+                    log.err('general_utils:notifyNextAliveServer:' + err);
                     next();
                 });
 

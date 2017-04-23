@@ -15,6 +15,7 @@ const log = require(__dirname + '/utils/log');
 const mongoose = require('mongoose');
 const request = require('request');
 const util = require('util');
+const generalUtils = require(__dirname + '/utils/general_utils');
 
 // ============= Constants ==============
 
@@ -462,38 +463,19 @@ function onWebServerFailure(serverInfo) {
         })
 }
 
-databaseServerManager.startHeartbeat(serverInfo => {
+databaseServerManager.startHeartbeat(failedServerInfo => {
     webServerManager
         .getAllServerInfo()
         .then(servers => {
-            // TODO: This should preform similar logic to the web server
-            // heartbeat, where servers are continuously tried until on is
-            // found that successfully recieves the request (maybe it can be a 
-            // utilities function)
-            let nextServerAddress;
-            for (let i = 0; i < servers.length; ++i) {
-                if (servers[i].baseAddr === baseAddr) {
-                    let nextServerPos = i + 1;
-                    if (nextServerPos >= servers.length) {
-                        nextServerPos = 0;
+            generalUtils.notifyNextAliveServer(servers, baseAddr, '/director/servermaybedown', failedServerInfo)
+                .catch(err => {
+                    if (err) {
+                        log.err('webapp:onHeartbeatFailure:' + err);
                     }
-                    if (servers[nextServerPos]) {
-                        nextServerAddress = servers[nextServerPos].baseAddr;
-                    }
-                    break;
-                }
-            }
-            if (nextServerAddress) {
-                const requestParams = {
-                    url: nextServerAddress + '/director/servermaybedown',
-                    body: serverInfo,
-                    method: 'POST',
-                    json: true
-                }
-                request(requestParams).on('error', err => {
-                    log.err('webapp:onHeartbeatFailure:' + err);
-                });
-            }
+                    // if we could not notify another server about the potential
+                    //  server failure, assume the server has failed
+                    onDatabaseServerFailure(failedServerInfo);
+                })
         })
 });
 

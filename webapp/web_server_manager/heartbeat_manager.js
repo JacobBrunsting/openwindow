@@ -6,8 +6,8 @@
  */
 
 const request = require('request');
-
 const log = require(__dirname + '/../utils/log');
+const generalUtils = require(__dirname + '/../utils/general_utils');
 
 const HEARTBEAT_PATH = '/heartbeat';
 const MISSED_BEATS_FOR_FAILURE = 3;
@@ -72,6 +72,25 @@ function startHeartbeat(serverInfoModel, baseAddr) {
     }
 }
 
+/**
+ * Gets the server after the target server in the server list when the list is
+ *  sorted by address
+ * @param {Object[]} servers - All of the servers in the network
+ * @param {string} targServerAddr - The address of the target server
+ */
+function getNextServer(servers, targServerAddr) {
+    const sortedServers = servers.sort((a, b) => a.baseAddr < b.baseAddr);
+    for (let i = 0; i < sortedServers.length; ++i) {
+        if (sortedServers[i].baseAddr === targServerAddr) {
+            let nextServerIndex = i + 1;
+            while (nextServerIndex >= sortedServers.length) {
+                nextServerIndex -= sortedServers.length;
+            }
+            return sortedServers[nextServerIndex];
+        }
+    }
+}
+
 function sendHeartbeat(serverBaseAddr) {
     const requestParams = {
         url: serverBaseAddr + HEARTBEAT_PATH,
@@ -93,21 +112,6 @@ function sendHeartbeat(serverBaseAddr) {
     });
 }
 
-// gets the server following this server, when the server order is alphabetical
-function getNextServer(servers, baseAddr) {
-    const sortedServers = servers.sort((a, b) => a.baseAddr < b.baseAddr);
-    for (let i = 0; i < sortedServers.length; ++i) {
-        if (sortedServers[i].baseAddr === baseAddr) {
-            let nextServerIndex = i + 1;
-            while (nextServerIndex >= sortedServers.length) {
-                nextServerIndex -= sortedServers.length;
-            }
-            return sortedServers[nextServerIndex];
-        }
-    }
-}
-
-
 function validateServerFailure(serverInfoModel, failedServer, baseAddr) {
     serverInfoModel
         .find()
@@ -118,31 +122,11 @@ function validateServerFailure(serverInfoModel, failedServer, baseAddr) {
 }
 
 function validateServerFailureWithServers(serverInfoModel, failedServer, servers, baseAddr) {
+    const filteredServers =
+        servers.filter(server => server.baseAddr !== failedServer.baseAddr);
     log.bright("Validating server failure for server " + JSON.stringify(failedServer));
-    servers.sort((a, b) => a.baseAddr < b.baseAddr ? -1 : 1);
-    let thisServerIndex;
-    for (let i = 0; i < servers.length; ++i) {
-        if (servers[i].baseAddr === baseAddr) {
-            thisServerIndex = i;
-            break;
-        }
-    }
-    if (!thisServerIndex) {
-        thisServerIndex = 0;
-    }
-    let curServerIndex = thisServerIndex + 1;
-
-    notifyNextServer();
-    // keep notifying the servers in the network until one successfully
-    // processes the request, or until all servers have been tried
-    function notifyNextServer() {
-        while (curServerIndex >= servers.length) {
-            curServerIndex -= servers.length;
-        }
-        if (curServerIndex === thisServerIndex) {
-            // if, after trying to verify the server failure with the other 
-            // servers in the network, no server could be notified, just remove
-            // the server from the local database
+    generalUtils.notifyNextAliveServer(filteredServers, baseAddr, '/webserver/servermaybedown', failedServer)
+        .catch(() => {
             log.bright('Could not connect to another server to verify the failure of server ' + JSON.stringify(failedServer) + ', removing locally');
             serverInfoModel
                 .findOneAndRemove({
@@ -151,24 +135,7 @@ function validateServerFailureWithServers(serverInfoModel, failedServer, servers
                 .catch(err => {
                     log.err('heartbeat_manager:notifyNextServer:' + err);
                 });
-            return;
-        }
-        if (servers[curServerIndex].baseAddr === failedServer.baseAddr) {
-            curServerIndex += 1;
-            notifyNextServer();
-            return;
-        }
-        const requestParams = {
-            url: servers[curServerIndex].baseAddr + '/webserver/servermaybedown',
-            method: 'POST',
-            body: failedServer,
-            json: true,
-        }
-        request(requestParams).on('error', () => {
-            curServerIndex += 1;
-            notifyNextServer();
-        });
-    }
+        })
 }
 
 module.exports = {

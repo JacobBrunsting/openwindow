@@ -354,7 +354,6 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
         } else {
             fromUrl = getApiCallURL(serverToMerge.baseAddr, "allposts");
         }
-        console.log("from url is " + fromUrl);
         return new Promise((resolve, reject) => {
             request.get(fromUrl, (err, res) => {
                 if (err) {
