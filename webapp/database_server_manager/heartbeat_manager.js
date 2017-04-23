@@ -5,9 +5,10 @@
  */
 
 const log = require(__dirname + '/../utils/log');
+
 const heartbeatPath = '/api/heartbeat';
 
-const MISSED_BEATS_FOR_FAILURE = 4;
+const MISSED_BEATS_FOR_FAILURE = 3;
 const HEARTBEAT_INTERVAL = 5;
 const REQUEST_TIMEOUT = 8000;
 

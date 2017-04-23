@@ -5,8 +5,7 @@
  * event of a server failure or disconnection.
  */
 
-// TODO TODO TODO: Make all 'request' calls use .on('error'...) and
-//  .on('request'...) to improve error handling
+// TODO TODO TODO: Use lower case for the start of all imports
 
 const bodyParser = require('body-parser');
 const express = require('express');
@@ -75,7 +74,7 @@ process.argv.forEach(function (val, index) {
 });
 
 const databaseServerManager = require(__dirname + '/database_server_manager/database_server_manager')
-    (app, mongoose, settings[DATABASE_SERVERS_INFO_COLLECTION_KEY]);
+    (mongoose, settings[DATABASE_SERVERS_INFO_COLLECTION_KEY]);
 const baseAddr = "http://" + ipAddr + ":" + settings[PORT_KEY];
 const webServerManager = require(__dirname + '/web_server_manager/web_server_manager')
     (settings[WEB_SERVERS_INFO_COLLECTION_KEY], baseAddr);
@@ -463,7 +462,6 @@ function onWebServerFailure(serverInfo) {
         })
 }
 
-// TODO: Move this into setup function in database_server_manager
 databaseServerManager.startHeartbeat(serverInfo => {
     webServerManager
         .getAllServerInfo()

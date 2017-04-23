@@ -13,7 +13,7 @@ const log = require(__dirname + '/../utils/log');
 const NetworkSyncronizationUtils = require(__dirname + '/../utils/network_syncronization_utils');
 const SERVER_INFO_MODEL_NAME = 'DatabaseServerInfo';
 
-module.exports = (app, mongoose, serverInfoCollectionName) => {
+module.exports = (mongoose, serverInfoCollectionName) => {
     // We have seperate longitudes for reading and writting because when we get
     // a new server, we want to send posts from some geographical area to it.
     // To avoid having to move over all the posts from the server currently 
