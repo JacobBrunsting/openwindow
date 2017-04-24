@@ -176,7 +176,7 @@ function redirectRequest(req, res, targLoc, targRad) {
             })
             .catch(err => {
                 res.status(500).send(err);
-               log.err('request_redirector:redirectRequest:' + err);
+                log.err('request_redirector:redirectRequest:' + err);
             });
         return;
     }
@@ -207,17 +207,14 @@ function redirectRequest(req, res, targLoc, targRad) {
  *  was retrieved from the server database
  */
 function sendRequestToServers(req, servers) {
-    return new Promise((resolve, reject) => {
-        Promise.all(servers.map(server => sendRequestToAddress(req, server.baseAddr)))
-            .then(results => {
-                if (results.length === 0) {
-                    resolve([]);
-                } else {
-                    resolve(results.reduce(mergeObjects));
-                }
-            })
-            .catch(reject);
-    });
+    return Promise.all(servers.map(server => sendRequestToAddress(req, server.baseAddr)))
+        .then(results => {
+            if (results.length === 0) {
+                return [];
+            } else {
+                return results.reduce(mergeObjects);
+            }
+        });
 
     function mergeObjects(a, b) {
         if (a.constructor === Array && b.constructor === Array) {
@@ -271,7 +268,7 @@ function sendRequestToAddress(req, serverAddress) {
     return new Promise((resolve, reject) => {
         request(requestParams, (err, res) => {
             if (err) {
-               log.err('request_redirector:sendRequestToAddress:' + err);
+                log.err('request_redirector:sendRequestToAddress:' + err);
                 reject(err);
             } else {
                 resolve(res.body);
