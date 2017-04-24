@@ -15,7 +15,7 @@ function mergePromisesIgnoreErrors(promises) {
                 })
                 .catch(err => {
                     responsesRemaining -= 1;
-                    log.err("web_server_manager:mergePromisesIgnoreErrors:" + err);
+                    log.err('web_server_manager:mergePromisesIgnoreErrors:' + err);
                     if (responsesRemaining <= 0) {
                         resolve(mergedResponses);
                     }

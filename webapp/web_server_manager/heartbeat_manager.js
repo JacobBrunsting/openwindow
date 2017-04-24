@@ -117,14 +117,14 @@ function validateServerFailure(serverInfoModel, failedServer, baseAddr) {
         .find()
         .then(servers => validateServerFailureWithServers(serverInfoModel, failedServer, servers, baseAddr))
         .catch(err => {
-            log.err("web_server_manager:validateServerFailure:" + err);
+            log.err('web_server_manager:validateServerFailure:' + err);
         })
 }
 
 function validateServerFailureWithServers(serverInfoModel, failedServer, servers, baseAddr) {
     const filteredServers =
         servers.filter(server => server.baseAddr !== failedServer.baseAddr);
-    log.bright("Validating server failure for server " + JSON.stringify(failedServer));
+    log.bright('Validating server failure for server ' + JSON.stringify(failedServer));
     generalUtils.notifyNextAliveServer(filteredServers, baseAddr, '/webserver/servermaybedown', failedServer)
         .catch(() => {
             log.bright('Could not connect to another server to verify the failure of server ' + JSON.stringify(failedServer) + ', removing locally');

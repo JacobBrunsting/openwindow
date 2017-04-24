@@ -6,8 +6,7 @@
 
 const log = require(__dirname + '/../utils/log');
 
-const heartbeatPath = '/api/heartbeat';
-
+const HEARTBEAT_PATH = '/api/heartbeat';
 const MISSED_BEATS_FOR_FAILURE = 3;
 const HEARTBEAT_INTERVAL = 5;
 const REQUEST_TIMEOUT = 8000;
@@ -22,7 +21,7 @@ function startHeartbeat(serverInfoModelWrapper, onHeartbeatFailure) {
 function runHeartbeat(serverInfoModelWrapper, missedBeatsByServer, onHeartbeatFailure) {
     serverInfoModelWrapper.getAllServers().then(servers => servers.map(server => {
         serverInfoModelWrapper
-            .sendRequestToServer(server, serverInfoModelWrapper.GET, heartbeatPath, undefined, undefined, REQUEST_TIMEOUT)
+            .sendRequestToServer(server, serverInfoModelWrapper.GET, HEARTBEAT_PATH, undefined, undefined, REQUEST_TIMEOUT)
             .then(res => {
                 missedBeatsByServer[server.baseAddr] = 0;
             })

@@ -1,3 +1,3 @@
 module.exports = {
-    apiAddress: "http://localhost:8080/"
+    apiAddress: 'http://localhost:8080/'
 }

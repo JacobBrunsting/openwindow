@@ -11,12 +11,13 @@
 const bodyParser = require('body-parser');
 const express = require('express');
 const ipAddr = require('ip').address();
-const app = express();
-const log = require(__dirname + '/utils/log');
 const mongoose = require('mongoose');
 const request = require('request');
 const util = require('util');
 const generalUtils = require(__dirname + '/utils/general_utils');
+const log = require(__dirname + '/utils/log');
+
+const app = express();
 
 // ============= Constants ==============
 
@@ -27,14 +28,14 @@ const WEB_SERVER_HEARTBEAT_PATH = '/heartbeat';
 
 const config = require(__dirname + '/config');
 
-const PORT_KEY = "port";
-const BOUND_IP_KEY = "boundIp";
-const MONGO_DB_ADDRESS_KEY = "mongoDbAddress";
+const PORT_KEY = 'port';
+const BOUND_IP_KEY = 'boundIp';
+const MONGO_DB_ADDRESS_KEY = 'mongoDbAddress';
 const SECONDS_BETWEEN_SERVER_SIZE_CALCULATIONS_KEY = 'secondsBetweenServerSizeCalculations';
 const SECONDS_BETWEEN_SERVER_VALIDATION_KEY = 'secondsBetweenServerValidation';
 const DATABASE_SERVERS_INFO_COLLECTION_KEY = 'databaseServersInfoCollection';
 const WEB_SERVERS_INFO_COLLECTION_KEY = 'webServersInfoCollection';
-const FIRST_SETUP_KEY = "firstSetup";
+const FIRST_SETUP_KEY = 'firstSetup';
 
 var settings = {};
 settings[PORT_KEY] = 8080;
@@ -49,13 +50,13 @@ for (var key in settings) {
     if (config[key]) {
         settings[key] = config[key];
     } else {
-        log.msg(key + " not set in config file, defaulting to " + settings[key]);
+        log.msg(key + ' not set in config file, defaulting to ' + settings[key]);
     }
 }
 
 process.argv.forEach(function (val, index) {
     if (index >= 2) {
-        var splitVal = val.split("=");
+        var splitVal = val.split('=');
         if (splitVal.length > 1) {
             switch (splitVal[0]) {
                 case PORT_KEY:
@@ -77,7 +78,7 @@ process.argv.forEach(function (val, index) {
 
 const databaseServerManager = require(__dirname + '/database_server_manager/database_server_manager')
     (mongoose, settings[DATABASE_SERVERS_INFO_COLLECTION_KEY]);
-const baseAddr = "http://" + ipAddr + ":" + settings[PORT_KEY];
+const baseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
 const webServerManager = require(__dirname + '/web_server_manager/web_server_manager')
     (settings[WEB_SERVERS_INFO_COLLECTION_KEY], baseAddr);
 
@@ -99,8 +100,8 @@ setInterval(databaseServerManager.recalculateServersRanges, millsBetweenSizeUpda
 // ============= Endpoints ==============
 
 app.use('*', (req, res, next) => {
-    log.msg(req.method + " " + req.originalUrl);
-    if (req.body && JSON.stringify(req.body) !== "{}") {
+    log.msg(req.method + ' ' + req.originalUrl);
+    if (req.body && JSON.stringify(req.body) !== '{}') {
         console.log(JSON.stringify(req.body));
     }
     next();
@@ -140,7 +141,7 @@ app.post('/sync', (req, res) => {
  * @api {get} /api/heartbeat - Get some response to verify that the server is 
  *  still running
  */
-app.get("/heartbeat", (req, res) => { res.status(200).send() });
+app.get('/heartbeat', (req, res) => { res.status(200).send() });
 
 /**
  * @api {post} /director/newserver - Add a new database server to the server
@@ -150,8 +151,8 @@ app.get("/heartbeat", (req, res) => { res.status(200).send() });
  */
 app.post('/director/newserver', (req, res) => {
     if (!req.body.baseAddr) {
-        log.msg("webapp:/director/newserver:baseAddr body property not provided");
-        res.status(400).send("baseAddr body property required");
+        log.msg('webapp:/director/newserver:baseAddr body property not provided');
+        res.status(400).send('baseAddr body property required');
         return;
     }
     databaseServerManager.generateAndStoreServerInfo(req.body)
@@ -166,7 +167,7 @@ app.post('/director/newserver', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log.err("webapp:/director/newserver:" + err);
+            log.err('webapp:/director/newserver:' + err);
         });
 });
 
@@ -193,7 +194,7 @@ app.post('/director/serverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log.err("webapp:/director/serverinfo:" + err);
+            log.err('webapp:/director/serverinfo:' + err);
         });
 });
 
@@ -221,7 +222,7 @@ app.post('/director/serverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log.err("webapp:/director/serverinfo:" + err);
+            log.err('webapp:/director/serverinfo:' + err);
         });
 });
 
@@ -276,7 +277,7 @@ app.get('/director/allserverinfo', (req, res) => {
             res.json(serverInfo);
         })
         .catch((err) => {
-            log.err("webapp:/director/allserverinfo:" + err);
+            log.err('webapp:/director/allserverinfo:' + err);
             res.status(500).send(err);
         });
 });
@@ -304,7 +305,7 @@ app.put('/director/serversinfo', (req, res) => {
             res.status(200).send();
         })
         .catch(err => {
-            log.err("webapp:/director/serversinfo:" + err);
+            log.err('webapp:/director/serversinfo:' + err);
             res.status(500).send(err);
         })
 });
@@ -320,7 +321,7 @@ app.delete('/director/serverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log.err("webapp:/director/serverinfo:" + err);
+            log.err('webapp:/director/serverinfo:' + err);
         });
 });
 
@@ -352,7 +353,7 @@ app.post('/webserver/newserver', (req, res) => {
             })
             .catch((err) => {
                 res.status(500).send(err);
-                log.err("webapp:/webserver/newserver:" + err);
+                log.err('webapp:/webserver/newserver:' + err);
             });
     }
     // TODO: If the server cannot be added to the network, notify the servers 
@@ -361,7 +362,7 @@ app.post('/webserver/newserver', (req, res) => {
         .then(addToDatabase)
         .catch((err) => {
             res.status(500).send(err);
-            log.err("webapp:/webserver/newserver:" + err);
+            log.err('webapp:/webserver/newserver:' + err);
         });
 });
 
@@ -377,7 +378,7 @@ app.post('/webserver/serverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log.err("webapp:/webserver/serverinfo:" + err);
+            log.err('webapp:/webserver/serverinfo:' + err);
         });
 });
 
@@ -411,7 +412,7 @@ app.get('/webserver/allserverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log.err("webapp:/webserver/allserverinfo:" + err);
+            log.err('webapp:/webserver/allserverinfo:' + err);
         });
 });
 
@@ -426,7 +427,7 @@ app.delete('/webserver/serverinfo', (req, res) => {
         })
         .catch((err) => {
             res.status(500).send(err);
-            log.err("webapp:/webserver/serverinfo:" + err);
+            log.err('webapp:/webserver/serverinfo:' + err);
         });
 });
 
@@ -466,7 +467,7 @@ function validateDatabaseAndWebServerInfo() {
 setInterval(() => {
     validateDatabaseAndWebServerInfo()
         .catch(err => {
-            log.err("webapp:validateDatabaseAndWebServerInfo:" + err);
+            log.err('webapp:validateDatabaseAndWebServerInfo:' + err);
         });
 }, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
 
@@ -513,19 +514,19 @@ databaseServerManager.startHeartbeat(failedServerInfo => {
 
 // the first server in the network needs to be set up differently, so we have
 // this setting (which can be passed in from the command line) to account for that
-const setupAsFirst = settings[FIRST_SETUP_KEY] === "true";
+const setupAsFirst = settings[FIRST_SETUP_KEY] === 'true';
 Promise.all([
         webServerManager.setupSelf(setupAsFirst),
         databaseServerManager.setupSelf(setupAsFirst)
     ])
     .then(() => {
-        console.log("");
-        log.msg("webapp listening on port " + settings[PORT_KEY]);
-        console.log("");
+        console.log('');
+        log.msg('webapp listening on port ' + settings[PORT_KEY]);
+        console.log('');
         app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
     })
     .catch((err) => {
-        log.err("webapp:" + err);
-        log.msg("error connecting to server network. exiting.");
+        log.err('webapp:' + err);
+        log.msg('error connecting to server network. exiting.');
         process.exit(1);
     });

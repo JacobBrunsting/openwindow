@@ -4,9 +4,10 @@
  * that request to the correct server
  */
 
-const log = require(__dirname + '/../utils/log');
 const request = require('request');
 const util = require('util');
+const log = require(__dirname + '/../utils/log');
+
 let serverInfoModelWrapper;
 
 const MAX_LNG = 180;
@@ -175,7 +176,7 @@ function redirectRequest(req, res, targLoc, targRad) {
             })
             .catch(err => {
                 res.status(500).send(err);
-               log.err("request_redirector:redirectRequest:" + err);
+               log.err('request_redirector:redirectRequest:' + err);
             });
         return;
     }
@@ -195,7 +196,7 @@ function redirectRequest(req, res, targLoc, targRad) {
         })
         .catch(err => {
             res.status(500).send(err);
-            log.err("request_redirector:redirectRequest:" + err);
+            log.err('request_redirector:redirectRequest:' + err);
         });
 }
 
@@ -270,7 +271,7 @@ function sendRequestToAddress(req, serverAddress) {
     return new Promise((resolve, reject) => {
         request(requestParams, (err, res) => {
             if (err) {
-               log.err("request_redirector:sendRequestToAddress:" + err);
+               log.err('request_redirector:sendRequestToAddress:' + err);
                 reject(err);
             } else {
                 resolve(res.body);

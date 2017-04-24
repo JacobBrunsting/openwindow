@@ -1,5 +1,5 @@
-var SqrGeoRng = require(__dirname + '/sqr_geo_rng');
-var mongoose = require('mongoose');
+const mongoose = require('mongoose');
+const SqrGeoRng = require(__dirname + '/sqr_geo_rng');
 
 /** Class representing a database server */
 module.exports = class DatabaseServerInfo {

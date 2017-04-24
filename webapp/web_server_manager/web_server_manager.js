@@ -4,13 +4,13 @@
  *  ensure that the data stored at this server is accurate
  */
 
-const constants = require(__dirname + '/../constants');
-const log = require(__dirname + '/../utils/log');
 const mongoose = require('mongoose');
-const NetworkSyncronizationUtils = require(__dirname + '/../utils/network_syncronization_utils');
 const request = require('request');
 const WebServerInfo = require(__dirname + '/web_server_info');
 const heartbeatManager = require(__dirname + '/heartbeat_manager');
+const constants = require(__dirname + '/../constants');
+const log = require(__dirname + '/../utils/log');
+const networkSyncronizationUtils = require(__dirname + '/../utils/network_syncronization_utils');
 
 const SERVER_INFO_MODEL_NAME = 'WebServerInfo';
 
@@ -23,7 +23,7 @@ function addServerInfo(serverInfo) {
 
 function getAllServerInfo(excludeid) {
     return serverInfoModel
-        .find({}, excludeid === "true" ? {
+        .find({}, excludeid === 'true' ? {
             _id: 0,
             __v: 0
         } : {
@@ -52,7 +52,7 @@ function notifyOtherServers(method, path, body, qs) {
         method: method,
         json: true
     }
-    log.msg("web_server_manager:notifyOtherServers:making a request to URL " + path + " to all servers, params are:");
+    log.msg('web_server_manager:notifyOtherServers:making a request to URL ' + path + ' to all servers, params are:');
     console.log(JSON.stringify(requestParams));
     return new Promise((resolve, reject) => {
         serverInfoModel
@@ -64,24 +64,24 @@ function notifyOtherServers(method, path, body, qs) {
             .lean()
             .then(notifyServerFromList)
             .catch((err) => {
-                log.err("web_server_manager:notifyOtherServers:" + err);
+                log.err('web_server_manager:notifyOtherServers:' + err);
                 reject(err);
             });
 
         function notifyServerFromList(servers) {
             if (!servers || servers.length === 0) {
-                log.msg("web_server_manager:notifyOtherServers:No servers to notify");
+                log.msg('web_server_manager:notifyOtherServers:No servers to notify');
                 resolve();
                 return;
             }
             let requestsWaitingForResponse = 0;
             servers.forEach((server) => {
                 ++requestsWaitingForResponse;
-                requestParams.url = server.baseAddr + "/" + path;
+                requestParams.url = server.baseAddr + '/' + path;
                 request(requestParams, (err) => {
                     --requestsWaitingForResponse;
                     if (err) {
-                        log.err("web_server_manager:notifyOtherServers:" + err);
+                        log.err('web_server_manager:notifyOtherServers:' + err);
                         reject(err);
                     }
                     if (requestsWaitingForResponse === 0) {
@@ -116,7 +116,7 @@ function setupSelf(isFirstServer) {
             }
             const servers = res.body;
             if (!servers) {
-                reject("Could not retrieve list of servers");
+                reject('Could not retrieve list of servers');
             } else {
                 // we include ourself in the database of servers to make it easier
                 // to compare different web server databases
@@ -144,7 +144,7 @@ function setupSelf(isFirstServer) {
                 }
                 request(requestParams, (err, res) => {
                     if (err) {
-                        log.err("web_server_manager:setupSelf:" + err);
+                        log.err('web_server_manager:setupSelf:' + err);
                         reject(err);
                     } else {
                         resolve();
@@ -169,10 +169,10 @@ function syncWithNetwork(otherServerAddresses) {
             'baseAddr')
         .then(res => {
             if (res === true) {
-                log.bright("successfully synced web server info with network, no changes made");
+                log.bright('successfully synced web server info with network, no changes made');
                 return;
             } else {
-                log.bright("successfully synced web server info with network, new data is " + JSON.stringify(res));
+                log.bright('successfully synced web server info with network, new data is ' + JSON.stringify(res));
                 serverInfoModel
                     .remove({})
                     .then(() => {
@@ -181,7 +181,7 @@ function syncWithNetwork(otherServerAddresses) {
             }
         })
         .catch((err) => {
-            log.err("web_server_manager:syncWithNetwork:" + err);
+            log.err('web_server_manager:syncWithNetwork:' + err);
             throw err;
         });
 }

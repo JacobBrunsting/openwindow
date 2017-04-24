@@ -1,7 +1,7 @@
 const request = require('request');
 const stableStringify = require('json-stable-stringify');
-const log = require(__dirname + '/log');
 const GeneralUtils = require(__dirname + '/general_utils');
+const log = require(__dirname + '/log');
 
 /**
  * syncWithNetwork - Syncronize the data stored at the provided model with the
@@ -35,7 +35,7 @@ function syncWithNetwork(model, otherServers, retrievalURI, documentIdProperty) 
             }
         })
         .catch(err => {
-            log.err("web_server_manager:syncWithNetwork:" + err);
+            log.err('web_server_manager:syncWithNetwork:' + err);
             throw err;
         });
 
@@ -46,7 +46,7 @@ function syncWithNetwork(model, otherServers, retrievalURI, documentIdProperty) 
                 return getCorrectDataFromArrays(dataArr, documentIdProperty);
             })
             .catch(err => {
-                log.err("web_server_manager:syncWithNetwork:" + err);
+                log.err('web_server_manager:syncWithNetwork:' + err);
                 throw err;
             });
     }
@@ -151,7 +151,7 @@ function determineIfMatchesNetwork(data, retrievalURI, otherServers) {
     return Promise.all(promises)
         .then(dataMatches => dataMatches.every(a => a))
         .catch(err => {
-            log.err("network_syncronization_utils:determineIfMatchesNetwork:" + err);
+            log.err('network_syncronization_utils:determineIfMatchesNetwork:' + err);
         });
 }
 
@@ -160,12 +160,12 @@ function retrieveDataAndCompare(data, serverAddress, retrievalURI) {
         .then(retrievedData => sortAndCompare(data, retrievedData))
         .then(result => {
             if (!result) {
-                log.msg("data at server " + serverAddress + " does not match");
+                log.msg('data at server ' + serverAddress + ' does not match');
             }
             return result;
         })
         .catch(err => {
-            log.err("network_syncronization_utils:retrieveDataAndCompare:" + err);
+            log.err('network_syncronization_utils:retrieveDataAndCompare:' + err);
         });
 }
 
@@ -218,7 +218,7 @@ function makeGetCall(serverAddress, uri) {
         }
         request(requestParams, (err, res) => {
             if (err) {
-                log.err("web_server_manager:makeGetCall:" + err);
+                log.err('web_server_manager:makeGetCall:' + err);
                 reject(err);
             } else {
                 resolve(res.body);

@@ -1,7 +1,7 @@
 var request = require('request');
 
 function apiCall(serverAddress, path, method, body, queries) {
-    return serverCall(serverAddress + "/api/" + path, method, body, queries);
+    return serverCall(serverAddress + '/api/' + path, method, body, queries);
 }
 
 function serverCall(url, method, body, queries) {

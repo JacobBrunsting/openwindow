@@ -1,6 +1,6 @@
 const request = require('request');
-const log = require(__dirname + '/../utils/log');
 const DatabaseServerInfo = require(__dirname + '/database_server_info');
+const log = require(__dirname + '/../utils/log');
 
 module.exports = class ServerInfoWrapper {
     constructor(serverInfoModel) {
@@ -48,7 +48,7 @@ module.exports = class ServerInfoWrapper {
     }
 
     removeOne(query) {
-        console.log("removing with query " + JSON.stringify(query));
+        console.log('removing with query ' + JSON.stringify(query));
         return this.serverInfoModel
             .findOneAndRemove(query)
             .lean()

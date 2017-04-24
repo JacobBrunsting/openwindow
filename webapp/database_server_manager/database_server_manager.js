@@ -4,13 +4,14 @@
  * originates from
  */
 
+const request = require('request');
 const DatabaseServerInfo = require(__dirname + '/database_server_info');
-const HeartbeatManager = require(__dirname + '/heartbeat_manager');
+const heartbeatManager = require(__dirname + '/heartbeat_manager');
 const ServerInfoModelWrapper = require(__dirname + '/server_info_model_wrapper');
 const constants = require(__dirname + '/../constants');
-const request = require('request');
 const log = require(__dirname + '/../utils/log');
-const NetworkSyncronizationUtils = require(__dirname + '/../utils/network_syncronization_utils');
+const networkSyncronizationUtils = require(__dirname + '/../utils/network_syncronization_utils');
+
 const SERVER_INFO_MODEL_NAME = 'DatabaseServerInfo';
 
 module.exports = (mongoose, serverInfoCollectionName) => {
@@ -57,7 +58,7 @@ module.exports = (mongoose, serverInfoCollectionName) => {
                             resolve();
                         })
                         .catch((err) => {
-                            reject("database_server_manager:setupSelf:" + err);
+                            reject('database_server_manager:setupSelf:' + err);
                         });
                 }
             });
@@ -71,17 +72,17 @@ module.exports = (mongoose, serverInfoCollectionName) => {
      *  servers in the network used for data validation
      */
     function syncWithNetwork(otherServerAddresses) {
-        return NetworkSyncronizationUtils.syncWithNetwork(
+        return networkSyncronizationUtils.syncWithNetwork(
                 serverInfoModel,
                 otherServerAddresses,
                 '/director/allserverinfo?excludeid=true',
                 'baseAddr')
             .then((res) => {
                 if (res === true) {
-                    log.bright("successfully synced database server info with network, no changes made");
+                    log.bright('successfully synced database server info with network, no changes made');
                     return;
                 } else {
-                    log.bright("successfully synced database server info with network, new data is " + JSON.stringify(res));
+                    log.bright('successfully synced database server info with network, new data is ' + JSON.stringify(res));
                     serverInfoModel
                         .remove({})
                         .then(() => {
@@ -90,13 +91,13 @@ module.exports = (mongoose, serverInfoCollectionName) => {
                 }
             })
             .catch((err) => {
-                log.err("database_server_manager:syncWithNetwork:" + err);
+                log.err('database_server_manager:syncWithNetwork:' + err);
                 throw err;
             });
     }
 
     function startHeartbeat(onHeartbeatFailure) {
-        HeartbeatManager.startHeartbeat(serverInfoModelWrapper, onHeartbeatFailure);
+        heartbeatManager.startHeartbeat(serverInfoModelWrapper, onHeartbeatFailure);
     }
 
     return {

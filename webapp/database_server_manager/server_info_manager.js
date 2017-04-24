@@ -1,17 +1,17 @@
 // TODO: Rename to 'database_server_manager'
-const request = require('request');
 const DatabaseServerInfo = require(__dirname + '/database_server_info');
-const log = require(__dirname + '/../utils/log');
 const SqrGeoRng = require(__dirname + '/sqr_geo_rng');
+const log = require(__dirname + '/../utils/log');
+const request = require('request');
 
 let serverInfoModelWrapper;
 
 function getApiCallURL(baseAddr, path) {
-    return baseAddr + "/api/" + path;
+    return baseAddr + '/api/' + path;
 }
 
 function addServerInfo(serverInfo) {
-    log.msg("server_manager:addServerInfo:Adding server " + JSON.stringify(serverInfo));
+    log.msg('server_manager:addServerInfo:Adding server ' + JSON.stringify(serverInfo));
     return serverInfoModelWrapper.create(serverInfo);
 }
 
@@ -37,7 +37,7 @@ function removeServerInfo(baseAddr) {
     return serverInfoModelWrapper
             .removeOne({baseAddr})
             .catch((err) => {
-                log.err("server_manager:removeServerInfo:" + err);
+                log.err('server_manager:removeServerInfo:' + err);
                 throw err;
             });
 }
@@ -66,13 +66,13 @@ function recalculateServersRanges() {
             });
         })
         .catch((err) => {
-            log.err("server_manager:server range calculations:" + err);
+            log.err('server_manager:server range calculations:' + err);
         });
 }
 
 function recalculateServerRanges(server) {
     let addr = server.baseAddr;
-    let url = getApiCallURL(addr, "postrange");
+    let url = getApiCallURL(addr, 'postrange');
     let requestParams = {
         url: url,
         method: 'GET',
@@ -80,10 +80,10 @@ function recalculateServerRanges(server) {
     };
     request(requestParams, function (err, res) {
         if (err) {
-            log.err("server_manager:recalculateServerRanges:" + err);
+            log.err('server_manager:recalculateServerRanges:' + err);
             return;
         } else if (!res) {
-            log.msg("server_manager:recalculateServerRanges:empty response");
+            log.msg('server_manager:recalculateServerRanges:empty response');
             return;
         }
         const serverPostArea = SqrGeoRng.convertObjToClass(res.body);
@@ -92,11 +92,11 @@ function recalculateServerRanges(server) {
         // no matter where a post is created, it will be within the read range 
         // and will be read by the web server
         server.readRng.expandToContainOther(server.writeRng);
-        log.msg("updating read area for a database server, updated info is:");
+        log.msg('updating read area for a database server, updated info is:');
         log.msg(JSON.stringify(server));
         resizeServer(server)
             .catch((err) => {
-                log.err("server_manager:recalculateServerRanges:" + err);
+                log.err('server_manager:recalculateServerRanges:' + err);
             });
     });
 }
@@ -120,14 +120,14 @@ function resizeServer(updatedServer) {
             new: true
         })
         .catch(err => {
-            log.err("server_manager:resizeServer:" + err);
+            log.err('server_manager:resizeServer:' + err);
             throw err;
         });
 }
 
 function getAllServerInfo(excludeid) {
     return serverInfoModelWrapper
-        .find({}, excludeid === "true" ? {
+        .find({}, excludeid === 'true' ? {
             _id: 0,
             __v: 0
         } : {
@@ -190,7 +190,7 @@ function generateAndStoreServerInfo(serverInfo) {
             updatedServers: updatedServers
         }))
         .catch(err => {
-            log.err("server_manager:generateAndStoreServerInfo:" + err);
+            log.err('server_manager:generateAndStoreServerInfo:' + err);
             throw err;
         });
 
@@ -238,7 +238,7 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
         .then(removedServer => fillSpaceLeftByServer(removedServer, useBackupServerForData))
         .then(updatedServers => {
             const removedServerBackupAddr = serverToRemove.backupAddr;
-            log.bright("clearing backups at server " + removedServerBackupAddr);
+            log.bright('clearing backups at server ' + removedServerBackupAddr);
             return clearBackupsAtServer(removedServerBackupAddr)
                 .then(() => serverInfoModelWrapper.getAllServers())
                 .then(servers => {
@@ -261,7 +261,7 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
             updatedServers: serverUpdates
         }))
         .catch(err => {
-            log.err("server_manager:removeServerAndAdjust:" + err);
+            log.err('server_manager:removeServerAndAdjust:' + err);
             throw err;
         });
 
@@ -279,7 +279,7 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
                     updateInfo[key] = updatedServer[key];
                 }
             }
-            updateInfo["baseAddr"] = originalServer["baseAddr"];
+            updateInfo['baseAddr'] = originalServer['baseAddr'];
             updates.push(updateInfo);
         });
         return updates;
@@ -319,7 +319,7 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
         .then(DatabaseServerInfo.convertObjsToClasses)
         .then(onBorderingServerRetrieval)
         .catch(err => {
-            log.err("server_manager:fillSpaceLeftByServer:" + err);
+            log.err('server_manager:fillSpaceLeftByServer:' + err);
             throw err;
         });
 
@@ -354,23 +354,23 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
     function mergeServers(serverToMerge, serverToMergeWith) {
         let fromUrl;
         if (useBackupServerForData) {
-            fromUrl = getApiCallURL(serverToMerge.backupAddr, "allbackupposts");
+            fromUrl = getApiCallURL(serverToMerge.backupAddr, 'allbackupposts');
         } else {
-            fromUrl = getApiCallURL(serverToMerge.baseAddr, "allposts");
+            fromUrl = getApiCallURL(serverToMerge.baseAddr, 'allposts');
         }
         return new Promise((resolve, reject) => {
             request.get(fromUrl, (err, res) => {
                 if (err) {
-                    log.err("server_manager:mergeServers:" + err);
+                    log.err('server_manager:mergeServers:' + err);
                     reject(err);
                     return;
                 } else if (!res) {
-                    log.msg("server_manager:mergeServers:empty response");
-                    reject("empty response");
+                    log.msg('server_manager:mergeServers:empty response');
+                    reject('empty response');
                     return;
                 }
                 const posts = res.body;
-                const toUrl = getApiCallURL(serverToMergeWith.baseAddr, "posts");
+                const toUrl = getApiCallURL(serverToMergeWith.baseAddr, 'posts');
                 const requestParams = {
                     url: toUrl,
                     method: 'POST',
@@ -379,7 +379,7 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
                 }
                 request(requestParams, (err, res) => {
                     if (err) {
-                        log.err("server_manager:mergeServers:" + err);
+                        log.err('server_manager:mergeServers:' + err);
                         reject(err);
                     } else {
                         resolve();
@@ -410,8 +410,8 @@ function getMostFilledServer(servers) {
         Promise.all(servers.map(getServerFilledAmount))
             .then(serverFilledAmounts => {
                 if (serverFilledAmounts.length <= 0) {
-                    log.msg("server_manager:getFilledServer:No server capacity information retrieved");
-                    reject("No server capacity information retrieved")
+                    log.msg('server_manager:getFilledServer:No server capacity information retrieved');
+                    reject('No server capacity information retrieved')
                     return;
                 }
                 let maxVal = serverFilledAmounts[0];
@@ -425,7 +425,7 @@ function getMostFilledServer(servers) {
                 resolve(servers[index]);
             })
             .catch(err => {
-                log.err("server_manager:getMostFilledServer:" + err);
+                log.err('server_manager:getMostFilledServer:' + err);
                 reject(err);
             });
     });
@@ -433,12 +433,12 @@ function getMostFilledServer(servers) {
     function getServerFilledAmount(server) {
         return new Promise((resolve, reject) => {
             var requestParams = {
-                url: getApiCallURL(server.baseAddr, "amountfull"),
+                url: getApiCallURL(server.baseAddr, 'amountfull'),
                 json: true
             };
             request.get(requestParams, (err, res) => {
                 if (err) {
-                    log.err("server_manager:getMostFilledServer:" + err);
+                    log.err('server_manager:getMostFilledServer:' + err);
                     reject(err);
                 } else {
                     resolve(res.body.amountFull);
@@ -450,13 +450,13 @@ function getMostFilledServer(servers) {
 
 function clearBackupsAtServer(serverAddress) {
     var requestParams = {
-        url: getApiCallURL(serverAddress, "backups"),
+        url: getApiCallURL(serverAddress, 'backups'),
         json: true
     };
     return new Promise((resolve, reject) => {
         request.delete(requestParams, (err) => {
             if (err) {
-                log.err("server_manager:clearBackupsAtServer:" + err);
+                log.err('server_manager:clearBackupsAtServer:' + err);
                 reject(err);
             } else {
                 resolve();
@@ -478,12 +478,12 @@ function changeServerbackupAddr(serverInfo, newBackupAddr) {
             notifyServerOfChange();
         })
         .catch(err => {
-            log.err("server_manager:changeServerbackupAddr:" + err);
+            log.err('server_manager:changeServerbackupAddr:' + err);
         });
 
     function notifyServerOfChange() {
         const requestParams = {
-            url: getApiCallURL(serverInfo.baseAddr, "backupaddr"),
+            url: getApiCallURL(serverInfo.baseAddr, 'backupaddr'),
             body: {
                 newBackupAddr: newBackupAddr
             },
@@ -491,7 +491,7 @@ function changeServerbackupAddr(serverInfo, newBackupAddr) {
         };
         request.put(requestParams, function (err) {
             if (err) {
-                log.err("server_manager:changeServerbackupAddr:notifyServerOfChange:" + err);
+                log.err('server_manager:changeServerbackupAddr:notifyServerOfChange:' + err);
             }
         });
     }

@@ -8,29 +8,29 @@
 
 // ============== Imports ===============
 
+const mongoose = require('mongoose');
+const util = require('util');
 const bodyParser = require('body-parser');
 const config = require(__dirname + '/config');
 const constants = require(__dirname + '/constants');
 const express = require('express');
 const ipAddr = require('ip').address();
 const log = require(__dirname + '/utils/log');
-const mongoose = require('mongoose');
-const util = require('util');
 const networkUtils = require(__dirname + '/network_utils');
 
 // ============== Settings ==============
 
-const PORT_KEY = "port";
-const BOUND_IP_KEY = "boundIp";
-const MONGO_DB_ADDRESS_KEY = "mongoDbAddress";
-const SECONDS_BETWEEN_CLEANUP_KEY = "secondsBetweenCleanup";
-const CACHE_EXPIRY_TIME_KEY = "cacheExpiryTime";
-const UPVOTE_INC_KEY = "upvoteInc";
-const DOWNVOTE_INC_KEY = "downvoteInc";
-const INITIAL_SECONDS_TO_SHOW_FOR = "initialSecondsToShowFor";
-const SITE_POST_MODEL_KEY = "postModelName";
-const BACKUP_POST_MODEL_KEY = "backupPostModelName";
-const SERVER_POWER_CONSTANT_KEY = "serverPowerConstant";
+const PORT_KEY = 'port';
+const BOUND_IP_KEY = 'boundIp';
+const MONGO_DB_ADDRESS_KEY = 'mongoDbAddress';
+const SECONDS_BETWEEN_CLEANUP_KEY = 'secondsBetweenCleanup';
+const CACHE_EXPIRY_TIME_KEY = 'cacheExpiryTime';
+const UPVOTE_INC_KEY = 'upvoteInc';
+const DOWNVOTE_INC_KEY = 'downvoteInc';
+const INITIAL_SECONDS_TO_SHOW_FOR = 'initialSecondsToShowFor';
+const SITE_POST_MODEL_KEY = 'postModelName';
+const BACKUP_POST_MODEL_KEY = 'backupPostModelName';
+const SERVER_POWER_CONSTANT_KEY = 'serverPowerConstant';
 
 var settings = {};
 settings[PORT_KEY] = 8080;
@@ -49,7 +49,7 @@ for (var key in settings) {
     if (config[key]) {
         settings[key] = config[key];
     } else {
-       log.msg(key + " not set in config file, defaulting to " + settings[key]);
+       log.msg(key + ' not set in config file, defaulting to ' + settings[key]);
     }
 }
 
@@ -57,7 +57,7 @@ for (var key in settings) {
 
 process.argv.forEach(function (val, index) {
     if (index >= 2) {
-        var splitVal = val.split("=");
+        var splitVal = val.split('=');
         if (splitVal.length > 1) {
             switch (splitVal[0]) {
                 case PORT_KEY:
@@ -99,17 +99,17 @@ var backupAddr;
 // ========= Add Server to List =========
 networkUtils.serverCall(constants.apiAddress + 'director/newserver',
         networkUtils.POST, {
-            baseAddr: "http://" + ipAddr + ":" + settings[PORT_KEY]
+            baseAddr: 'http://' + ipAddr + ':' + settings[PORT_KEY]
         })
     .then((_backupAddr) => {
         if (_backupAddr) {
             backupAddr = _backupAddr;
         } else {
-           log.msg("did not receive backup database address. exiting.");
+           log.msg('did not receive backup database address. exiting.');
         }
     })
     .catch((err) => {
-       log.err("error connecting to server network: " + err);
+       log.err('error connecting to server network: ' + err);
         process.exit(1);
     });
 
@@ -125,7 +125,7 @@ const commentSchema = mongoose.Schema({
 const coordinatesSchema = mongoose.Schema({
     type: {
         type: String,
-        default: "Point"
+        default: 'Point'
     },
     coordinates: {
         type: [Number],
@@ -194,7 +194,7 @@ setInterval(() => {
             removeExpiredPostsFromBackup();
         })
         .catch((err) => {
-           log.err("post_database:old post cleanup:" + err);
+           log.err('post_database:old post cleanup:' + err);
         });
 }, cleanupInterval);
 
@@ -209,7 +209,7 @@ function removeExpiredPosts(model) {
             })
             .remove((err, data) => {
                 if (err) {
-                   log.err("post_database:removeExpiredPosts:" + err);
+                   log.err('post_database:removeExpiredPosts:' + err);
                     reject(err);
                 } else {
                     resolve();
@@ -222,8 +222,8 @@ function removeExpiredPosts(model) {
 
 // allow access to external database servers directly from the frontend
 app.use('*', (req, res, next) => {
-   log.msg(req.method + " " + req.originalUrl);
-    if (req.body && JSON.stringify(req.body) !== "{}") {
+   log.msg(req.method + ' ' + req.originalUrl);
+    if (req.body && JSON.stringify(req.body) !== '{}') {
         console.log(JSON.stringify(req.body));
     }
     res.header('Access-Control-Allow-Origin', '*');
@@ -251,7 +251,7 @@ app.use('*', (req, res, next) => {
  * @apiParam {String} post.backupDatabaseAddr
  * @apiParam {mongoose.Types.ObjectId} post._id
  */
-app.post("/api/post", postPost);
+app.post('/api/post', postPost);
 
 /**
  * @api {post} /api/posts - Create new posts
@@ -270,21 +270,21 @@ app.post("/api/post", postPost);
  * @apiParam {String} posts.backupDatabaseAddr
  * @apiParam {mongoose.Types.ObjectId} posts._id
  */
-app.post("/api/posts", postPosts);
+app.post('/api/posts', postPosts);
 
 /**
  * @api {post} /api/comment - Add a new comment to a post
  * @apiParam {mongoose.Types.ObjectId} id
  * @apiParam {String} comment 
  */
-app.post("/api/comment", postComment);
+app.post('/api/comment', postComment);
 
 /**
  * @api {post} /api/settime - Update the total seconds to show the post for
  * @apiParam {mongoose.Types.ObjectId} id
  * @apiParam {Number} newSecondsToShowFor
  */
-app.post("/api/settime", postSetTime);
+app.post('/api/settime', postSetTime);
 
 /**
  * @api {get} /api/allposts - Get all posts stored in the main database
@@ -302,7 +302,7 @@ app.post("/api/settime", postSetTime);
  * @apiSuccess {String} posts.backupDatabaseAddr
  * @apiSuccess {mongoose.Types.ObjectId} posts._id
  */
-app.get("/api/allposts", getAllPosts);
+app.get('/api/allposts', getAllPosts);
 
 /**
  * @api {get} /api/post - Get a specific post by id
@@ -321,7 +321,7 @@ app.get("/api/allposts", getAllPosts);
  * @apiSuccess {String} post.backupDatabaseAddr
  * @apiSuccess {mongoose.Types.ObjectId} posts._id
  */
-app.get("/api/post", getPost);
+app.get('/api/post', getPost);
 
 /**
  * @api {get} /api/posts - Get all the posts within a certain radius of a set of
@@ -344,7 +344,7 @@ app.get("/api/post", getPost);
  * @apiSuccess {String} post.backupDatabaseAddr
  * @apiSuccess {mongoose.Types.ObjectId} posts._id
  */
-app.get("/api/posts", getPosts);
+app.get('/api/posts', getPosts);
 
 /**
  * @api {get} /api/postssecondstoshowfor - Get the total time a post should be
@@ -352,7 +352,7 @@ app.get("/api/posts", getPosts);
  * @apiSuccess {Object[]} postTimesToShowFor.{id} - The total number of seconds
  *  the post with the specified ID should be shown for
  */
-app.get("/api/postssecondstoshowfor", getPostsSecondsToShowFor);
+app.get('/api/postssecondstoshowfor', getPostsSecondsToShowFor);
 
 /**
  * @api {get} /api/postrange - Get the range of posts stored in the main 
@@ -363,7 +363,7 @@ app.get("/api/postssecondstoshowfor", getPostsSecondsToShowFor);
  * @apiSuccess {Number} range.minLat
  * @apiSuccess {Number} range.maxLat
  */
-app.get("/api/postrange", getPostRange);
+app.get('/api/postrange', getPostRange);
 
 /**
  * @api {get} /api/amountused - Get a number representing the amount of the 
@@ -372,27 +372,27 @@ app.get("/api/postrange", getPostRange);
  *  porportionate to the number of posts stored on the server, and a server
  *  speed constant specified by the server creator
  */
-app.get("/api/amountfull", getAmountFull);
+app.get('/api/amountfull', getAmountFull);
 
 /**
  * @api {get} /api/heartbeat - Get some response to verify that the server is 
  *  still running
  */
-app.get("/api/heartbeat", getHeartbeat);
+app.get('/api/heartbeat', getHeartbeat);
 
 /**
  * @api {put} /api/upvote - Upvote a post
  * @apiParam {mongoose.Type.ObjectId} id - The id of the upvoted post
  * @apiParam {number} oldVote - The previous vote on the post
  */
-app.put("/api/upvote", putUpvote);
+app.put('/api/upvote', putUpvote);
 
 /**
  * @api {put} /api/downvote - Downvote a post
  * @apiParam {mongoose.Type.ObjectId} id - The id of the downvoted post
  * @apiParam {number} oldVote - The previous vote on the post
  */
-app.put("/api/downvote", putDownvote);
+app.put('/api/downvote', putDownvote);
 
 /**
  * @api {put} /api/post - Update a post, undefined post parameters will not be
@@ -411,14 +411,14 @@ app.put("/api/downvote", putDownvote);
  * @apiParam {String} posts.backupDatabaseAddr
  * @apiParam {mongoose.Types.ObjectId} posts._id
  */
-app.put("/api/post", putPost);
+app.put('/api/post', putPost);
 
 /**
  * @api {put} /api/backupaddr - Update the address of the database server this 
  *  server backs up to
  * @apiParam {String} newBackupAddr
  */
-app.put("/api/backupaddr", putBackupAddr);
+app.put('/api/backupaddr', putBackupAddr);
 
 /**
  * @api {delete} /api/comment - Delete a comment from a post
@@ -426,13 +426,13 @@ app.put("/api/backupaddr", putBackupAddr);
  *  the comment
  * @apiParam {mongoose.Types.ObjectId} commentId - The id of the comment
  */
-app.delete("/api/comment", deleteComment);
+app.delete('/api/comment', deleteComment);
 
 /**
  * @api {delete} /api/comment - Delete a post
  * @apiParam {mongoose.Types.ObjectId} id
  */
-app.delete("/api/post", deletePost);
+app.delete('/api/post', deletePost);
 
 // ------ Backup Database Endpoints -------
 
@@ -452,7 +452,7 @@ app.delete("/api/post", deletePost);
  * @apiParam {String} post.backupDatabaseAddr
  * @apiParam {mongoose.Types.ObjectId} post._id
  */
-app.post("/api/backuppost", postBackupPost);
+app.post('/api/backuppost', postBackupPost);
 
 /**
  * @api {post} /api/backupposts - Create new posts in the backup database
@@ -470,7 +470,7 @@ app.post("/api/backuppost", postBackupPost);
  * @apiParam {String} posts.backupDatabaseAddr
  * @apiParam {mongoose.Types.ObjectId} posts._id
  */
-app.post("/api/backupposts", postBackupPosts);
+app.post('/api/backupposts', postBackupPosts);
 
 /**
  * @api {get} /api/allbackupposts - Get all posts stored in the backup database
@@ -488,7 +488,7 @@ app.post("/api/backupposts", postBackupPosts);
  * @apiSuccess {String} posts.backupDatabaseAddr
  * @apiSuccess {mongoose.Types.ObjectId} posts._id
  */
-app.get("/api/allbackupposts", getAllBackupPosts);
+app.get('/api/allbackupposts', getAllBackupPosts);
 
 /**
  * @api {put} /api/backuppost - Update a post stored in the backup database, 
@@ -507,24 +507,24 @@ app.get("/api/allbackupposts", getAllBackupPosts);
  * @apiParam {String} posts.backupDatabaseAddr
  * @apiParam {mongoose.Types.ObjectId} posts._id
  */
-app.put("/api/backuppost", putBackupPost);
+app.put('/api/backuppost', putBackupPost);
 
 /**
  * @api {delete} /api/backuppost - Delete a post from the backup database
  * @apiParam {mongoose.Types.ObjectId} id
  */
-app.delete("/api/backuppost", deleteBackupPost);
+app.delete('/api/backuppost', deleteBackupPost);
 
 /**
  * @api {delete} /api/expiredbackupposts - Delete all posts from the backup
  *  database which have been displayed longer than their secondsToShowFor
  */
-app.delete("/api/expiredbackupposts", deleteExpiredBackupPosts);
+app.delete('/api/expiredbackupposts', deleteExpiredBackupPosts);
 
 /**
  * @api {delete} /api/backups - Delete all backups from the backup database
  */
-app.delete("/api/backups", deleteBackups);
+app.delete('/api/backups', deleteBackups);
 
 // ========= API Implementation =========
 
@@ -533,7 +533,7 @@ app.delete("/api/backups", deleteBackups);
 function postPost(req, res) {
     let post = req.body;
     addExtraPostProperties(post);
-   log.msg("adding post " + JSON.stringify(post));
+   log.msg('adding post ' + JSON.stringify(post));
     postModel
         .create(post)
         .then(() => {
@@ -542,7 +542,7 @@ function postPost(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:postPost:" + err);
+           log.err('post_database:postPost:' + err);
         });
 }
 
@@ -557,7 +557,7 @@ function postPosts(req, res) {
         })
         .catch((err) => {
             req.status(500).send(err);
-           log.err("post_database:postPosts:" + err);
+           log.err('post_database:postPosts:' + err);
         });
 }
 
@@ -570,7 +570,7 @@ function getAllPosts(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:getAllPosts:" + err);
+           log.err('post_database:getAllPosts:' + err);
         });
 }
 
@@ -582,7 +582,7 @@ function getPost(req, res) {
             function (err, data) {
                 if (err || data === null) {
                     res.status(500).send(err);
-                   log.err("post_database:getPost:" + JSON.stringify(err));
+                   log.err('post_database:getPost:' + JSON.stringify(err));
                 } else {
                     res.json(data);
                 }
@@ -610,7 +610,7 @@ function getPosts(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:getPosts:" + err);
+           log.err('post_database:getPosts:' + err);
         });
 }
 
@@ -633,7 +633,7 @@ function getPostsSecondsToShowFor(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:getPostsSecondsToShowFor:" + err);
+           log.err('post_database:getPostsSecondsToShowFor:' + err);
         });
 }
 
@@ -647,7 +647,7 @@ function getAmountFull(req, res) {
         })
         .catch(err => {
             res.status(500).send(err);
-           log.err("post_database:getAmountFull:" + err);
+           log.err('post_database:getAmountFull:' + err);
         })
 }
 
@@ -677,7 +677,7 @@ function getPostRange(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:getPostRange:" + err);
+           log.err('post_database:getPostRange:' + err);
         });
 
     function updateRange(post) {
@@ -781,7 +781,7 @@ function putBackupAddr(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:changeBackupAddr:" + err);
+           log.err('post_database:changeBackupAddr:' + err);
         });
 }
 
@@ -805,7 +805,7 @@ function deletePost(req, res) {
             function (err, data) {
                 if (err) {
                     res.status(500).send(err);
-                   log.err("post_database:deletePost:" + err);
+                   log.err('post_database:deletePost:' + err);
                 } else {
                     res.status(200).send();
                     removePostFromBackup(id);
@@ -824,7 +824,7 @@ function postBackupPost(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:postBackupPost:" + err);
+           log.err('post_database:postBackupPost:' + err);
         });
 }
 
@@ -836,7 +836,7 @@ function postBackupPosts(req, res) {
         })
         .catch((err) => {
             req.status(500).send(err);
-           log.err("post_database:postPosts:" + err);
+           log.err('post_database:postPosts:' + err);
         });
 }
 
@@ -849,7 +849,7 @@ function getAllBackupPosts(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:getAllBackupPosts:" + err);
+           log.err('post_database:getAllBackupPosts:' + err);
         });
 }
 
@@ -863,7 +863,7 @@ function putBackupPost(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:putBackupPost:" + err);
+           log.err('post_database:putBackupPost:' + err);
         });
 }
 
@@ -876,7 +876,7 @@ function deleteBackupPost(req, res) {
             function (err, data) {
                 if (err) {
                     res.status(500).send(err);
-                   log.err("post_database:deleteBackupPost:" + err);
+                   log.err('post_database:deleteBackupPost:' + err);
                 } else {
                     res.status(200).send();
                 }
@@ -891,7 +891,7 @@ function deleteExpiredBackupPosts(req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:deleteExpiredBackupPosts:" + err);
+           log.err('post_database:deleteExpiredBackupPosts:' + err);
         });
 }
 
@@ -900,7 +900,7 @@ function deleteBackups(req, res) {
         .remove({}, function (err) {
             if (err) {
                 res.status(500).send(err);
-               log.err("post_database:deleteBackups:" + err);
+               log.err('post_database:deleteBackups:' + err);
             } else {
                 res.status(200).send();
             }
@@ -912,7 +912,7 @@ function deleteBackups(req, res) {
 function addExtraPostProperties(post) {
     post.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
     post.postTime = Date.now();
-    post.mainDatabaseAddr = "http://" + ipAddr + ":" + settings[PORT_KEY];
+    post.mainDatabaseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
     post.backupDatabaseAddr = backupAddr;
     post._id = mongoose.Types.ObjectId();
 }
@@ -938,7 +938,7 @@ function updatePostFromUpdateObj(id, updateInfo, req, res) {
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err("post_database:updatePostFromUpdateObj:" + err);
+           log.err('post_database:updatePostFromUpdateObj:' + err);
         });
 }
 
@@ -949,61 +949,61 @@ function updatePostBackup(_id, updatedPostFields) {
         _id: _id,
         updatedPostFields: updatedPostFields
     }
-    networkUtils.apiCall(backupAddr, "backuppost", networkUtils.PUT, body)
+    networkUtils.apiCall(backupAddr, 'backuppost', networkUtils.PUT, body)
         .catch(
             (err) => {
-               log.err("post_database:updatePostBackup:" + err);
+               log.err('post_database:updatePostBackup:' + err);
             }
         );
 }
 
 function addPostToBackup(post) {
-    networkUtils.apiCall(backupAddr, "backuppost", networkUtils.POST, post)
+    networkUtils.apiCall(backupAddr, 'backuppost', networkUtils.POST, post)
         .catch(
             (err) => {
-               log.err("post_database:addPostToBackup:" + err);
+               log.err('post_database:addPostToBackup:' + err);
             }
         );
 }
 
 function addPostsToBackup(posts) {
-    networkUtils.apiCall(backupAddr, "backupposts", networkUtils.POST, posts)
+    networkUtils.apiCall(backupAddr, 'backupposts', networkUtils.POST, posts)
         .catch(
             (err) => {
-               log.err("post_database:addPostsToBackup:" + err);
+               log.err('post_database:addPostsToBackup:' + err);
             }
         );
 }
 
 function removePostFromBackup(_id) {
-    networkUtils.apiCall(backupAddr, "backuppost", networkUtils.DELETE, undefined, {
+    networkUtils.apiCall(backupAddr, 'backuppost', networkUtils.DELETE, undefined, {
             id: _id
         })
         .catch(
             (err) => {
-               log.err("post_database:removePostFromBackup:" + err);
+               log.err('post_database:removePostFromBackup:' + err);
             }
         );
 }
 
 function removeExpiredPostsFromBackup() {
-    networkUtils.apiCall(backupAddr, "expiredbackupposts", networkUtils.DELETE)
+    networkUtils.apiCall(backupAddr, 'expiredbackupposts', networkUtils.DELETE)
         .catch(
             (err) => {
-               log.err("post_database:removeExpiredPostsFromBackup:" + err);
+               log.err('post_database:removeExpiredPostsFromBackup:' + err);
             }
         );
 }
 
 function clearBackups() {
-    networkUtils.apiCall(backupAddr, "backups", networkUtils.DELETE)
+    networkUtils.apiCall(backupAddr, 'backups', networkUtils.DELETE)
         .catch(
             (err) => {
-               log.err("post_database:clearBackups:" + err);
+               log.err('post_database:clearBackups:' + err);
             }
         );
 }
-console.log("");
-log.msg("post database listening on port " + settings[PORT_KEY]);
-console.log("");
+console.log('');
+log.msg('post database listening on port ' + settings[PORT_KEY]);
+console.log('');
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
