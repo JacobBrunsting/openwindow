@@ -1,15 +1,24 @@
 #!/bin/bash
+kill -9 $(lsof -t -i:8080 -sTCP:LISTEN)
 kill -9 $(lsof -t -i:8000 -sTCP:LISTEN)
 kill -9 $(lsof -t -i:8008 -sTCP:LISTEN)
-kill -9 $(lsof -t -i:8080 -sTCP:LISTEN)
+kill -9 $(lsof -t -i:9000 -sTCP:LISTEN)
 kill -9 $(lsof -t -i:6050 -sTCP:LISTEN)
 kill -9 $(lsof -t -i:5000 -sTCP:LISTEN)
 kill -9 $(lsof -t -i:4000 -sTCP:LISTEN)
 kill -9 $(lsof -t -i:3000 -sTCP:LISTEN)
 
 gnome-terminal --window-with-profile=solarized-dark-small -x sh -c '
-echo -ne "\033]0;port 8080 webserver\007"
-node --use-strict ../webapp/webapp.js firstSetup=true databaseServersInfoCollection=DatabaseServersInfo1 webServersInfoCollection=WebServersInfoCollection1 port=8080
+echo -ne "\033]0;port 8080 load balancer\007"
+node --use-strict ../load_balancer/load_balancer.js port=8080
+echo "\n\nEND OF EXECUTION\n\nPress enter to exit"
+read _
+'
+sleep 1
+
+gnome-terminal --window-with-profile=solarized-dark-small -x sh -c '
+echo -ne "\033]0;port 9000 webserver\007"
+node --use-strict ../webapp/webapp.js firstSetup=true databaseServersInfoCollection=DatabaseServersInfo1 webServersInfoCollection=WebServersInfoCollection1 port=9000
 echo "\n\nEND OF EXECUTION\n\nPress enter to exit"
 read _
 '

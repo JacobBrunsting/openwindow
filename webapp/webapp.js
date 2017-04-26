@@ -5,8 +5,7 @@
  * event of a server failure or disconnection.
  */
 
-// TODO TODO TODO: Use lower case for the start of all imports and do all single
-// quotes, rename 'director' endpoints to 'database'
+// TODO: rename 'director' endpoints to 'database'
 
 const bodyParser = require('body-parser');
 const express = require('express');
@@ -16,6 +15,7 @@ const request = require('request');
 const util = require('util');
 const generalUtils = require(__dirname + '/utils/general_utils');
 const log = require(__dirname + '/utils/log');
+const constants = require(__dirname + '/constants');
 
 const app = express();
 
@@ -141,7 +141,9 @@ app.post('/sync', (req, res) => {
  * @api {get} /api/heartbeat - Get some response to verify that the server is 
  *  still running
  */
-app.get('/heartbeat', (req, res) => { res.status(200).send() });
+app.get('/heartbeat', (req, res) => {
+    res.status(200).send()
+});
 
 /**
  * @api {post} /director/newserver - Add a new database server to the server
@@ -333,7 +335,9 @@ app.delete('/director/serverinfo', (req, res) => {
 app.delete('/director/serverfromnetwork', (req, res) => {
     databaseServerManager.getServerInfo(req.query.baseAddr)
         .then(removeDatabaseServerFromNetwork)
-        .then(() => { res.status(200).send(); })
+        .then(() => {
+            res.status(200).send();
+        })
         .catch(err => {
             res.status(500).send(err);
             log.err('webapp:/director/deleteserverfromnetwork:' + err);
@@ -341,13 +345,13 @@ app.delete('/director/serverfromnetwork', (req, res) => {
 });
 
 /**
- * @api {post} /webserver/newserver - Add server info to the database server
+ * @api {post} /webserver/newserver - Add server info to the web server
  *  info collection, and add it to all other servers in the network
  * @apiParam {string} baseAddr
  */
 app.post('/webserver/newserver', (req, res) => {
     function addToDatabase() {
-        webServerManager.addServerInfo(req.body)
+        return webServerManager.addServerInfo(req.body)
             .then(() => {
                 res.status(200).send();
             })
@@ -360,6 +364,7 @@ app.post('/webserver/newserver', (req, res) => {
     // that were already notified of the server addition of the failure
     webServerManager.notifyOtherServers('POST', 'webserver/serverinfo', req.body)
         .then(addToDatabase)
+        .then(updateLoadBalancerServerList)
         .catch((err) => {
             res.status(500).send(err);
             log.err('webapp:/webserver/newserver:' + err);
@@ -373,6 +378,7 @@ app.post('/webserver/newserver', (req, res) => {
  */
 app.post('/webserver/serverinfo', (req, res) => {
     webServerManager.addServerInfo(req.body)
+        .then(updateLoadBalancerServerList)
         .then(() => {
             res.status(200).send();
         })
@@ -438,7 +444,9 @@ app.delete('/webserver/serverinfo', (req, res) => {
  */
 app.delete('/webserver/serverfromnetwork', (req, res) => {
     removeWebServerFromNetwork(req.query.baseAddr)
-        .then(() => { res.status(200).send(); })
+        .then(() => {
+            res.status(200).send();
+        })
         .catch((err) => {
             res.status(500).send(err);
             log.err('webapp:/webserver/serverinfofromnetwork:' + err);
@@ -471,29 +479,6 @@ setInterval(() => {
         });
 }, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
 
-function removeDatabaseServerFromNetwork(serverInfo) {
-    return databaseServerManager
-        .removeServerAndAdjust(serverInfo, true)
-        .then(removedAndUpdatedServers => {
-            log.bright('removed database server from network, removed and updated servers are ' + JSON.stringify(removedAndUpdatedServers));
-            const removedServer = removedAndUpdatedServers.removedServer;
-            const updatedServers = removedAndUpdatedServers.updatedServers;
-            const removalQueryParams = { baseAddr: removedServer.baseAddr };
-            webServerManager.notifyOtherServers('DELETE', 'director/serverinfo', undefined, removalQueryParams);
-            webServerManager.notifyOtherServers('PUT', 'director/serversinfo', updatedServers);
-        });
-}
-
-function removeWebServerFromNetwork(serverBaseAddr) {
-    return webServerManager
-        .removeServerInfo(serverBaseAddr)
-        .then(() => {
-            log.bright('removed web server from network, removed server address is ' + serverBaseAddr);
-            const removalQueryParams = { baseAddr: serverBaseAddr };
-            webServerManager.notifyOtherServers('DELETE', 'webserver/serverinfo', undefined, removalQueryParams);
-        })
-}
-
 databaseServerManager.startHeartbeat(failedServerInfo => {
     webServerManager
         .getAllServerInfo()
@@ -510,6 +495,57 @@ databaseServerManager.startHeartbeat(failedServerInfo => {
         })
 });
 
+// ========== Utility Functions ==========
+
+function removeDatabaseServerFromNetwork(serverInfo) {
+    return databaseServerManager
+        .removeServerAndAdjust(serverInfo, true)
+        .then(removedAndUpdatedServers => {
+            log.bright('removed database server from network, removed and updated servers are ' + JSON.stringify(removedAndUpdatedServers));
+            const removedServer = removedAndUpdatedServers.removedServer;
+            const updatedServers = removedAndUpdatedServers.updatedServers;
+            const removalQueryParams = {
+                baseAddr: removedServer.baseAddr
+            };
+            webServerManager.notifyOtherServers('DELETE', 'director/serverinfo', undefined, removalQueryParams);
+            webServerManager.notifyOtherServers('PUT', 'director/serversinfo', updatedServers);
+        });
+}
+
+function removeWebServerFromNetwork(serverBaseAddr) {
+    return webServerManager
+        .removeServerInfo(serverBaseAddr)
+        .then(() => {
+            log.bright('removed web server from network, removed server address is ' + serverBaseAddr);
+            const removalQueryParams = {
+                baseAddr: serverBaseAddr
+            };
+            webServerManager.notifyOtherServers('DELETE', 'webserver/serverinfo', undefined, removalQueryParams);
+        })
+        .then(updateLoadBalancerServerList);
+}
+
+function updateLoadBalancerServerList() {
+    return webServerManager.getAllServerInfo().then(servers => {
+        const serversurls = servers.map(server => server.baseAddr);
+        const requestParams = {
+            url: constants.apiAddress + 'balancer/servers',
+            method: 'POST',
+            body: {
+                serversurls
+            },
+            json: true
+        }
+        request(requestParams, (err, res) => {
+            if (err) {
+                throw err;
+            }
+        }).on('error', err => {
+            throw err
+        });
+    });
+}
+
 // =============== Startup ===============
 
 // the first server in the network needs to be set up differently, so we have
@@ -525,6 +561,7 @@ Promise.all([
         console.log('');
         app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
     })
+    .then(updateLoadBalancerServerList)
     .catch((err) => {
         log.err('webapp:' + err);
         log.msg('error connecting to server network. exiting.');
