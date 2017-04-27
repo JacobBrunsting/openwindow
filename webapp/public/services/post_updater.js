@@ -4,7 +4,7 @@ angular.module('openwindow').service('post_updater', [
     'INT_CONSTANTS',
     function ($interval, $http, INT_CONSTANTS) {
         this.startUpdatingPosts = function (posts, location, updateInterval, callback) {
-            $interval(function (response) {
+            $interval(function () {
                 $http.get("/api/postssecondstoshowfor", {
                         params: {
                             radius: INT_CONSTANTS.POST_RADIUS,

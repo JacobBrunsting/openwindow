@@ -232,7 +232,7 @@ function sendRequestToServers(req, servers) {
                     a[key] = b[key];
                 }
             }
-            if (Object.keys(a) > 0) {
+            if (Object.keys(a).length > 0) {
                 return a;
             } else if (!b) {
                 return a;
