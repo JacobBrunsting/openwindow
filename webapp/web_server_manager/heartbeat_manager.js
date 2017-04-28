@@ -10,7 +10,7 @@ const log = require(__dirname + '/../utils/log');
 const generalUtils = require(__dirname + '/../utils/general_utils');
 
 const HEARTBEAT_PATH = '/heartbeat';
-const MISSED_BEATS_FOR_FAILURE = 3;
+const MISSED_BEATS_FOR_FAILURE = 2;
 const HEARTBEAT_INTERVAL = 5;
 const REQUEST_TIMEOUT = 8000;
 
