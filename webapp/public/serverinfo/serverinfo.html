@@ -2,6 +2,11 @@
 <h2>
     Database server write areas
 </h2>
+<p>
+    Each box represents a database server. Each database server accepts and
+    stores posts only from a certain area of the world. This range may change
+    as servers are added/removed from the network.
+</p>
 <div class="mapGraphicWrapper">
     <canvas id="serverWriteAreaCanvas" class="serverDisplay">
     </canvas>
@@ -9,16 +14,45 @@
 <h2>
     Database server read areas
 </h2>
+<p>
+    Each box represents a database server. Each database server contains posts
+    from a specific area of the world. This range must fully contain the
+    server's write range, since at any point a post can be added from anywhere
+    inside of that range, so we must assume that the sever is storing posts 
+    from that area. Since the write range occasionally changes, the read range
+    may also need to cover areas not in the write range, to account for posts
+    that were added before the write range changed sizes. This range is
+    recalculated periodically.
+</p>
 <div class="mapGraphicWrapper">
     <canvas id="serverReadAreaCanvas" class="serverDisplay">
     </canvas>
 </div>
+<p>
+    Press one of the 'simulate error' buttons to kill the specified server 
+    without notifying any of the other servers in the network. In ~15-25 
+    seconds, the network will detect the server failure, and run the failover
+    logic. Then you can refresh the page to see the changes that were made.
+</p>
+<p>
+    For web server failures, all web servers in the network will be notified
+    about the failure, and the load balancer will remove the server from it's
+    list of valid servers.
+</p>
+<p>
+    For database server failures, an existing database server will expand to
+    service the same area of the world as the killed server, and will retrieve
+    and store the posts previously stored at the killed server from their backup
+    location. The expanded server will back up to the same server that the 
+    killed server backed up to.
+</p>
 <h2>
     Web servers info
 </h2>
 <div class="tableContainer">
     <table>
         <tr>
+            <th>Error Simulator</th>
             <th>Base Address</th>
         </tr>
         <tr ng-repeat="server in webservers track by $index">
@@ -33,6 +67,7 @@
 <div class="tableContainer">
     <table>
         <tr>
+            <th>Error Simulator</th>
             <th>Base Address</th>
             <th>Backup Server Address</th>
             <th>Min Read Latitude</th>
