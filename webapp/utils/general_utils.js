@@ -1,4 +1,5 @@
 const request = require('request');
+const log = require('./log');
 
 function mergePromisesIgnoreErrors(promises) {
     return new Promise((resolve, reject) => {
