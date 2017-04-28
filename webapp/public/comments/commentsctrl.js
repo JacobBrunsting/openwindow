@@ -34,5 +34,9 @@ angular.module('openwindow').controller('commentsctrl', [
             );
             $scope.body_box = "";
         }
+
+        $scope.goHome = function() {
+            $location.url('/home');
+        }
     }
 ]);

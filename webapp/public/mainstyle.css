@@ -52,7 +52,7 @@ div.post_container:hover .title {
     color: #6E98AE;
 }
 
-button.float_add_btn {
+button.float_btn {
     position: fixed;
     right: 30px;
     bottom: 30px;
@@ -67,7 +67,7 @@ button.float_add_btn {
     outline: none;
 }
 
-button.float_add_btn:hover {
+button.float_btn:hover {
     right: 29px;
     bottom: 29px;
     width: 62px;

@@ -28,5 +28,9 @@ angular.module('openwindow').controller('newpostctrl', [
                     }
                 );
         }
+
+        $scope.goHome = function () {
+            $location.url('/home');
+        }
     }
 ]);
