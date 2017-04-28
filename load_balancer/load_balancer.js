@@ -55,8 +55,6 @@ app.all('*', (req, res) => {
         } else {
             res.status(reqRes.statusCode).send(reqRes.body);
         }
-    }).on('error', err => {
-        res.status(500).send(err);
     });
 });
 
