@@ -69,14 +69,11 @@ function notifyNextAliveServer(servers, thisServerAddr, path, body) {
             }
             request(requestParams, (err, res) => {
                     if (err) {
+                        log.err('general_utils:notifyNextAliveServer:' + err);
                         next();
                     } else {
                         resolve();
                     }
-                })
-                .on('error', err => {
-                    log.err('general_utils:notifyNextAliveServer:' + err);
-                    next();
                 });
 
             function next() {

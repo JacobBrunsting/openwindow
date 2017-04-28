@@ -97,6 +97,7 @@ app.use(express.static('./public'));
 var backupAddr;
 
 // ========= Add Server to List =========
+
 networkUtils.serverCall(constants.apiAddress + 'director/newserver',
         networkUtils.POST, {
             baseAddr: 'http://' + ipAddr + ':' + settings[PORT_KEY]
@@ -1007,3 +1008,9 @@ console.log('');
 log.msg('post database listening on port ' + settings[PORT_KEY]);
 console.log('');
 app.listen(settings[PORT_KEY], settings[BOUND_IP_KEY]);
+
+app.delete('/self', (req, res) => {
+    res.status(200).send();
+    log.msg('received kill request, exiting');
+    process.exit(1);
+});

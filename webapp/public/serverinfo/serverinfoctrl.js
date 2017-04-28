@@ -25,6 +25,10 @@ angular.module('openwindow').controller('serverinfoctrl', [
             });
 
         $scope.posts = [];
+
+        $scope.killServer = function(baseAddr) {
+            $http.delete(baseAddr + "/self");
+        }
     }
 ]);
 

@@ -22,6 +22,7 @@
             <th>Base Address</th>
         </tr>
         <tr ng-repeat="server in webservers track by $index">
+            <td><button class="kill_server_button" ng-click="killServer(server.baseAddr)">Simulate Hard Error</button></td>
             <td>{{server.baseAddr.replace('http://','')}}</td>
         </tr>
     </table>
@@ -44,6 +45,7 @@
             <th>Max Write Longitude</th>
         </tr>
         <tr ng-repeat="server in databaseservers track by $index">
+            <td><button class="kill_server_button" ng-click="killServer(server.baseAddr)">Simulate Hard Error</button></td>
             <td>{{server.baseAddr.replace('http://','')}}</td>
             <td>{{server.backupAddr.replace('http://','')}}</td>
             <td>{{server.readRng.minLat}}</td>

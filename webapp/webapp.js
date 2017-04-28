@@ -104,6 +104,9 @@ app.use('*', (req, res, next) => {
     if (req.body && JSON.stringify(req.body) !== '{}') {
         console.log(JSON.stringify(req.body));
     }
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
     next();
 });
 
@@ -567,3 +570,9 @@ Promise.all([
         log.msg('error connecting to server network. exiting.');
         process.exit(1);
     });
+
+app.delete('/self', (req, res) => {
+    res.status(200).send();
+    log.msg('received kill request, exiting');
+    process.exit(1);
+});
