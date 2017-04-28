@@ -24,7 +24,7 @@ const REQUEST_TIMEOUT = 8000;
  * servers. If the server is not alive, another server is notified to verify
  * that the server is down.
  */
-function startHeartbeat(serverInfoModel, baseAddr) {
+function startHeartbeat(serverInfoModel, baseAddr, serverFailureCallback) {
     let serverBeingChecked;
     let numSequentialFailures = 0;
     setInterval(() => {
@@ -64,7 +64,7 @@ function startHeartbeat(serverInfoModel, baseAddr) {
                 ++numSequentialFailures;
                 if (numSequentialFailures >= MISSED_BEATS_FOR_FAILURE) {
                     log.bright('Full failure of web server ' + JSON.stringify(serverBeingChecked));
-                    validateServerFailure(serverInfoModel, serverBeingChecked, baseAddr);
+                    validateServerFailure(serverInfoModel, serverBeingChecked, baseAddr, serverFailureCallback);
                     serverBeingChecked = undefined;
                     numSequentialFailures = 0;
                 }
@@ -112,16 +112,16 @@ function sendHeartbeat(serverBaseAddr) {
     });
 }
 
-function validateServerFailure(serverInfoModel, failedServer, baseAddr) {
+function validateServerFailure(serverInfoModel, failedServer, baseAddr, serverFailureCallback) {
     serverInfoModel
         .find()
-        .then(servers => validateServerFailureWithServers(serverInfoModel, failedServer, servers, baseAddr))
+        .then(servers => validateServerFailureWithServers(serverInfoModel, failedServer, servers, baseAddr, serverFailureCallback))
         .catch(err => {
             log.err('web_server_manager:validateServerFailure:' + err);
         })
 }
 
-function validateServerFailureWithServers(serverInfoModel, failedServer, servers, baseAddr) {
+function validateServerFailureWithServers(serverInfoModel, failedServer, servers, baseAddr, serverFailureCallback) {
     const filteredServers =
         servers.filter(server => server.baseAddr !== failedServer.baseAddr);
     log.bright('Validating server failure for server ' + JSON.stringify(failedServer));
@@ -132,6 +132,7 @@ function validateServerFailureWithServers(serverInfoModel, failedServer, servers
                 .findOneAndRemove({
                     baseAddr: failedServer.baseAddr
                 })
+                .then(serverFailureCallback)
                 .catch(err => {
                     log.err('heartbeat_manager:notifyNextServer:' + err);
                 });

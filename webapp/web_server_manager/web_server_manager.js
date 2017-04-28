@@ -93,13 +93,13 @@ function notifyOtherServers(method, path, body, qs) {
     });
 }
 
-function setupSelf(isFirstServer) {
+function setupSelf(isFirstServer, serverFailureCallback) {
     const self = new WebServerInfo(baseAddr);
     if (isFirstServer && isFirstServer === true) {
         return serverInfoModel
             .create(self)
             .then(res => {
-                heartbeatManager.startHeartbeat(serverInfoModel, baseAddr);
+                heartbeatManager.startHeartbeat(serverInfoModel, baseAddr, serverFailureCallback);
                 return res;
             });
     }
@@ -127,7 +127,7 @@ function setupSelf(isFirstServer) {
                         addSelfToNetwork()
                     ])
                     .then(() => {
-                        heartbeatManager.startHeartbeat(serverInfoModel, baseAddr);
+                        heartbeatManager.startHeartbeat(serverInfoModel, baseAddr, serverFailureCallback);
                         resolve();
                     })
                     .catch(reject);

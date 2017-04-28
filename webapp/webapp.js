@@ -555,7 +555,7 @@ function updateLoadBalancerServerList() {
 // this setting (which can be passed in from the command line) to account for that
 const setupAsFirst = settings[FIRST_SETUP_KEY] === 'true';
 Promise.all([
-        webServerManager.setupSelf(setupAsFirst),
+        webServerManager.setupSelf(setupAsFirst, updateLoadBalancerServerList),
         databaseServerManager.setupSelf(setupAsFirst)
     ])
     .then(() => {
