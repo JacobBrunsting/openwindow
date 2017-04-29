@@ -776,13 +776,16 @@ function putBackupAddr(req, res) {
         .then((posts) => {
             posts.forEach(post => {
                 post.backupDatabaseAddr = newBackupAddr;
+                postModel.findByIdAndUpdate(post.id, {
+                    $set: { backupDatabaseAddr: newBackupAddr }
+                })
             });
             res.status(200).send();
             addPostsToBackup(posts);
         })
         .catch((err) => {
             res.status(500).send(err);
-           log.err('post_database:changeBackupAddr:' + err);
+            log.err('post_database:changeBackupAddr:' + err);
         });
 }
 
