@@ -965,7 +965,7 @@ function addPostToBackup(post) {
     networkUtils.apiCall(backupAddr, 'backuppost', networkUtils.POST, post)
         .catch(
             (err) => {
-               log.err('post_database:addPostToBackup:' + err);
+                log.err('post_database:addPostToBackup:' + err);
             }
         );
 }
@@ -974,7 +974,7 @@ function addPostsToBackup(posts) {
     networkUtils.apiCall(backupAddr, 'backupposts', networkUtils.POST, posts)
         .catch(
             (err) => {
-               log.err('post_database:addPostsToBackup:' + err);
+                log.err('post_database:addPostsToBackup:' + err);
             }
         );
 }

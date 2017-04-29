@@ -369,7 +369,7 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
                     reject('empty response');
                     return;
                 }
-                const posts = res.body;
+                const posts = JSON.parse(res.body);
                 const toUrl = getApiCallURL(serverToMergeWith.baseAddr, 'posts');
                 const requestParams = {
                     url: toUrl,
