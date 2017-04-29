@@ -254,7 +254,12 @@ app.post('/director/servermaybedown', (req, res) => {
     request.get(url).on('error', err => {
         // TODO: Consider only running the server failure function for certain errors
         log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
-        removeDatabaseServerFromNetwork(serverInfo);
+        removeDatabaseServerFromNetwork(serverInfo)
+            .then(() => { res.status(200).send(); })
+            .catch(err => {
+                log.err('webapp:/director/servermaybedown:' + err);
+                res.status(500).send(err);
+            });
     })
 });
 
