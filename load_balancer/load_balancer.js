@@ -43,19 +43,39 @@ app.all('*', (req, res) => {
     const newReqUrl = serverUrl + req.originalUrl;
     lastServerIndex = nextServerIndex;
 
-    const requestParams = {
+    let requestParams = {
         url: newReqUrl,
         method: req.method,
         body: req.body,
         json: true
     }
+
     request(requestParams, (err, reqRes) => {
         if (err) {
-            res.status(500).send(err);
+            tryNextServer();
         } else {
             res.status(reqRes.statusCode).send(reqRes.body);
         }
     });
+
+    function tryNextServer() {
+        if (serverUrls.length === 0) {
+            res.status(500).send();
+            return;
+        }
+        let retryServerIndex = nextServerIndex + 1;
+        if (retryServerIndex >= serverUrls.length) {
+            retryServerIndex = 0;
+        }
+        requestParams.url = serverUrls[retryServerIndex] + req.originalUrl;
+        request(requestParams, (err, reqRes) => {
+            if (err) {
+                res.status(500).send(err);
+            } else {
+                res.status(reqRes.statusCode).send(reqRes.body);
+            }
+        });
+    }
 });
 
 const PORT_KEY = 'port';
