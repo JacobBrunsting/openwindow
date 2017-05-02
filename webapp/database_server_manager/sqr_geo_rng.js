@@ -93,6 +93,20 @@ module.exports = class SqrGeoRng {
     }
 
     /**
+     * Determine if a point is within the range
+     * @param {number} lng - The longitude of the point
+     * @param {number} lat - The latitude of the point
+     */
+    containsPoint(lng, lat) {
+        return (
+            this.minLat <= lat &&
+            this.maxLat >= lat &&
+            this.minLng <= lng &&
+            this.maxLng >= lng
+        );
+    }
+
+    /**
      * Get the structure of this class in the format required for a Mongoose 
      * Schema
      * @returns {Object} - The class structure.

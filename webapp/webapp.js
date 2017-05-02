@@ -508,12 +508,10 @@ databaseServerManager.startHeartbeat(failedServerInfo => {
 function removeDatabaseServerFromNetwork(serverInfo) {
     return databaseServerManager
         .removeServerAndAdjust(serverInfo, true)
-        .then(removedAndUpdatedServers => {
-            log.bright('removed database server from network, removed and updated servers are ' + JSON.stringify(removedAndUpdatedServers));
-            const removedServer = removedAndUpdatedServers.removedServer;
-            const updatedServers = removedAndUpdatedServers.updatedServers;
+        .then(updatedServers => {
+            console.log("updated servers are " + JSON.stringify(updatedServers));
             const removalQueryParams = {
-                baseAddr: removedServer.baseAddr
+                baseAddr: serverInfo.baseAddr
             };
             webServerManager.notifyOtherServers('DELETE', 'director/serverinfo', undefined, removalQueryParams);
             webServerManager.notifyOtherServers('PUT', 'director/serversinfo', updatedServers);

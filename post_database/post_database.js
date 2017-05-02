@@ -94,7 +94,7 @@ mongoose.connect(settings[MONGO_DB_ADDRESS_KEY]);
 const app = express();
 app.use(bodyParser.json());
 app.use(express.static('./public'));
-var backupAddr;
+let backupAddr;
 
 // ========= Add Server to List =========
 
@@ -773,19 +773,19 @@ function putBackupAddr(req, res) {
     postModel
         .find()
         .lean()
-        .then((posts) => {
+        .then(posts => {
             posts.forEach(post => {
                 post.backupDatabaseAddr = newBackupAddr;
-                postModel.findByIdAndUpdate(post.id, {
+                postModel.findByIdAndUpdate(post._id, {
                     $set: { backupDatabaseAddr: newBackupAddr }
-                })
+                }, { new: true })
             });
             res.status(200).send();
             addPostsToBackup(posts);
         })
         .catch((err) => {
             res.status(500).send(err);
-            log.err('post_database:changeBackupAddr:' + err);
+            log.err('post_database:putBackupAddr:' + err);
         });
 }
 

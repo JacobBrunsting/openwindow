@@ -68,6 +68,9 @@ module.exports = class ServerInfoWrapper {
                 new: true
             })
             .lean()
+            .then(res => {
+                return res;
+            })
             .then(DatabaseServerInfo.convertObjToClass);
 
     }

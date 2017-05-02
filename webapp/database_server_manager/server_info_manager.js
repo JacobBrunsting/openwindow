@@ -35,11 +35,13 @@ function addAllServerInfo(serversInfo) {
 
 function removeServerInfo(baseAddr) {
     return serverInfoModelWrapper
-            .removeOne({baseAddr})
-            .catch((err) => {
-                log.err('server_manager:removeServerInfo:' + err);
-                throw err;
-            });
+        .removeOne({
+            baseAddr
+        })
+        .catch((err) => {
+            log.err('server_manager:removeServerInfo:' + err);
+            throw err;
+        });
 }
 
 /**
@@ -133,13 +135,15 @@ function getAllServerInfo(excludeid) {
         } : {
             __v: 0
         })
-        .then(servers => 
+        .then(servers =>
             servers.sort((a, b) => a.baseAddr.localeCompare(b.baseAddr)))
         .then(servers => DatabaseServerInfo.convertObjsToClasses(servers));
 }
 
 function getServerInfo(targetAddr) {
-    return serverInfoModelWrapper.findOne({baseAddr: targetAddr});
+    return serverInfoModelWrapper.findOne({
+        baseAddr: targetAddr
+    });
 }
 
 var locationUtils = require(__dirname + '/server_location_utils');
@@ -207,7 +211,7 @@ function generateAndStoreServerInfo(serverInfo) {
             // servers in the same area
             clearBackupsAtServer(farthestServer.backupAddr);
             backupAddr = farthestServer.backupAddr;
-            changeServerbackupAddr(farthestServer, newBaseAddr);
+            changeServerBackupAddr(farthestServer.baseAddr, newBaseAddr);
             updatedServers.push({
                 baseAddr: farthestServer.baseAddr,
                 backupAddr: newBaseAddr
@@ -221,75 +225,164 @@ function generateAndStoreServerInfo(serverInfo) {
 
 // function (list of removed servers, list of updated servers)
 function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
-    let serverUpdates = [];
+    let updatesByAddr = {};
+    let postsFromRemovedServer;
+
     return serverInfoModelWrapper
         .removeOne({
             baseAddr: serverToRemove.baseAddr
         })
         .then(res => {
-            if (res) {
-                console.log('res is ' + JSON.stringify(res));
-                return res;
-            } else {
+            if (!res) {
                 throw 'Server not found in database';
             }
         })
-        .then(DatabaseServerInfo.convertObjToClass)
-        .then(removedServer => fillSpaceLeftByServer(removedServer, useBackupServerForData))
-        .then(updatedServers => {
-            const removedServerBackupAddr = serverToRemove.backupAddr;
-            log.bright('clearing backups at server ' + removedServerBackupAddr);
-            return clearBackupsAtServer(removedServerBackupAddr)
-                .then(() => serverInfoModelWrapper.getAllServers())
-                .then(servers => {
-                    serverUpdates = generateUpdates(servers, updatedServers);
-                    // find the server that was previously backing up to the
-                    //  removed server, and make it back up to the server 
-                    //  the removed server was backing up to
-                    return servers.find(s =>
-                        s && s.backupAddr === serverToRemove.baseAddr);
-                })
-                .then(serverBackingUpToRemovedServer =>
-                    changeServerbackupAddr(
-                        serverBackingUpToRemovedServer,
-                        removedServerBackupAddr
-                    )
-                );
+        .then(() => {
+            return getPostsFromRemovedServer()
+                .then(posts => {
+                    postsFromRemovedServer = posts;
+                });
         })
-        .then(() => ({
-            removedServer: serverToRemove,
-            updatedServers: serverUpdates
-        }))
+        .then(getBackupAddrUpdates)
+        .then(addToUpdatesObject)
+        .then(getRangeUpdates)
+        .then(addToUpdatesObject)
+        .then(generateUpdatedServersInfo)
+        .then(updatedServersInfo =>
+            preformUpdatesLocally(updatedServersInfo)
+            .then(redistributePostsFromRemovedServer)
+            .then(() => updatedServersInfo)
+        )
         .catch(err => {
-            log.err('server_manager:removeServerAndAdjust:' + err);
-            throw err;
+            log.err("server_info_manager:removeServerAndAdjust:" + err);
         });
 
-    function generateUpdates(originalServers, updatedServers) {
-        let originalServersByAddr = {};
-        originalServers.forEach(server => {
-            originalServersByAddr[server.baseAddr] = server;
-        });
-        let updates = [];
-        updatedServers.forEach(updatedServer => {
-            const originalServer = originalServersByAddr[updatedServer.baseAddr];
-            let updateInfo = {};
-            for (let key in updatedServer) {
-                if (updatedServer[key] !== originalServer[key]) {
-                    updateInfo[key] = updatedServer[key];
+    function getBackupAddrUpdates() {
+        return serverInfoModelWrapper.getAllServers()
+            .then(servers => {
+                const serverBackingToRemoved = servers.find(s =>
+                    s && s.backupAddr === serverToRemove.baseAddr);
+                if (!serverBackingToRemoved) {
+                    return;
                 }
+                let backupUpdatesByAddr = {};
+                backupUpdatesByAddr[serverBackingToRemoved.baseAddr] = {
+                    backupAddr: serverToRemove.backupAddr
+                };
+                return backupUpdatesByAddr;
+            })
+    }
+
+    function getRangeUpdates() {
+        return fillSpaceLeftByServer(serverToRemove, useBackupServerForData);
+    }
+
+    function addToUpdatesObject(newUpdates) {
+        for (let addr in newUpdates) {
+            if (updatesByAddr[addr]) {
+                updatesByAddr[addr] = Object.assign(updatesByAddr[addr], newUpdates[addr]);
+            } else {
+                updatesByAddr[addr] = newUpdates[addr];
             }
-            updateInfo['baseAddr'] = originalServer['baseAddr'];
-            updates.push(updateInfo);
+        }
+    }
+
+    function generateUpdatedServersInfo() {
+        return Object.keys(updatesByAddr).map(addr => {
+            let updatedServerInfo = updatesByAddr[addr];
+            updatedServerInfo.baseAddr = addr;
+            return updatedServerInfo;
         });
-        return updates;
+    }
+
+    function preformUpdatesLocally(updatedServersInfo) {
+        return Promise.all(updatedServersInfo.reduce((promises, serverInfo) => {
+                if (serverInfo.backupAddr) {
+                    promises.push(
+                        changeServerBackupAddr(serverInfo.baseAddr,
+                            serverInfo.backupAddr));
+                }
+                return promises;
+            }, []))
+            .then(() => updateServersInfo(updatedServersInfo));
+    }
+
+    function redistributePostsFromRemovedServer() {
+        let remainingPosts = postsFromRemovedServer.slice(0);
+        serverInfoModelWrapper.getAllServers()
+            .then(servers => {
+                return Promise.all(servers.reduce((promises, server) => {
+                    const fittingPosts = getPostsThatFitInServer(server, remainingPosts);
+                    if (fittingPosts && fittingPosts.length !== 0) {
+                        promises.push(
+                            sendPostsToServer(server.baseAddr, fittingPosts)
+                        );
+                        remainingPosts = remainingPosts.filter(post => 
+                            !fittingPosts.some(fittingPost => fittingPost._id === post._id)
+                        );
+                    }
+                    return promises;
+                }, []));
+            })
+    }
+
+    function getPostsThatFitInServer(serverInfo, posts) {
+        return posts.filter(post =>
+            serverInfo.writeRng
+            .containsPoint(post.loc.coordinates[0], post.loc.coordinates[1])
+        );
+    }
+
+    function getPostsFromRemovedServer() {
+        let fromUrl;
+        if (useBackupServerForData) {
+            fromUrl = getApiCallURL(serverToRemove.backupAddr, 'allbackupposts');
+        } else {
+            fromUrl = getApiCallURL(serverToRemove.baseAddr, 'allposts');
+        }
+
+        return new Promise((resolve, reject) => {
+            request.get({
+                url: fromUrl,
+                json: true
+            }, (err, res) => {
+                if (err) {
+                    log.err('server_manager:getPostsFromRemovedServer:' + err);
+                    reject(err);
+                } else if (!res) {
+                    log.err('server_manager:getPostsFromRemovedServer:empty response');
+                    reject('array of posts from removed server is empty');
+                } else {
+                    resolve(res.body);
+                }
+            })
+        });
+    }
+
+    function sendPostsToServer(targetAddr, posts) {
+        const toUrl = getApiCallURL(targetAddr, 'posts');
+        const requestParams = {
+            url: toUrl,
+            method: 'POST',
+            body: posts,
+            json: true
+        }
+        return new Promise((resolve, reject) => {
+            request(requestParams, (err, res) => {
+                if (err) {
+                    log.err('server_info_manager:sendPostsToServer:' + err);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
     }
 }
 
 // Fills in the area previously covered by the provided server by expanding an
-// existing server
+// existing server, return the updated server fields
 function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
-    let serverUpdates = [];
     let query = {
         $or: [{
                 'writeRng.minLng': {
@@ -323,70 +416,68 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
             throw err;
         });
 
-    // returns an array of the servers that were modified
+    // returns an object with address keys of the servers that were modified CLEAN UP LATER
     function onBorderingServerRetrieval(servers) {
-        for (let i = 0; i < servers.length; ++i) {
-            const server = servers[i];
-            let minLngMatch = server.writeRng.minLng == oldServer.writeRng.minLng;
-            let maxLngMatch = server.writeRng.maxLng == oldServer.writeRng.maxLng;
-            let minLatMatch = server.writeRng.minLat == oldServer.writeRng.minLat;
-            let maxLatMatch = server.writeRng.maxLat == oldServer.writeRng.maxLat;
-            // if the server has an edge with the same position and length as an
-            //  edge on the removed server, expand that edge outwards to
-            //  cover the space previously occupied by the removed server
-            if ((minLngMatch && maxLngMatch) || (minLatMatch && maxLatMatch)) {
-                return expandServerToMatchOldServer(server, oldServer)
-                    .then(modifiedServer => [modifiedServer]);
+
+        let rangeUpdatesByAddr = {};
+        const edges = ['minLng', 'maxLat', 'maxLng', 'minLat'];
+        for (let i = 0; i < 4; ++i) {
+            let parallelEdge = edges[i < 3 ? i + 1 : i - 3];
+            let minAdjascent = i % 2 === 0 ? 'minLng' : 'minLat';
+            let maxAdjascent = i % 2 === 0 ? 'maxLng' : 'maxLat';
+            let oppositeEdge = edges[i < 1 ? i + 3 : i - 1];
+            let parallelAlignedServers = findServersAlignedToSide(
+                servers,
+                parallelEdge,
+                oppositeEdge,
+                minAdjascent,
+                maxAdjascent
+            );
+            let alignedMax = false;
+            let alignedMin = false;
+            for (let i = 0; i < parallelAlignedServers.length; ++i) {
+                const curServer = parallelAlignedServers[i];
+                if (curServer.writeRng[minAdjascent] === oldServer.writeRng[minAdjascent]) {
+                    alignedMin = true;
+                }
+                if (curServer.writeRng[maxAdjascent] === oldServer.writeRng[maxAdjascent]) {
+                    alignedMax = true;
+                }
+                if (alignedMax && alignedMin) {
+                    break;
+                }
+            }
+            if (alignedMax && alignedMin) {
+                const oppositeEdgeWriteVal = oldServer.writeRng[oppositeEdge];
+                const oppositeEdgeReadVal = oldServer.readRng[oppositeEdge];
+                parallelAlignedServers.forEach(server => {
+                    const writeRng = server.writeRng;
+                    const readRng = server.readRng;
+                    if (oppositeEdge.substring(0, 3) === 'max') {
+                        writeRng[oppositeEdge] = Math.max(writeRng[oppositeEdge], oppositeEdgeWriteVal);
+                        readRng[oppositeEdge] = Math.max(readRng[oppositeEdge], oppositeEdgeReadVal);
+                    } else {
+                        writeRng[oppositeEdge] = Math.min(writeRng[oppositeEdge], oppositeEdgeWriteVal);
+                        readRng[oppositeEdge] = Math.min(readRng[oppositeEdge], oppositeEdgeReadVal);
+                    }
+                    rangeUpdatesByAddr[server.baseAddr] = {
+                        writeRng,
+                        readRng
+                    };
+                });
+                break;
             }
         }
-
-        // TODO: Complete the rare case where there are no bordering servers
-        //  which have a side perfectly matching the removed server
+        return rangeUpdatesByAddr;
     }
 
-    function expandServerToMatchOldServer(server, oldServer) {
-        server.expandToContainOther(oldServer);
-        return resizeServer(server)
-            .then(() => mergeServers(oldServer, server))
-            .then(() => server);
-    }
-
-    function mergeServers(serverToMerge, serverToMergeWith) {
-        let fromUrl;
-        if (useBackupServerForData) {
-            fromUrl = getApiCallURL(serverToMerge.backupAddr, 'allbackupposts');
-        } else {
-            fromUrl = getApiCallURL(serverToMerge.baseAddr, 'allposts');
-        }
-        return new Promise((resolve, reject) => {
-            request.get(fromUrl, (err, res) => {
-                if (err) {
-                    log.err('server_manager:mergeServers:' + err);
-                    reject(err);
-                    return;
-                } else if (!res) {
-                    log.msg('server_manager:mergeServers:empty response');
-                    reject('empty response');
-                    return;
-                }
-                const posts = JSON.parse(res.body);
-                const toUrl = getApiCallURL(serverToMergeWith.baseAddr, 'posts');
-                const requestParams = {
-                    url: toUrl,
-                    method: 'POST',
-                    body: posts,
-                    json: true
-                }
-                request(requestParams, (err, res) => {
-                    if (err) {
-                        log.err('server_manager:mergeServers:' + err);
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                });
-            });
-        });
+    // idk how to describe this
+    function findServersAlignedToSide(servers, targetSide, oppositeSide, minPerpSide, maxPerpSide) {
+        return servers.filter(server =>
+            (server.writeRng[oppositeSide] === oldServer.writeRng[targetSide] &&
+                server.writeRng[minPerpSide] >= oldServer.writeRng[minPerpSide] &&
+                server.writeRng[maxPerpSide] <= oldServer.writeRng[maxPerpSide])
+        );
     }
 }
 
@@ -410,7 +501,7 @@ function getMostFilledServer(servers) {
         Promise.all(servers.map(getServerFilledAmount))
             .then(serverFilledAmounts => {
                 if (serverFilledAmounts.length <= 0) {
-                    log.msg('server_manager:getFilledServer:No server capacity information retrieved');
+                    log.err('server_manager:getFilledServer:No server capacity information retrieved');
                     reject('No server capacity information retrieved')
                     return;
                 }
@@ -465,35 +556,43 @@ function clearBackupsAtServer(serverAddress) {
     });
 }
 
-function changeServerbackupAddr(serverInfo, newBackupAddr) {
-    serverInfoModelWrapper
+function changeServerBackupAddr(serverAddr, newBackupAddr) {
+    return serverInfoModelWrapper
         .updateOne({
-            baseAddr: serverInfo.baseAddr
+            baseAddr: serverAddr
         }, {
             $set: {
                 backupAddr: newBackupAddr,
             }
         })
-        .then(data => {
-            notifyServerOfChange();
+        .then(() => {
+            return clearBackupsAtServer(newBackupAddr);
+        })
+        .then(() => {
+            return notifyServerOfChange();
         })
         .catch(err => {
-            log.err('server_manager:changeServerbackupAddr:' + err);
+            log.err('server_manager:changeServerBackupAddr:' + err);
         });
 
     function notifyServerOfChange() {
         const requestParams = {
-            url: getApiCallURL(serverInfo.baseAddr, 'backupaddr'),
+            url: getApiCallURL(serverAddr, 'backupaddr'),
             body: {
                 newBackupAddr: newBackupAddr
             },
             json: true
         };
-        request.put(requestParams, function (err) {
-            if (err) {
-                log.err('server_manager:changeServerbackupAddr:notifyServerOfChange:' + err);
-            }
-        });
+        return new Promise((resolve, reject) => {
+            request.put(requestParams, function (err) {
+                if (err) {
+                    log.err('server_manager:changeServerBackupAddr:notifyServerOfChange:' + err);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        })
     }
 }
 
