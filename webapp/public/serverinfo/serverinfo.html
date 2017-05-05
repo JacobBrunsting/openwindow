@@ -101,7 +101,6 @@
     <table>
         <tr>
             <th>Address of Database Storing</th>
-            <th>Address of Backup Database</th>
             <th>Longitude</th>
             <th>Latitude</th>
             <th>Title</th>
@@ -109,7 +108,6 @@
         </tr>
         <tr ng-repeat="post in posts track by $index">
             <td>{{post.mainDatabaseAddr.replace('http://', '')}}</td>
-            <td>{{post.backupDatabaseAddr.replace('http://', '')}}</td>
             <td>{{post.loc.coordinates[0]}}</td>
             <td>{{post.loc.coordinates[1]}}</td>
             <td>{{post.title}}</td>
