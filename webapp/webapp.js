@@ -255,7 +255,9 @@ app.post('/director/servermaybedown', (req, res) => {
         // TODO: Consider only running the server failure function for certain errors
         log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
         removeDatabaseServerFromNetwork(serverInfo)
-            .then(() => { res.status(200).send(); })
+            .then(() => {
+                res.status(200).send();
+            })
             .catch(err => {
                 log.err('webapp:/director/servermaybedown:' + err);
                 res.status(500).send(err);
@@ -487,21 +489,25 @@ setInterval(() => {
         });
 }, settings[SECONDS_BETWEEN_SERVER_VALIDATION_KEY] * 1000);
 
-databaseServerManager.startHeartbeat(failedServerInfo => {
-    webServerManager
-        .getAllServerInfo()
-        .then(servers => {
-            generalUtils.notifyNextAliveServer(servers, baseAddr, '/director/servermaybedown', failedServerInfo)
-                .catch(err => {
-                    if (err) {
-                        log.err('webapp:onHeartbeatFailure:' + err);
-                    }
-                    // if we could not notify another server about the potential
-                    //  server failure, assume the server has failed
-                    removeDatabaseServerFromNetwork(failedServerInfo);
-                })
-        })
-});
+databaseServerManager.startHeartbeat(
+    webServerManager.getAllServerInfo,
+    baseAddr,
+    failedServerInfo => {
+        webServerManager
+            .getAllServerInfo()
+            .then(servers => {
+                generalUtils.notifyNextAliveServer(servers, baseAddr, '/director/servermaybedown', failedServerInfo)
+                    .catch(err => {
+                        if (err) {
+                            log.err('webapp:onHeartbeatFailure:' + err);
+                        }
+                        // if we could not notify another server about the potential
+                        //  server failure, assume the server has failed
+                        removeDatabaseServerFromNetwork(failedServerInfo);
+                    })
+            })
+    }
+);
 
 // ========== Utility Functions ==========
 

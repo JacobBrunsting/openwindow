@@ -96,8 +96,11 @@ module.exports = (mongoose, serverInfoCollectionName) => {
             });
     }
 
-    function startHeartbeat(onHeartbeatFailure) {
-        heartbeatManager.startHeartbeat(serverInfoModelWrapper, onHeartbeatFailure);
+    // getWebServersInfo should be a function that returns a promise, resolving
+    // with a list of all of the web servers in the network. This is kind of 
+    // gross, you should look into a better way of doing this.
+    function startHeartbeat(getWebServersInfo, baseAddr, onHeartbeatFailure) {
+        heartbeatManager.startHeartbeat(serverInfoModelWrapper, getWebServersInfo, baseAddr, onHeartbeatFailure);
     }
 
     return {
