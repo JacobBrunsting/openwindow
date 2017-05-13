@@ -93,7 +93,14 @@ function recalculateServerRanges(server) {
         // we expand the read range to encompass the entire write range so that,
         // no matter where a post is created, it will be within the read range 
         // and will be read by the web server
+        if (!server.readRng || !server.writeRng) {
+            return;
+        }
         server.readRng.expandToContainOther(server.writeRng);
+        if (server.readRng.minLat === null || server.readRng.maxLat === null ||
+            server.readRng.minLng === null || server.readRng.maxLng === null) {
+            return;
+        }
         log.msg('updating read area for a database server, updated info is:');
         log.msg(JSON.stringify(server));
         resizeServer(server)
