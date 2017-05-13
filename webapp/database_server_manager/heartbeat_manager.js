@@ -33,7 +33,7 @@ function getDatabaseServersForHeartbeat(allWebServers, thisServerAddr, allDataba
     const sectionEndPercent = sectionStartPercent + sectionWidthPercent;
     const sectionStartIndex = Math.ceil(sectionStartPercent * (allDatabaseServers.length - 1));
     const sectionEndIndex = Math.ceil(sectionEndPercent * (allDatabaseServers.length - 1));
-    return allDatabaseServers.slice(sectionStartIndex, sectionEndIndex);
+    return allDatabaseServers.slice(sectionStartIndex, sectionEndIndex + 1);
 }
 
 function runServerHeartbeat(server, serverInfoModelWrapper, missedBeatsByServer, onHeartbeatFailure) {
