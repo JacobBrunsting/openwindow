@@ -312,6 +312,10 @@ app.get('/director/allserverinfo', (req, res) => {
  * @apiParam {number} servers.readRng.maxLng
  */
 app.put('/director/serversinfo', (req, res) => {
+    if (!req.body || req.body.constructor !== Array) {
+        res.status(401).send("array of servers required");
+        return;
+    }
     databaseServerManager.updateServersInfo(req.body)
         .then((result) => {
             res.status(200).send();
