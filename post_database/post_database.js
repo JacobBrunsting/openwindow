@@ -56,7 +56,7 @@ for (var key in settings) {
 
 // ======= Command Line Arguments =======
 
-let baseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
+let baseAddr;
 
 process.argv.forEach(function (val, index) {
     if (index >= 2) {
@@ -82,6 +82,10 @@ process.argv.forEach(function (val, index) {
         }
     }
 });
+
+if (!baseAddr) {
+    baseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
+}
 
 // ============= Constants ==============
 

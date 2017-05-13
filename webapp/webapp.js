@@ -55,7 +55,7 @@ for (var key in settings) {
     }
 }
 
-let baseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
+let baseAddr;
 
 process.argv.forEach(function (val, index) {
     if (index >= 2) {
@@ -81,6 +81,10 @@ process.argv.forEach(function (val, index) {
         }
     }
 });
+
+if (!baseAddr) {
+    baseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
+}
 
 const databaseServerManager = require(__dirname + '/database_server_manager/database_server_manager')
     (mongoose, settings[DATABASE_SERVERS_INFO_COLLECTION_KEY]);
