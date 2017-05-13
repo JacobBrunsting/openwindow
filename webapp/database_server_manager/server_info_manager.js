@@ -317,7 +317,7 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
                         promises.push(
                             sendPostsToServer(server.baseAddr, fittingPosts)
                         );
-                        remainingPosts = remainingPosts.filter(post => 
+                        remainingPosts = remainingPosts.filter(post =>
                             !fittingPosts.some(fittingPost => fittingPost._id === post._id)
                         );
                     }
@@ -385,24 +385,16 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
 function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
     let query = {
         $or: [{
-                'writeRng.minLng': {
-                    $eq: oldServer.writeRng.minLng
-                }
+                'writeRng.minLng': oldServer.writeRng.minLng
             },
             {
-                'writeRng.maxLng': {
-                    $eq: oldServer.writeRng.maxLng
-                }
+                'writeRng.maxLng': oldServer.writeRng.maxLng
             },
             {
-                'writeRng.minLat': {
-                    $eq: oldServer.writeRng.minLat
-                }
+                'writeRng.minLat': oldServer.writeRng.minLat
             },
             {
-                'writeRng.maxLat': {
-                    $eq: oldServer.writeRng.maxLat
-                }
+                'writeRng.maxLat': oldServer.writeRng.maxLat
             }
         ]
     };
