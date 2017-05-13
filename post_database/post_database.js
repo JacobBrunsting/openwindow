@@ -31,6 +31,7 @@ const INITIAL_SECONDS_TO_SHOW_FOR = 'initialSecondsToShowFor';
 const SITE_POST_MODEL_KEY = 'postModelName';
 const BACKUP_POST_MODEL_KEY = 'backupPostModelName';
 const SERVER_POWER_CONSTANT_KEY = 'serverPowerConstant';
+const BASE_ADDR_KEY = 'baseAddr';
 
 var settings = {};
 settings[PORT_KEY] = 8080;
@@ -55,6 +56,8 @@ for (var key in settings) {
 
 // ======= Command Line Arguments =======
 
+let baseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
+
 process.argv.forEach(function (val, index) {
     if (index >= 2) {
         var splitVal = val.split('=');
@@ -71,6 +74,9 @@ process.argv.forEach(function (val, index) {
                     break;
                 case SERVER_POWER_CONSTANT_KEY:
                     settings[SERVER_POWER_CONSTANT_KEY] = splitVal[1];
+                    break;
+                case BASE_ADDR_KEY:
+                    baseAddr = splitVal[1];
                     break;
             }
         }
@@ -100,7 +106,7 @@ let backupAddr;
 
 networkUtils.serverCall(constants.apiAddress + 'director/newserver',
         networkUtils.POST, {
-            baseAddr: 'http://' + ipAddr + ':' + settings[PORT_KEY]
+            baseAddr: baseAddr
         })
     .then((_backupAddr) => {
         if (_backupAddr) {

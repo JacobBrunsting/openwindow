@@ -3,7 +3,7 @@ const express = require('express');
 const request = require('request');
 const app = express();
 
-let serverUrls = [];
+let serverUrls = []; // TEMPORARY ONLY - This should be moved into a database
 let lastServerIndex = 0;
 
 app.use(bodyParser.json());

@@ -36,6 +36,7 @@ const SECONDS_BETWEEN_SERVER_VALIDATION_KEY = 'secondsBetweenServerValidation';
 const DATABASE_SERVERS_INFO_COLLECTION_KEY = 'databaseServersInfoCollection';
 const WEB_SERVERS_INFO_COLLECTION_KEY = 'webServersInfoCollection';
 const FIRST_SETUP_KEY = 'firstSetup';
+const BASE_ADDR_KEY = 'baseAddr';
 
 var settings = {};
 settings[PORT_KEY] = 8080;
@@ -54,6 +55,8 @@ for (var key in settings) {
     }
 }
 
+let baseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
+
 process.argv.forEach(function (val, index) {
     if (index >= 2) {
         var splitVal = val.split('=');
@@ -71,6 +74,9 @@ process.argv.forEach(function (val, index) {
                 case FIRST_SETUP_KEY:
                     settings[FIRST_SETUP_KEY] = splitVal[1];
                     break;
+                case BASE_ADDR_KEY:
+                    baseAddr = splitVal[1];
+                    break;
             }
         }
     }
@@ -78,7 +84,6 @@ process.argv.forEach(function (val, index) {
 
 const databaseServerManager = require(__dirname + '/database_server_manager/database_server_manager')
     (mongoose, settings[DATABASE_SERVERS_INFO_COLLECTION_KEY]);
-const baseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
 const webServerManager = require(__dirname + '/web_server_manager/web_server_manager')
     (settings[WEB_SERVERS_INFO_COLLECTION_KEY], baseAddr);
 
