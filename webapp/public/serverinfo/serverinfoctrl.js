@@ -26,28 +26,31 @@ angular.module('openwindow').controller('serverinfoctrl', [
 
         $scope.posts = [];
 
-        $scope.killServer = function(baseAddr) {
+        $scope.killServer = function (baseAddr) {
             $http.delete(baseAddr + "/self");
         }
     }
 ]);
 
 function getPosts($scope, $http, servers) {
-    servers.forEach(server => {
-        var url = server.baseAddr + '/api/allposts';
-        $http.get(url)
-            .then(res => {
-                if (!res.data) {
-                    return;
-                }
-                res.data.forEach(post => {
-                    $scope.posts.push(post);
-                });
-            })
-            .catch(err => {
-                console.log("serverinfoctrl:" + JSON.stringify(err));
+    $http.get('/api/posts', {
+            params: {
+                radius: 9999999999999,
+                longitude: 0,
+                latitude: 0
+            }
+        })
+        .then(res => {
+            if (!res.data) {
+                return;
+            }
+            res.data.body.forEach(post => {
+                $scope.posts.push(post);
             });
-    });
+        })
+        .catch(err => {
+            console.log("serverinfoctrl:" + JSON.stringify(err));
+        });
 }
 
 function drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers) {
@@ -57,10 +60,10 @@ function drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers) {
     serverReadAreaCanvas.height = serverReadAreaCanvas.clientHeight;
     servers.forEach(function (server) {
         drawServerArea(serverWriteAreaCanvas, server.writeRng.minLng,
-            server.writeRng.minLat, server.writeRng.maxLng, server.writeRng.maxLat, 
+            server.writeRng.minLat, server.writeRng.maxLng, server.writeRng.maxLat,
             server.baseAddr);
         drawServerArea(serverReadAreaCanvas, server.readRng.minLng,
-            server.readRng.minLat, server.readRng.maxLng, server.readRng.maxLat, 
+            server.readRng.minLat, server.readRng.maxLng, server.readRng.maxLat,
             server.baseAddr);
     });
 }
@@ -93,7 +96,7 @@ function drawServerArea(canvas, minLng, minLat, maxLng, maxLat, serverAddr) {
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = "white";
-    ctx.font="20px Arial";
-    ctx.textAlign="center"; 
-    ctx.fillText(serverAddr.replace('http://', ''),(minX + maxX) / 2,(minY + maxY) / 2);
+    ctx.font = "20px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(serverAddr.replace('http://', ''), (minX + maxX) / 2, (minY + maxY) / 2);
 }
