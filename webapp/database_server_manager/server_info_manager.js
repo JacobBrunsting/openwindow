@@ -478,29 +478,27 @@ function splitArea(area) {
 }
 
 function getMostFilledServer(servers) {
-    return new Promise((resolve, reject) => {
-        Promise.all(servers.map(getServerFilledAmount))
-            .then(serverFilledAmounts => {
-                if (serverFilledAmounts.length <= 0) {
-                    log.err('server_manager:getFilledServer:No server capacity information retrieved');
-                    reject('No server capacity information retrieved')
-                    return;
+    return Promise.all(servers.map(getServerFilledAmount))
+        .then(serverFilledAmounts => {
+            if (serverFilledAmounts.length <= 0) {
+                log.err('server_manager:getFilledServer:No server capacity information retrieved');
+                reject('No server capacity information retrieved')
+                return;
+            }
+            let maxVal = serverFilledAmounts[0];
+            let index = 0;
+            for (let i = 1; i < serverFilledAmounts.length; ++i) {
+                if (maxVal < serverFilledAmounts[i]) {
+                    maxVal = serverFilledAmounts[i];
+                    index = i;
                 }
-                let maxVal = serverFilledAmounts[0];
-                let index = 0;
-                for (let i = 1; i < serverFilledAmounts.length; ++i) {
-                    if (maxVal < serverFilledAmounts[i]) {
-                        maxVal = serverFilledAmounts[i];
-                        index = i;
-                    }
-                }
-                resolve(servers[index]);
-            })
-            .catch(err => {
-                log.err('server_manager:getMostFilledServer:' + err);
-                reject(err);
-            });
-    });
+            }
+            return servers[index];
+        })
+        .catch(err => {
+            log.err('server_manager:getMostFilledServer:' + err);
+            throw err;
+        });
 
     function getServerFilledAmount(server) {
         var requestParams = {
@@ -508,6 +506,7 @@ function getMostFilledServer(servers) {
             json: true
         };
         return request.get(requestParams)
+            .then(res => res.amountFull)
             .catch(err => {
                 log.err('server_manager:getMostFilledServer:' + err);
                 throw err;

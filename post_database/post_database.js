@@ -379,7 +379,7 @@ app.get('/api/postssecondstoshowfor', getPostsSecondsToShowFor);
 app.get('/api/postrange', getPostRange);
 
 /**
- * @api {get} /api/amountused - Get a number representing the amount of the 
+ * @api {get} /api/amountfull - Get a number representing the amount of the 
  *  server's total capacity that is used
  * @apiSuccess {Number} amountFull - The total amount of the server that is used, 
  *  porportionate to the number of posts stored on the server, and a server
