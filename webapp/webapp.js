@@ -109,9 +109,11 @@ setInterval(databaseServerManager.recalculateServersRanges, millsBetweenSizeUpda
 // ============= Endpoints ==============
 
 app.use('*', (req, res, next) => {
-    log.msg(req.method + ' ' + req.originalUrl);
-    if (req.body && JSON.stringify(req.body) !== '{}') {
-        console.log(JSON.stringify(req.body));
+    if (req.originalUrl !== '/heartbeat') {
+        log.msg(req.method + ' ' + req.originalUrl);
+        if (req.body && JSON.stringify(req.body) !== '{}') {
+            console.log(JSON.stringify(req.body));
+        }
     }
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
@@ -510,9 +512,7 @@ databaseServerManager.startHeartbeat(
             .then(servers => {
                 generalUtils.notifyNextAliveServer(servers, baseAddr, '/director/servermaybedown', failedServerInfo)
                     .catch(err => {
-                        if (err) {
-                            log.err('webapp:onHeartbeatFailure:' + err);
-                        }
+                        log.err('webapp:onHeartbeatFailure:' + err);
                         // if we could not notify another server about the potential
                         //  server failure, assume the server has failed
                         removeDatabaseServerFromNetwork(failedServerInfo);

@@ -48,7 +48,6 @@ module.exports = class ServerInfoWrapper {
     }
 
     removeOne(query) {
-        console.log('removing with query ' + JSON.stringify(query));
         return this.serverInfoModel
             .findOneAndRemove(query)
             .lean()
