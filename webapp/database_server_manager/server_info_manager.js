@@ -362,12 +362,9 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
             body: posts,
             json: true
         }
-        return new Promise((resolve, reject) => {
-            request(requestParams)
-                .catch(err => {
-                    log.err('server_info_manager:sendPostsToServer:' + err);
-                    reject(err);
-                });
+        return request(requestParams).catch(err => {
+            log.err('server_info_manager:sendPostsToServer:' + err);
+            throw err;
         });
     }
 }
