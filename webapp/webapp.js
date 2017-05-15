@@ -109,7 +109,7 @@ setInterval(databaseServerManager.recalculateServersRanges, millsBetweenSizeUpda
 // ============= Endpoints ==============
 
 app.use('*', (req, res, next) => {
-    if (req.originalUrl !== '/heartbeat') {
+    if (req.originalUrl !== '/api/heartbeat') {
         log.msg(req.method + ' ' + req.originalUrl);
         if (req.body && JSON.stringify(req.body) !== '{}') {
             console.log(JSON.stringify(req.body));
