@@ -1,4 +1,4 @@
-const request = require('request');
+const request = require('request-promise');
 const DatabaseServerInfo = require(__dirname + '/database_server_info');
 const log = require(__dirname + '/../utils/log');
 
@@ -83,18 +83,10 @@ module.exports = class ServerInfoWrapper {
             method,
             timeout
         }
-        return new Promise((resolve, reject) => {
-            request(requestParams, (err, res) => {
-                if (err) {
-                    reject(err)
-                } else {
-                    resolve(res)
-                }
-            })
-            .on('error', err => {
+        return request(requestParams)
+            .catch(err => {
                 log.err('server_info_model_wrapper:sendRequestToServer:' + err);
-                reject(err);
+                throw err;
             });
-        });
     }
 }

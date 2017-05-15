@@ -5,7 +5,7 @@
  *  callback function
  */
 
-const request = require('request');
+const request = require('request-promise');
 const log = require(__dirname + '/../utils/log');
 const generalUtils = require(__dirname + '/../utils/general_utils');
 
@@ -97,19 +97,11 @@ function sendHeartbeat(serverBaseAddr) {
         method: 'GET',
         json: true
     }
-    return new Promise((resolve, reject) => {
-        request(requestParams, (err, res) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            })
-            .on('error', err => {
-                log.err('heartbeat_manager:sendHeartbeat:' + err);
-                reject(err);
-            });
-    });
+    return request(requestParams)
+        .catch(err => {
+            log.err('heartbeat_manager:sendHeartbeat:' + err);
+            throw err;
+        });
 }
 
 function validateServerFailure(serverInfoModel, failedServer, baseAddr, serverFailureCallback) {

@@ -4,7 +4,7 @@
  * originates from
  */
 
-const request = require('request');
+const request = require('request-promise');
 const DatabaseServerInfo = require(__dirname + '/database_server_info');
 const heartbeatManager = require(__dirname + '/heartbeat_manager');
 const ServerInfoModelWrapper = require(__dirname + '/server_info_model_wrapper');
@@ -49,19 +49,13 @@ module.exports = (mongoose, serverInfoCollectionName) => {
                 method: 'GET',
                 json: true
             }
-            request(requestParams, (err, res) => {
-                if (err) {
+            request(requestParams)
+                .then(serverInfoManager.addAllServerInfo)
+                .then(resolve)
+                .catch(err => {
+                    log.err('database_server_manager:setupSelf:' + err);
                     reject(err);
-                } else {
-                    serverInfoManager.addAllServerInfo(res.body)
-                        .then(() => {
-                            resolve();
-                        })
-                        .catch((err) => {
-                            reject('database_server_manager:setupSelf:' + err);
-                        });
-                }
-            });
+                });
         });
     }
 

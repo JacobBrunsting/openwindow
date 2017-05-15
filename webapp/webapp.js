@@ -11,7 +11,7 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const ipAddr = require('ip').address();
 const mongoose = require('mongoose');
-const request = require('request');
+const request = require('request-promise');
 const util = require('util');
 const generalUtils = require(__dirname + '/utils/general_utils');
 const log = require(__dirname + '/utils/log');
@@ -260,7 +260,7 @@ app.post('/director/servermaybedown', (req, res) => {
     const serverInfo = req.body;
     const serverBaseAddr = serverInfo.baseAddr;
     const url = serverBaseAddr + DATABASE_SERVER_HEARTBEAT_PATH;
-    request.get(url).on('error', err => {
+    request.get(url).catch(err => {
         // TODO: Consider only running the server failure function for certain errors
         log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
         removeDatabaseServerFromNetwork(serverInfo)
@@ -419,12 +419,11 @@ app.post('/webserver/serverinfo', (req, res) => {
 app.post('/webserver/servermaybedown', (req, res) => {
     const serverInfo = req.body;
     const url = serverInfo.baseAddr + WEB_SERVER_HEARTBEAT_PATH;
-    request.get(url, (err, res) => {
-        if (err) { // TODO: Consider only running the server failure function for certain errors
-            log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
-            removeWebServerFromNetwork(serverInfo.baseAddr);
-        }
-    })
+    request.get(url).catch(err => {
+        // TODO: Consider only running the server failure function for certain errors
+        log.bright('server failure confirmed for server ' + JSON.stringify(serverInfo));
+        removeWebServerFromNetwork(serverInfo.baseAddr);
+    });
 });
 
 /**
@@ -561,13 +560,11 @@ function updateLoadBalancerServerList() {
             },
             json: true
         }
-        request(requestParams, (err, res) => {
-            if (err) {
+        return request(requestParams)
+            .catch(err => {
+                log.err('webapp:updateLoadBalancerServerList:' + JSON.stringify(err));
                 throw err;
-            }
-        }).on('error', err => {
-            throw err
-        });
+            });
     });
 }
 

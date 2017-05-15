@@ -2,7 +2,7 @@
 const DatabaseServerInfo = require(__dirname + '/database_server_info');
 const SqrGeoRng = require(__dirname + '/sqr_geo_rng');
 const log = require(__dirname + '/../utils/log');
-const request = require('request');
+const request = require('request-promise');
 
 let serverInfoModelWrapper;
 
@@ -80,34 +80,32 @@ function recalculateServerRanges(server) {
         method: 'GET',
         json: true
     };
-    request(requestParams, function (err, res) {
-        if (err) {
+    request(requestParams)
+        .then(res => {
+            const serverPostArea = SqrGeoRng.convertObjToClass(res);
+            server.readRng = serverPostArea;
+            // we expand the read range to encompass the entire write range so that,
+            // no matter where a post is created, it will be within the read range 
+            // and will be read by the web server
+            if (!server.readRng || !server.writeRng) {
+                return;
+            }
+            server.readRng.expandToContainOther(server.writeRng);
+            if (server.readRng.minLat === null || server.readRng.maxLat === null ||
+                server.readRng.minLng === null || server.readRng.maxLng === null) {
+                return;
+            }
+            log.msg('updating read area for a database server, updated info is:');
+            log.msg(JSON.stringify(server));
+            resizeServer(server)
+                .catch((err) => {
+                    log.err('server_manager:recalculateServerRanges:' + err);
+                });
+        })
+        .catch(err => {
             log.err('server_manager:recalculateServerRanges:' + err);
             return;
-        } else if (!res) {
-            log.msg('server_manager:recalculateServerRanges:empty response');
-            return;
-        }
-        const serverPostArea = SqrGeoRng.convertObjToClass(res.body);
-        server.readRng = serverPostArea;
-        // we expand the read range to encompass the entire write range so that,
-        // no matter where a post is created, it will be within the read range 
-        // and will be read by the web server
-        if (!server.readRng || !server.writeRng) {
-            return;
-        }
-        server.readRng.expandToContainOther(server.writeRng);
-        if (server.readRng.minLat === null || server.readRng.maxLat === null ||
-            server.readRng.minLng === null || server.readRng.maxLng === null) {
-            return;
-        }
-        log.msg('updating read area for a database server, updated info is:');
-        log.msg(JSON.stringify(server));
-        resizeServer(server)
-            .catch((err) => {
-                log.err('server_manager:recalculateServerRanges:' + err);
-            });
-    });
+        });
 }
 
 function resizeServer(updatedServer) {
@@ -244,11 +242,9 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
                 throw 'Server not found in database';
             }
         })
-        .then(() => {
-            return getPostsFromRemovedServer()
-                .then(posts => {
-                    postsFromRemovedServer = posts;
-                });
+        .then(getPostsFromRemovedServer)
+        .then(posts => {
+            postsFromRemovedServer = posts;
         })
         .then(getBackupAddrUpdates)
         .then(addToUpdatesObject)
@@ -348,22 +344,14 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
             fromUrl = getApiCallURL(serverToRemove.baseAddr, 'allposts');
         }
 
-        return new Promise((resolve, reject) => {
-            request.get({
+        return request.get({
                 url: fromUrl,
                 json: true
-            }, (err, res) => {
-                if (err) {
-                    log.err('server_manager:getPostsFromRemovedServer:' + err);
-                    reject(err);
-                } else if (!res) {
-                    log.err('server_manager:getPostsFromRemovedServer:empty response');
-                    reject('array of posts from removed server is empty');
-                } else {
-                    resolve(res.body);
-                }
             })
-        });
+            .catch(err => {
+                log.err('server_manager:getPostsFromRemovedServer:' + err);
+                throw err;
+            });
     }
 
     function sendPostsToServer(targetAddr, posts) {
@@ -375,14 +363,11 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
             json: true
         }
         return new Promise((resolve, reject) => {
-            request(requestParams, (err, res) => {
-                if (err) {
+            request(requestParams)
+                .catch(err => {
                     log.err('server_info_manager:sendPostsToServer:' + err);
                     reject(err);
-                } else {
-                    resolve();
-                }
-            });
+                });
         });
     }
 }
@@ -521,20 +506,15 @@ function getMostFilledServer(servers) {
     });
 
     function getServerFilledAmount(server) {
-        return new Promise((resolve, reject) => {
-            var requestParams = {
-                url: getApiCallURL(server.baseAddr, 'amountfull'),
-                json: true
-            };
-            request.get(requestParams, (err, res) => {
-                if (err) {
-                    log.err('server_manager:getMostFilledServer:' + err);
-                    reject(err);
-                } else {
-                    resolve(res.body.amountFull);
-                }
+        var requestParams = {
+            url: getApiCallURL(server.baseAddr, 'amountfull'),
+            json: true
+        };
+        return request.get(requestParams)
+            .catch(err => {
+                log.err('server_manager:getMostFilledServer:' + err);
+                throw err;
             });
-        });
     }
 }
 
@@ -543,16 +523,11 @@ function clearBackupsAtServer(serverAddress) {
         url: getApiCallURL(serverAddress, 'backups'),
         json: true
     };
-    return new Promise((resolve, reject) => {
-        request.delete(requestParams, (err) => {
-            if (err) {
-                log.err('server_manager:clearBackupsAtServer:' + err);
-                reject(err);
-            } else {
-                resolve();
-            }
+    return request.delete(requestParams)
+        .catch(err => {
+            log.err('server_manager:clearBackupsAtServer:' + err);
+            throw err;
         });
-    });
 }
 
 function changeServerBackupAddr(serverAddr, newBackupAddr) {
@@ -582,16 +557,11 @@ function changeServerBackupAddr(serverAddr, newBackupAddr) {
             },
             json: true
         };
-        return new Promise((resolve, reject) => {
-            request.put(requestParams, function (err) {
-                if (err) {
-                    log.err('server_manager:changeServerBackupAddr:notifyServerOfChange:' + err);
-                    reject(err);
-                } else {
-                    resolve();
-                }
+        return request.put(requestParams)
+            .catch(err => {
+                log.err('server_manager:changeServerBackupAddr:notifyServerOfChange:' + err);
+                throw err;
             });
-        })
     }
 }
 

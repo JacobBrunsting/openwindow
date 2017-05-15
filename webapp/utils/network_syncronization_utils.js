@@ -1,4 +1,4 @@
-const request = require('request');
+const request = require('request-promise');
 const stableStringify = require('json-stable-stringify');
 const GeneralUtils = require(__dirname + '/general_utils');
 const log = require(__dirname + '/log');
@@ -216,14 +216,11 @@ function makeGetCall(serverAddress, uri) {
             method: 'GET',
             json: true
         }
-        request(requestParams, (err, res) => {
-            if (err) {
+        request(requestParams)
+            .catch(err => {
                 log.err('web_server_manager:makeGetCall:' + err);
-                reject(err);
-            } else {
-                resolve(res.body);
-            }
-        });
+                throw err;
+            });
     });
 }
 

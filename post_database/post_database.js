@@ -778,7 +778,9 @@ function putPost(req, res) {
 
 function putBackupAddr(req, res) {
     const newBackupAddr = req.body.newBackupAddr
-    clearBackups();
+    if (backupAddr) {
+        clearBackups();
+    }
     backupAddr = newBackupAddr;
     postModel
         .find()

@@ -1,6 +1,6 @@
 const bodyParser = require('body-parser');
 const express = require('express');
-const request = require('request');
+const request = require('request-promise');
 const app = express();
 
 let serverUrls = []; // TEMPORARY ONLY - This should be moved into a database
@@ -43,24 +43,31 @@ app.all('*', (req, res) => {
     const newReqUrl = serverUrl + req.originalUrl;
     lastServerIndex = nextServerIndex;
 
+    let resTransform = (body, res) => ({
+        statusCode: res.statusCode,
+        body: body
+    });
+
     let requestParams = {
         url: newReqUrl,
         method: req.method,
         body: req.body,
-        json: true
+        json: true,
+        transform: resTransform
     }
 
-    request(requestParams, (err, reqRes) => {
-        if (err) {
-            tryNextServer();
-        } else {
+    request(requestParams)
+        .then(reqRes => {
             res.status(reqRes.statusCode).send(reqRes.body);
-        }
-    });
+        })
+        .catch(err => {
+            console.log('load_balancer:*:' + err);
+            tryNextServer();
+        });
 
     function tryNextServer() {
         if (serverUrls.length === 0) {
-            res.status(500).send();
+            res.status(404).send();
             return;
         }
         let retryServerIndex = nextServerIndex + 1;
@@ -68,13 +75,13 @@ app.all('*', (req, res) => {
             retryServerIndex = 0;
         }
         requestParams.url = serverUrls[retryServerIndex] + req.originalUrl;
-        request(requestParams, (err, reqRes) => {
-            if (err) {
-                res.status(500).send(err);
-            } else {
+        request(requestParams)
+            .then(reqRes => {
                 res.status(reqRes.statusCode).send(reqRes.body);
-            }
-        });
+            })
+            .catch(err => {
+                res.status(500).send(err);
+            });
     }
 });
 

@@ -1,4 +1,4 @@
-const request = require('request');
+const request = require('request-promise');
 const log = require('./log');
 
 function mergePromisesIgnoreErrors(promises) {
@@ -67,13 +67,10 @@ function notifyNextAliveServer(servers, thisServerAddr, path, body) {
                 body: body,
                 json: true,
             }
-            request(requestParams, (err, res) => {
-                    if (err) {
-                        log.err('general_utils:notifyNextAliveServer:' + err);
-                        next();
-                    } else {
-                        resolve();
-                    }
+            request(requestParams)
+                .catch(err => {
+                    log.err('general_utils:notifyNextAliveServer:' + err);
+                    next();
                 });
 
             function next() {

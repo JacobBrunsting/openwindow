@@ -1,4 +1,4 @@
-var request = require('request');
+var request = require('request-promise');
 
 function apiCall(serverAddress, path, method, body, queries) {
     return serverCall(serverAddress + '/api/' + path, method, body, queries);
@@ -12,15 +12,7 @@ function serverCall(url, method, body, queries) {
         method: method,
         json: true
     }
-    return new Promise((resolve, reject) => {
-        request(requestParams, (err, res) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(res.body);
-            }
-        });
-    });
+    return request(requestParams);
 }
 
 module.exports = {

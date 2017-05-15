@@ -4,7 +4,7 @@
  * that request to the correct server
  */
 
-const request = require('request');
+const request = require('request-promise');
 const util = require('util');
 const log = require(__dirname + '/../utils/log');
 
@@ -265,15 +265,9 @@ function sendRequestToAddress(req, serverAddress) {
         body: req.body,
         json: true
     };
-    return new Promise((resolve, reject) => {
-        request(requestParams, (err, res) => {
-            if (err) {
-                log.err('request_redirector:sendRequestToAddress:' + err);
-                reject(err);
-            } else {
-                resolve(res.body);
-            }
-        });
+    return request(requestParams).catch(err => {
+        log.err('request_redirector:sendRequestToAddress:' + err);
+        throw err;
     });
 }
 

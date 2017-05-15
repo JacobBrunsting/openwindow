@@ -5,7 +5,7 @@
  */
 
 const mongoose = require('mongoose');
-const request = require('request');
+const request = require('request-promise');
 const WebServerInfo = require(__dirname + '/web_server_info');
 const heartbeatManager = require(__dirname + '/heartbeat_manager');
 const constants = require(__dirname + '/../constants');
@@ -78,16 +78,17 @@ function notifyOtherServers(method, path, body, qs) {
             servers.forEach((server) => {
                 ++requestsWaitingForResponse;
                 requestParams.url = server.baseAddr + '/' + path;
-                request(requestParams, (err) => {
-                    --requestsWaitingForResponse;
-                    if (err) {
+                request(requestParams)
+                    .then(() => {
+                        --requestsWaitingForResponse;
+                        if (requestsWaitingForResponse === 0) {
+                            resolve();
+                        }
+                    })
+                    .catch(err => {
                         log.err('web_server_manager:notifyOtherServers:' + err);
                         reject(err);
-                    }
-                    if (requestsWaitingForResponse === 0) {
-                        resolve();
-                    }
-                });
+                    });
             });
         }
     });
@@ -103,56 +104,47 @@ function setupSelf(isFirstServer, serverFailureCallback) {
                 return res;
             });
     }
-    return new Promise((resolve, reject) => {
+    const requestParams = {
+        url: constants.apiAddress + 'webserver/allserverinfo?excludeid=true',
+        method: 'GET',
+        json: true
+    }
+    return request(requestParams).then(servers => {
+        if (!servers) {
+            throw 'Could not retrieve list of servers';
+        } else {
+            // we include ourself in the database of servers to make it easier
+            // to compare different web server databases
+            servers.push(self);
+            return Promise
+                .all([
+                    serverInfoModel.create(servers),
+                    addSelfToNetwork()
+                ])
+                .then(() => {
+                    heartbeatManager.startHeartbeat(serverInfoModel, baseAddr, serverFailureCallback);
+                })
+                .catch(err => {
+                    console.log('web_server_manager:setupSelf:' + err);
+                    throw err;
+                });
+        }
+    }).catch(err => {
+        throw err;
+    });
+
+    function addSelfToNetwork() {
         const requestParams = {
-            url: constants.apiAddress + 'webserver/allserverinfo?excludeid=true',
-            method: 'GET',
+            url: constants.apiAddress + 'webserver/newserver',
+            body: self,
+            method: 'POST',
             json: true
         }
-        request(requestParams, (err, res) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            const servers = res.body;
-            if (!servers) {
-                reject('Could not retrieve list of servers');
-            } else {
-                // we include ourself in the database of servers to make it easier
-                // to compare different web server databases
-                servers.push(self);
-                Promise
-                    .all([
-                        serverInfoModel.create(servers),
-                        addSelfToNetwork()
-                    ])
-                    .then(() => {
-                        heartbeatManager.startHeartbeat(serverInfoModel, baseAddr, serverFailureCallback);
-                        resolve();
-                    })
-                    .catch(reject);
-            }
+        return request(requestParams).catch(err => {
+            log.err('web_server_manager:setupSelf:' + err);
+            throw err;
         });
-
-        function addSelfToNetwork() {
-            return new Promise((resolve, reject) => {
-                const requestParams = {
-                    url: constants.apiAddress + 'webserver/newserver',
-                    body: self,
-                    method: 'POST',
-                    json: true
-                }
-                request(requestParams, (err, res) => {
-                    if (err) {
-                        log.err('web_server_manager:setupSelf:' + err);
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                });
-            });
-        }
-    });
+    }
 }
 
 /**
@@ -162,7 +154,7 @@ function setupSelf(isFirstServer, serverFailureCallback) {
  *  servers in the network used for data validation
  */
 function syncWithNetwork(otherServerAddresses) {
-    return NetworkSyncronizationUtils.syncWithNetwork(
+    return networkSyncronizationUtils.syncWithNetwork(
             serverInfoModel,
             otherServerAddresses,
             '/webserver/allserverinfo?excludeid=true',
