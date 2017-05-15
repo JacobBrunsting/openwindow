@@ -870,9 +870,11 @@ function getAllBackupPosts(req, res) {
 }
 
 function putBackupPost(req, res) {
+    let updatedPost = req.body.updatedPostFields;
+    delete updatedPost._id;
     backupPostModel
         .findByIdAndUpdate(req.body._id, {
-            $set: req.body.updatedPostFields
+            $set: updatedPost
         })
         .then(() => {
             res.status(200).send();
@@ -950,6 +952,7 @@ function updatePostFromUpdateObj(id, updateInfo, req, res) {
         )
         .then((post) => {
             res.json(post);
+            delete post._id;
             updatePostBackup(id, post);
         })
         .catch((err) => {
