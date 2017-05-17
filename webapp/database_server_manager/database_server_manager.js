@@ -39,24 +39,21 @@ module.exports = (mongoose, serverInfoCollectionName) => {
     const serverInfoManager = require(__dirname + '/server_info_manager')(serverInfoModelWrapper);
 
     function setupSelf(isFirstServer) {
-        return new Promise((resolve, reject) => {
-            if (isFirstServer && isFirstServer === true) {
-                resolve();
-                return;
-            }
-            const requestParams = {
-                url: constants.apiAddress + 'director/allserverinfo?excludeid=true',
-                method: 'GET',
-                json: true
-            }
-            request(requestParams)
-                .then(serverInfoManager.addAllServerInfo)
-                .then(resolve)
-                .catch(err => {
-                    log.err('database_server_manager:setupSelf:' + err);
-                    reject(err);
-                });
-        });
+        if (isFirstServer && isFirstServer === true) {
+            return serverInfoModel.remove({});
+        }
+        const requestParams = {
+            url: constants.apiAddress + 'director/allserverinfo?excludeid=true',
+            method: 'GET',
+            json: true
+        }
+        return serverInfoModel.remove({})
+            .then(() => request(requestParams))
+            .then(serverInfoManager.addAllServerInfo)
+            .catch(err => {
+                log.err('database_server_manager:setupSelf:' + err);
+                throw err;
+            });
     }
 
     /**

@@ -98,7 +98,8 @@ function setupSelf(isFirstServer, serverFailureCallback) {
     const self = new WebServerInfo(baseAddr);
     if (isFirstServer && isFirstServer === true) {
         return serverInfoModel
-            .create(self)
+            .remove({})
+            .then(() => serverInfoModel.create(self))
             .then(res => {
                 heartbeatManager.startHeartbeat(serverInfoModel, baseAddr, serverFailureCallback);
                 return res;
@@ -109,29 +110,32 @@ function setupSelf(isFirstServer, serverFailureCallback) {
         method: 'GET',
         json: true
     }
-    return request(requestParams).then(servers => {
-        if (!servers) {
-            throw 'Could not retrieve list of servers';
-        } else {
-            // we include ourself in the database of servers to make it easier
-            // to compare different web server databases
-            servers.push(self);
-            return Promise
-                .all([
-                    serverInfoModel.create(servers),
-                    addSelfToNetwork()
-                ])
-                .then(() => {
-                    heartbeatManager.startHeartbeat(serverInfoModel, baseAddr, serverFailureCallback);
-                })
-                .catch(err => {
-                    console.log('web_server_manager:setupSelf:' + err);
-                    throw err;
-                });
-        }
-    }).catch(err => {
-        throw err;
-    });
+    return serverInfoModel
+        .remove({})
+        .then(() => request(requestParams))
+        .then(servers => {
+            if (!servers) {
+                throw 'Could not retrieve list of servers';
+            } else {
+                // we include ourself in the database of servers to make it easier
+                // to compare different web server databases
+                servers.push(self);
+                return Promise
+                    .all([
+                        serverInfoModel.create(servers),
+                        addSelfToNetwork()
+                    ])
+                    .then(() => {
+                        heartbeatManager.startHeartbeat(serverInfoModel, baseAddr, serverFailureCallback);
+                    })
+                    .catch(err => {
+                        console.log('web_server_manager:setupSelf:' + err);
+                        throw err;
+                    });
+                }
+            }).catch(err => {
+                throw err;
+            });
 
     function addSelfToNetwork() {
         const requestParams = {
