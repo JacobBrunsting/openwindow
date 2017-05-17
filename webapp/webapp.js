@@ -174,8 +174,12 @@ app.post('/director/newserver', (req, res) => {
     databaseServerManager.generateAndStoreServerInfo(req.body)
         .then((newAndUpdatedServers) => {
             return Promise.all([
-                    webServerManager.notifyOtherServers('POST', 'director/serverinfo', newAndUpdatedServers.newServer),
-                    webServerManager.notifyOtherServers('PUT', 'director/serversinfo', newAndUpdatedServers.updatedServers)
+                    webServerManager.notifyOtherServers(
+                        'POST', 'director/serverinfo', newAndUpdatedServers.newServer
+                    ),
+                    webServerManager.notifyOtherServers(
+                        'PUT', 'director/serversinfo', newAndUpdatedServers.updatedServers
+                    )
                 ])
                 .then(() => {
                     res.json(newAndUpdatedServers.newServer.backupAddr);
@@ -531,8 +535,17 @@ function removeDatabaseServerFromNetwork(serverInfo) {
             const removalQueryParams = {
                 baseAddr: serverInfo.baseAddr
             };
-            webServerManager.notifyOtherServers('DELETE', 'director/serverinfo', undefined, removalQueryParams);
-            webServerManager.notifyOtherServers('PUT', 'director/serversinfo', updatedServers);
+            return Promise.all([
+                webServerManager.notifyOtherServers(
+                    'DELETE', 'director/serverinfo', undefined, removalQueryParams
+                ),
+                webServerManager.notifyOtherServers(
+                    'PUT', 'director/serversinfo', updatedServers
+                )
+            ]);
+        })
+        .catch(err => {
+            log.err('webapp:removeDatabaseServerFromNetwork:' + err);
         });
 }
 
@@ -544,7 +557,9 @@ function removeWebServerFromNetwork(serverBaseAddr) {
             const removalQueryParams = {
                 baseAddr: serverBaseAddr
             };
-            webServerManager.notifyOtherServers('DELETE', 'webserver/serverinfo', undefined, removalQueryParams);
+            webServerManager.notifyOtherServers(
+                'DELETE', 'webserver/serverinfo', undefined, removalQueryParams
+            );
         })
         .then(updateLoadBalancerServerList);
 }
