@@ -233,7 +233,7 @@ function removeExpiredPosts(model) {
 
 // allow access to external database servers directly from the frontend
 app.use('*', (req, res, next) => {
-    if (req.originalUrl !== '/heartbeat') {
+    if (req.originalUrl !== '/api/heartbeat') {
         log.msg(req.method + ' ' + req.originalUrl);
         if (req.body && JSON.stringify(req.body) !== '{}') {
             console.log(JSON.stringify(req.body));
