@@ -932,7 +932,7 @@ function deleteBackups(req, res) {
 function addExtraPostProperties(post) {
     post.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
     post.postTime = Date.now();
-    post.mainDatabaseAddr = 'http://' + ipAddr + ':' + settings[PORT_KEY];
+    post.mainDatabaseAddr = baseAddr;
     post.backupDatabaseAddr = backupAddr;
     post._id = mongoose.Types.ObjectId();
 }
