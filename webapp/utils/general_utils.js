@@ -70,7 +70,7 @@ function notifyNextAliveServer(servers, thisServerAddr, path, body) {
             request(requestParams)
                 .catch(err => {
                     log.err('general_utils:notifyNextAliveServer:' + err);
-                    log.err('error occurred when connecting to: ' + requestparams.url);
+                    log.err('error occurred when connecting to: ' + requestParams.url);
                     next();
                 });
 
