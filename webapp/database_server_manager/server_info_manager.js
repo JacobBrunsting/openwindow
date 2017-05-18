@@ -491,6 +491,9 @@ function getMostFilledServer(servers) {
                 if (maxVal < serverFilledAmounts[i]) {
                     maxVal = serverFilledAmounts[i];
                     index = i;
+                } else if (maxVal === serverFilledAmounts[i] &&
+                        servers[i].writeRng.getArea() > servers[index].writeRng.getArea()) {
+                    index = i;
                 }
             }
             return servers[index];
