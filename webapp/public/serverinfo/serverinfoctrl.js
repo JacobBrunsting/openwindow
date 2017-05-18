@@ -5,11 +5,6 @@ angular.module('openwindow').controller('serverinfoctrl', [
         var serverWriteAreaCanvas = document.getElementById("serverWriteAreaCanvas");
         var serverReadAreaCanvas = document.getElementById("serverReadAreaCanvas");
 
-        $http.get("/director/allserverinfo")
-            .success(servers => {
-                drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers);
-            });
-
         $scope.webservers = [];
         $scope.databaseservers = [];
 
@@ -21,7 +16,10 @@ angular.module('openwindow').controller('serverinfoctrl', [
         $http.get("/director/allserverinfo")
             .success(servers => {
                 $scope.databaseservers = servers;
-                getPosts($scope, $http, servers);
+                getPosts($scope, $http, servers)
+                    .then(() => {
+                        drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers, $scope.posts);
+                    });
             });
 
         $scope.posts = [];
@@ -33,7 +31,7 @@ angular.module('openwindow').controller('serverinfoctrl', [
 ]);
 
 function getPosts($scope, $http, servers) {
-    $http.get('/api/posts', {
+    return $http.get('/api/posts', {
             params: {
                 radius: 9999999999999,
                 longitude: 0,
@@ -53,18 +51,22 @@ function getPosts($scope, $http, servers) {
         });
 }
 
-function drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers) {
+function drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers, posts) {
     serverWriteAreaCanvas.width = serverWriteAreaCanvas.clientWidth;
     serverWriteAreaCanvas.height = serverWriteAreaCanvas.clientHeight;
     serverReadAreaCanvas.width = serverReadAreaCanvas.clientWidth;
     serverReadAreaCanvas.height = serverReadAreaCanvas.clientHeight;
-    servers.forEach(function (server) {
+    servers.forEach(function (server, index) {
         drawServerArea(serverWriteAreaCanvas, server.writeRng.minLng,
             server.writeRng.minLat, server.writeRng.maxLng, server.writeRng.maxLat,
-            server.baseAddr);
+            index + 1, server.baseAddr);
         drawServerArea(serverReadAreaCanvas, server.readRng.minLng,
             server.readRng.minLat, server.readRng.maxLng, server.readRng.maxLat,
-            server.baseAddr);
+            index + 1, server.baseAddr);
+    });
+    posts.forEach(function (post) {
+        drawPost(serverWriteAreaCanvas, post.loc.coordinates[0], post.loc.coordinates[1], post.mainDatabaseAddr);
+        drawPost(serverReadAreaCanvas, post.loc.coordinates[0], post.loc.coordinates[1], post.mainDatabaseAddr);
     });
 }
 
@@ -82,21 +84,45 @@ var MIN_LNG = -180;
 var MAX_LAT = 90;
 var MIN_LAT = -90;
 
-function drawServerArea(canvas, minLng, minLat, maxLng, maxLat, serverAddr) {
+function drawServerArea(canvas, minLng, minLat, maxLng, maxLat, text, serverAddr) {
     var ctx = canvas.getContext("2d");
     var minX = mapToNewRange(minLng, MIN_LNG, MAX_LNG, 0, canvas.width);
     var minY = mapToNewRange(-maxLat, MIN_LAT, MAX_LAT, 0, canvas.height);
     var maxX = mapToNewRange(maxLng, MIN_LNG, MAX_LNG, 0, canvas.width);
     var maxY = mapToNewRange(-minLat, MIN_LAT, MAX_LAT, 0, canvas.height);
+    var rgbVals = getRgbFromServerAddr(serverAddr);
     ctx.beginPath();
-    ctx.lineWidth = "4";
-    ctx.strokeStyle = "white";
-    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    ctx.rect(minX + 4, minY + 4, maxX - minX - 8, maxY - minY - 8);
+    ctx.lineWidth = "8";
+    ctx.strokeStyle = `rgb(${rgbVals[1]}, ${rgbVals[0]}, ${rgbVals[2]})`;
+    ctx.fillStyle = `rgba(${rgbVals[1]}, ${rgbVals[0]}, ${rgbVals[2]}, 0.4)`;
+    ctx.rect(minX + 6, minY + 6, maxX - minX - 12, maxY - minY - 12);
     ctx.fill();
     ctx.stroke();
+    ctx.beginPath();
+    ctx.lineWidth = "4";
+    ctx.strokeStyle = 'rgb(255, 255, 255)';
+    ctx.rect(minX + 4, minY + 4, maxX - minX - 8, maxY - minY - 8);
+    ctx.stroke();
     ctx.fillStyle = "white";
-    ctx.font = "20px Arial";
+    ctx.font = "80px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(serverAddr.replace('http://', ''), (minX + maxX) / 2, (minY + maxY) / 2);
+    ctx.fillText(text, (minX + maxX) / 2, (minY + maxY) / 2);
+}
+
+function drawPost(canvas, lng, lat, serverAddr) {
+    var ctx = canvas.getContext("2d");
+    var x = mapToNewRange(lng, MIN_LNG, MAX_LNG, 0, canvas.width);
+    var y = mapToNewRange(-lat, MIN_LAT, MAX_LAT, 0, canvas.height);
+    var rgbVals = getRgbFromServerAddr(serverAddr);
+    ctx.lineWidth = "5";
+    ctx.strokeStyle = `rgb(${rgbVals[1]}, ${rgbVals[0]}, ${rgbVals[2]})`;
+    ctx.fillStyle = 'rgb(0, 0, 0)';
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+}
+
+function getRgbFromServerAddr(serverAddr) {
+    return serverAddr.split('//')[1].split(':')[0].split('.').slice(1, 4);
 }

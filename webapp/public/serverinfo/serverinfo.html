@@ -4,7 +4,8 @@
 </h2>
 <p>
     Each box represents a database server. Each database server accepts and
-    stores posts only from a certain area of the world. This range may change
+    stores posts only from a certain area of the world (posts are denoted with 
+    black dots). This range may change
     as servers are added/removed from the network.
 </p>
 <div class="mapGraphicWrapper">
@@ -67,6 +68,7 @@
 <div class="tableContainer">
     <table>
         <tr>
+            <th>Server Number</th>
             <th>Error Simulator</th>
             <th>Base Address</th>
             <th>Backup Server Address</th>
@@ -80,6 +82,7 @@
             <th>Max Write Longitude</th>
         </tr>
         <tr ng-repeat="server in databaseservers track by $index">
+            <td>{{$index + 1}}</td>
             <td><button class="kill_server_button" ng-click="killServer(server.baseAddr)">Simulate Hard Error</button></td>
             <td>{{server.baseAddr.replace('http://','')}}</td>
             <td>{{server.backupAddr.replace('http://','')}}</td>
