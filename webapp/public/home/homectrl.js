@@ -19,7 +19,9 @@ angular.module('openwindow').controller('homectrl', [
 
         $scope.updateLocation = function() {
             $scope.posts = [];
-            setupPage({longitude: $scope.longitude_input, latitude: $scope.latitude_input});
+            let newLocation = {longitude: $scope.longitude_input, latitude: $scope.latitude_input};
+            geolocation.setLocation(newLocation);
+            setupPage(newLocation);
         }
 
         function onLocationRetrievalFailure(err) {

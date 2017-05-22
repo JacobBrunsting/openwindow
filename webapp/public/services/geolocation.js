@@ -20,6 +20,10 @@ angular.module('openwindow').service('geolocation', [function () {
         onSuccess(this.location);
     }
 
+    this.setLocation = function(newLocation) {
+        this.location = newLocation;
+    }
+
     this.addLocationToURL = function (url, location) {
         if (url.indexOf('?') == -1) {
             url += '?';
