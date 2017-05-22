@@ -5,32 +5,39 @@ angular.module('openwindow').controller('newpostctrl', [
     'post_creator',
     'geolocation',
     function ($scope, $location, $http, post_creator, geolocation) {
-        var posterLocation;
-        $scope.location = geolocation.getLocationFromLocationService($location);
-        $scope.createNewPost = function () {
-            var post = post_creator.createPostForServer($scope.title,
-                $scope.body,
-                $scope.location.latitude,
-                $scope.location.longitude);
-            $scope.title = '';
-            $scope.body = '';
-            $http.post("/api/post", post, {
-                    params: $scope.location
-                })
-                .success(
-                    function (response) {
-                        $location.url('/home');
-                    }
-                )
-                .error(
-                    function (err) {
-                        console.log(err);
-                    }
-                );
+        geolocation.get(setupPage, onLocationRetrievalFailure);
+
+        function onLocationRetrievalFailure(err) {
+            console.log(err);
         }
 
-        $scope.goHome = function () {
-            $location.url('/home');
+        function setupPage(geolocation) {
+            var posterLocation;
+            $scope.createNewPost = function () {
+                var post = post_creator.createPostForServer($scope.title,
+                    $scope.body,
+                    geolocation.latitude,
+                    geolocation.longitude);
+                $scope.title = '';
+                $scope.body = '';
+                $http.post("/api/post", post, {
+                        params: geolocation
+                    })
+                    .success(
+                        function (response) {
+                            $location.url('/home');
+                        }
+                    )
+                    .error(
+                        function (err) {
+                            console.log(err);
+                        }
+                    );
+            }
+
+            $scope.goHome = function () {
+                $location.url('/home');
+            }
         }
     }
 ]);

@@ -13,7 +13,7 @@ angular.module('openwindow').controller('homectrl', [
             $scope.latitude_input = location.latitude;
             getAllPosts();
             $scope.addPost = function () {
-                $location.url(geolocation.addLocationToURL('/new', $scope.location));
+                $location.url('/new');
             }
         }
 

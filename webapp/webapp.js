@@ -482,6 +482,7 @@ app.delete('/webserver/serverfromnetwork', (req, res) => {
 });
 
 app.get('/favicon.ico', (req, res) => {
+    res.json();
 });
 
 // ======= Network Syncronization ========
