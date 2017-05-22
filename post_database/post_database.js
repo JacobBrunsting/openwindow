@@ -569,7 +569,7 @@ function postPosts(req, res) {
             res.status(200).send();
         })
         .catch((err) => {
-            req.status(500).send(err);
+            res.status(500).send(err);
             log.err('post_database:postPosts:' + err);
         });
 }
@@ -853,7 +853,7 @@ function postBackupPosts(req, res) {
             res.status(200).send();
         })
         .catch((err) => {
-            req.status(500).send(err);
+            res.status(500).send(err);
             log.err('post_database:postPosts:' + err);
         });
 }

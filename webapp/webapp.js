@@ -484,10 +484,6 @@ app.delete('/webserver/serverfromnetwork', (req, res) => {
 app.get('/favicon.ico', (req, res) => {
 });
 
-app.all('*', (req, res) => {
-    res.status(404).send();
-});
-
 // ======= Network Syncronization ========
 
 function validateDatabaseAndWebServerInfo() {
