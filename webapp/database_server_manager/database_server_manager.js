@@ -33,6 +33,7 @@ module.exports = (mongoose, serverInfoCollectionName) => {
     });
 
     const serverInfoModel = mongoose.model(SERVER_INFO_MODEL_NAME, serverInfoSchema);
+    serverInfoModel.remove({});
     const serverInfoModelWrapper = new ServerInfoModelWrapper(serverInfoModel);
 
     const requestRedirector = require(__dirname + '/request_redirector')(serverInfoModelWrapper);

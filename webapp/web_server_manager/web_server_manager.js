@@ -196,6 +196,7 @@ module.exports = (serverInfoCollectionName, nbaseAddr) => {
     });
 
     serverInfoModel = mongoose.model(SERVER_INFO_MODEL_NAME, serverInfoSchema);
+    serverInfoModel.remove({});
 
     return {
         addServerInfo,

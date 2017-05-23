@@ -194,6 +194,9 @@ postSchema.index({
 const postModel = mongoose.model(settings[SITE_POST_MODEL_KEY], postSchema);
 const backupPostModel = mongoose.model(settings[BACKUP_POST_MODEL_KEY], postSchema);
 
+postModel.remove({});
+backupPostModel.remove({});
+
 // ========== Old Post Cleanup ==========
 
 const cleanupInterval = 1000 * settings[SECONDS_BETWEEN_CLEANUP_KEY];
