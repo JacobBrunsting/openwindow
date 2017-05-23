@@ -7,7 +7,9 @@ angular.module('openwindow').controller('homectrl', [
     'post_creator',
     'INT_CONSTANTS',
     function ($scope, $http, $location, post_updater, geolocation, post_creator, INT_CONSTANTS) {
+        $scope.isLoading = true;
         function setupPage(location) {
+            $scope.isLoading = true;
             $scope.location = location;
             $scope.longitude_input = location.longitude;
             $scope.latitude_input = location.latitude;
@@ -44,6 +46,7 @@ angular.module('openwindow').controller('homectrl', [
                     }
                     var UPDATE_INTERVAL = 10000;
                     post_updater.startUpdatingPosts($scope.posts, $scope.location, UPDATE_INTERVAL);
+                    $scope.isLoading = false;
                 });
         }
     }

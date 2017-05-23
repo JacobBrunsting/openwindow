@@ -187,11 +187,27 @@ input.title_input {
     margin-bottom: 10px;
 }
 
+h3.time_remaining_header {
+    color: #F4F5FC;
+    display: inline-block;
+    width: 100%;
+    text-align: right;
+    padding-right: 1.5%;
+    box-sizing: border-box;
+    font-size: 12pt;
+    font-weight: normal;
+    margin-bottom: 5px;
+}
+
+div.no_content_message {
+    
+}
+
 textarea {
     box-sizing: border-box;
     display: block;
     width: 100%;
-    height: 10%;
+    height: 200px;
     background-color: #F4F5FC;
     margin-bottom: 10px;
     color: #535A9C;
@@ -223,18 +239,24 @@ button.submit_button {
 }
 
 button.location_submit {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: auto;
-    height: auto;
-    margin-left: 10px;
+    display: flex;
     margin-top: 3px;
     margin-bottom: 3px;
+    margin-right: 3px;
+    width: auto;
 }
 
 div.location_info_wrapper {
-    position: relative;
+    display: flex;
+    width: 100%;
+    overflow: auto;
+}
+
+input.location_input {
+    display: flex;
+    flex-shrink: 1;
+    min-width: 100px;
+    margin-right: 10px;
 }
 
 button.submit_button:hover {

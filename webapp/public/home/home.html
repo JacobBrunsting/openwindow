@@ -1,15 +1,37 @@
 <html>
 <form class="location_form" ng-submit="updateLocation()">
-    <div class="field_heading">Location</div>
+    <div class="field_heading">Location (latitude, longitude)</div>
     <div class="location_info_wrapper">
-        <input class="longitude_input" type="text" ng-model="longitude_input"\>
-        <input class="latitude_input" type="text" ng-model="latitude_input"\>
+         <input 
+            class="location_input latitude_input" 
+            type="number" 
+            ng-model="latitude_input"
+            name="latitude"
+            min="-90"
+            max="90"
+            step="any"
+         \>
+        <input 
+            class="location_input longitude_input" 
+            type="number" 
+            ng-model="longitude_input"
+            name="longitude"
+            min="-180"
+            max="180"
+            step="any"
+        \>
         <button class="location_submit submit_button" type="submit">Update</button>
     </div>
 </form>
+<h3 class="time_remaining_header">
+    Time Remaining
+</h3>
 <div ng-repeat="post in posts track by $index">
     <div ng-include="'/submodules/post/post.html'">
     </div>
+</div>
+<div class="no_content_message post_container" ng-show="!posts.length">
+    {{isLoading ? "Loading..." : "No posts found in your area"}}
 </div>
 <div class="new_post_button_wrapper">
     <button class="submit_button" ng-click="addPost()">New Post</button>
