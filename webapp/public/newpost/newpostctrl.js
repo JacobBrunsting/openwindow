@@ -21,7 +21,11 @@ angular.module('openwindow').controller('newpostctrl', [
                 $scope.title = '';
                 $scope.body = '';
                 $http.post("/api/post", post, {
-                        params: geolocation
+                        params: {
+                            latitude: geolocation.latitude,
+                            longitude: geolocation.longitude,
+                            radius: 0
+                        }
                     })
                     .success(
                         function (response) {
