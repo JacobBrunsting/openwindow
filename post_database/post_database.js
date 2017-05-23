@@ -933,7 +933,9 @@ function deleteBackups(req, res) {
 // ====== Post Management Utilities =====
 
 function addExtraPostProperties(post) {
-    post.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
+    if (!post.secondsToShowFor) {
+        post.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
+    }
     post.postTime = Date.now();
     post.mainDatabaseAddr = baseAddr;
     post.backupDatabaseAddr = backupAddr;
