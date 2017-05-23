@@ -160,6 +160,25 @@ app.get('/heartbeat', (req, res) => {
 });
 
 /**
+ * @api {delete} /server - Kill the server at the provided address without 
+ *  warning the network
+ * @apiParam {string} baseAddr - The address of the server
+ */
+app.delete('/server', (req, res) => {
+    if (req.query.baseAddr) {
+        request.delete(decodeURIComponent(req.query.baseAddr) + '/self')
+            .then(() => {
+                res.status(200).send();
+            })
+            .catch(err => {
+                res.status(err.statusCode).send(err);
+            });
+    } else {
+        res.status(400).send('baseAddr parameter required');
+    }
+});
+
+/**
  * @api {post} /director/newserver - Add a new database server to the server
  *  info collection and assign it a geographic region so the database server 
  *  manager can start reading from it and storing posts in it
