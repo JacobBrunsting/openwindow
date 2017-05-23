@@ -91,11 +91,12 @@ function drawServerArea(canvas, minLng, minLat, maxLng, maxLat, text, serverAddr
     var maxX = mapToNewRange(maxLng, MIN_LNG, MAX_LNG, 0, canvas.width);
     var maxY = mapToNewRange(-minLat, MIN_LAT, MAX_LAT, 0, canvas.height);
     var rgbVals = getRgbFromServerAddr(serverAddr);
+    console.log("rgb values are " + JSON.stringify(rgbVals));
     ctx.beginPath();
-    ctx.lineWidth = "8";
-    ctx.strokeStyle = `rgb(${rgbVals[1]}, ${rgbVals[0]}, ${rgbVals[2]})`;
-    ctx.fillStyle = `rgba(${rgbVals[1]}, ${rgbVals[0]}, ${rgbVals[2]}, 0.4)`;
-    ctx.rect(minX + 6, minY + 6, maxX - minX - 12, maxY - minY - 12);
+    ctx.lineWidth = "12";
+    ctx.strokeStyle = `rgb(${rgbVals[0]}, ${rgbVals[1]}, ${rgbVals[2]})`;
+    ctx.fillStyle = `rgba(${rgbVals[0]}, ${rgbVals[1]}, ${rgbVals[2]}, 0.6)`;
+    ctx.rect(minX + 12, minY + 12, maxX - minX - 24, maxY - minY - 24);
     ctx.fill();
     ctx.stroke();
     ctx.beginPath();
@@ -115,7 +116,7 @@ function drawPost(canvas, lng, lat, serverAddr) {
     var y = mapToNewRange(-lat, MIN_LAT, MAX_LAT, 0, canvas.height);
     var rgbVals = getRgbFromServerAddr(serverAddr);
     ctx.lineWidth = "5";
-    ctx.strokeStyle = `rgb(${rgbVals[1]}, ${rgbVals[0]}, ${rgbVals[2]})`;
+    ctx.strokeStyle = `rgb(${rgbVals[0]}, ${rgbVals[1]}, ${rgbVals[2]})`;
     ctx.fillStyle = 'rgb(0, 0, 0)';
     ctx.beginPath();
     ctx.arc(x, y, 5, 0, 2 * Math.PI);
@@ -124,5 +125,17 @@ function drawPost(canvas, lng, lat, serverAddr) {
 }
 
 function getRgbFromServerAddr(serverAddr) {
-    return serverAddr.split('//')[1].split(':')[0].split('.').slice(1, 4);
+    let serverAddrComponents = serverAddr.split('//')[1].split(/[.:]/);
+    let mappedAddrComponents = []
+
+    for (let i = 0; i < serverAddrComponents.length; ++i) {
+        const current = serverAddrComponents[i];
+        if (i == serverAddrComponents.length - 1) { // if we are at the port number
+            mappedAddrComponents[i] = Math.round((current / Math.pow(10, current.length)) * 255);
+        } else {
+            mappedAddrComponents[i] = Math.round(current);
+        }
+    }
+
+    return [mappedAddrComponents[0], mappedAddrComponents[3], mappedAddrComponents[4]];
 }
