@@ -17,6 +17,7 @@ const express = require('express');
 const ipAddr = require('ip').address();
 const log = require(__dirname + '/utils/log');
 const networkUtils = require(__dirname + '/network_utils');
+const request = require('request');
 
 // ============== Settings ==============
 
@@ -105,20 +106,14 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static('./public'));
 let backupAddr;
+const JSONStream = require('JSONStream');
 
 // ========= Add Server to List =========
 
-networkUtils.serverCall(constants.apiAddress + 'director/newserver',
+networkUtils.serverCall(constants.apiAddress + 'director/newserver', // its getting posts before this terminates, so backup addr is undefined
         networkUtils.POST, {
             baseAddr: baseAddr
         })
-    .then((_backupAddr) => {
-        if (_backupAddr) {
-            backupAddr = _backupAddr;
-        } else {
-            log.msg('did not receive backup database address. exiting.');
-        }
-    })
     .catch((err) => {
         log.err('error connecting to server network: ' + err);
         process.exit(1);
@@ -301,6 +296,20 @@ app.post('/api/comment', postComment);
  * @apiParam {Number} newSecondsToShowFor
  */
 app.post('/api/settime', postSetTime);
+
+/**
+ * @api {post} /api/redistributebackups - Send all of the backup posts to the
+ *  correct address based on their location, and then clear out the backup
+ *  database
+ * @apiParam {Object[]} targetServers
+ * @apiParam {String} targetServers.baseAddr
+ * @apiParam {Object} targetServers.range
+ * @apiParam {Number} targetServers.range.minLat
+ * @apiParam {Number} targetServers.range.maxLat
+ * @apiParam {Number} targetServers.range.minLng
+ * @apiParam {Number} targetServers.range.maxLng
+ */
+app.post('/api/redistributebackups', postRedistributeBackups)
 
 /**
  * @api {get} /api/allposts - Get all posts stored in the main database
@@ -489,6 +498,13 @@ app.post('/api/backuppost', postBackupPost);
 app.post('/api/backupposts', postBackupPosts);
 
 /**
+ * @api {post} /api/backupaddr - Sets the initial value of the server's backup 
+ *  address. Simply sets the value, does not do any other logic.
+ * @apiParam {string} backupAddr
+ */
+app.post('/api/backupaddr', postBackupAddr);
+
+/**
  * @api {get} /api/allbackupposts - Get all posts stored in the backup database
  * @apiSuccess {Object[]} posts
  * @apiSuccess {String} posts.body
@@ -563,18 +579,59 @@ function postPost(req, res) {
 }
 
 function postPosts(req, res) {
-    let posts = req.body;
-    posts.forEach(addExtraPostProperties);
-    postModel
-        .create(posts)
-        .then(() => {
-            addPostToBackup(posts);
-            res.status(200).send();
-        })
-        .catch((err) => {
-            res.status(500).send(err);
-            log.err('post_database:postPosts:' + err);
+    if (req.query.stream) {
+        // we do this because, if the post request inside the pipe fails, it
+        // will cancel the stream, and then we won't get any of the posts being
+        // streamed. If the backup database is down, it will be removed
+        // anyways, and then the posts we added will be put in the new backup
+        // database
+        // A better solution would be to handle any connection errors without
+        // canceling the stream, but this doesn't seem to be easy to do in
+        // the current version of request
+        request(backupAddr + '/api/heartbeat', (err, res) => {
+            if (err) {
+                log.err('post_database:postPosts:' + err);
+                readStream(false);
+            } else {
+                readStream(true);
+            }
         });
+    } else {
+        const posts = req.body;
+        posts.forEach(addExtraPostProperties);
+        postModel
+            .create(posts)
+            .then(() => {
+                addPostsToBackup(posts);
+                res.status(200).send();
+            })
+            .catch((err) => {
+                res.status(500).send(err);
+                log.err('post_database:postPosts:' + err);
+            });
+    }
+
+    function readStream(sendToBackup) {
+        if (sendToBackup) {
+            req.pipe(request.post(backupAddr + '/api/backupposts?stream=true', err => {
+                    if (err) {
+                        log.err('post_database:postPosts:' + err);
+                    }
+                }))
+                .on('error', err => {
+                    log.err('post_database:postPosts:' + err);
+                });
+        }
+        readAndSavePostStream(req, posts => postModel.create(posts))
+            .then(() => {
+                res.status(200).send();
+                log.msg('post_database:postPosts: done reading posts stream');
+            })
+            .catch(err => {
+                log.err('post_database:postPosts:' + err);
+                res.status(500).send(err);
+            });
+    }
 }
 
 function getAllPosts(req, res) {
@@ -732,6 +789,52 @@ function postSetTime(req, res) {
     updatePostFromUpdateObj(req.body.id, updateObj, req, res);
 }
 
+function postRedistributeBackups(req, res) {
+    const targetServers = req.body.targetServers;
+
+    Promise.all(targetServers.map(server =>
+            backupPostModel.find({
+                $and: [{
+                        "loc.coordinates.0": {
+                            $gt: server.range.minLng
+                        }
+                    },
+                    {
+                        "loc.coordinates.0": {
+                            $lte: server.range.maxLng
+                        }
+                    },
+                    {
+                        "loc.coordinates.1": {
+                            $gt: server.range.minLat
+                        }
+                    },
+                    {
+                        "loc.coordinates.1": {
+                            $lte: server.range.maxLat
+                        }
+                    }
+                ]
+            })
+            .lean()
+            .cursor()
+            .pipe(JSONStream.stringify())
+            .pipe(request.post(server.address + '/api/posts?stream=true', err => {
+                if (err) {
+                    log.err('post_database:postPosts:' + err);
+                }
+            }))
+        ))
+        .then(() => backupPostModel.remove({}))
+        .then(() => {
+            res.status(200).send();
+        })
+        .catch(err => {
+            log.err('post_database:postRedistributeBackups:' + err);
+            res.status(500).send(err);
+        });
+}
+
 function putUpvote(req, res) {
     const id = req.body.id;
     const oldVote = req.body.oldVote;
@@ -782,28 +885,34 @@ function putPost(req, res) {
 }
 
 function putBackupAddr(req, res) {
-    const newBackupAddr = req.body.newBackupAddr
+    const newBackupAddr = req.body.newBackupAddr;
+    if (newBackupAddr === backupAddr) {
+        res.status(200).send();
+        return;
+    }
     if (backupAddr) {
         clearBackups();
     }
     backupAddr = newBackupAddr;
     postModel
-        .find()
-        .lean()
-        .then(posts => {
-            posts.forEach(post => {
-                post.backupDatabaseAddr = newBackupAddr;
-                postModel.findByIdAndUpdate(post._id, {
-                    $set: { backupDatabaseAddr: newBackupAddr }
-                }, { new: true })
-            });
+        .update({}, {
+            backupDatabaseAddr: newBackupAddr
+        })
+        .then(() => {
             res.status(200).send();
-            addPostsToBackup(posts);
         })
         .catch((err) => {
-            res.status(500).send(err);
             log.err('post_database:putBackupAddr:' + err);
+            res.status(500).send(err);
         });
+
+    log.bright('backing up all posts to ' + newBackupAddr + '/api/backupposts?stream=true');
+    postModel
+        .find()
+        .lean()
+        .cursor()
+        .pipe(JSONStream.stringify())
+        .pipe(request.post(newBackupAddr + '/api/backupposts?stream=true'));
 }
 
 function deleteComment(req, res) {
@@ -850,15 +959,37 @@ function postBackupPost(req, res) {
 }
 
 function postBackupPosts(req, res) {
-    backupPostModel
-        .create(req.body)
-        .then(() => {
-            res.status(200).send();
-        })
-        .catch((err) => {
-            res.status(500).send(err);
-            log.err('post_database:postPosts:' + err);
-        });
+    if (req.query.stream) {
+        readAndSavePostStream(req, posts => {
+                return backupPostModel.create(posts);
+            })
+            .then(() => {
+                log.msg('post_database:postBackupPosts: done reading posts stream');
+                res.status(200).send();
+            })
+            .catch(err => {
+                res.status(500).send(err);
+            });
+    } else {
+        backupPostModel
+            .create(req.body)
+            .then(() => {
+                res.status(200).send()
+            })
+            .catch(err => {
+                log.err('post_database:postBackupPosts:' + err);
+                res.status(500).send(err);
+            });
+    }
+}
+
+function postBackupAddr(req, res) {
+    if (req.body.backupAddr) {
+        backupAddr = req.body.backupAddr;
+        res.status(200).send();
+    } else {
+        res.status(400).send('backupAddr property required in body');
+    }
 }
 
 function getAllBackupPosts(req, res) {
@@ -936,7 +1067,9 @@ function addExtraPostProperties(post) {
     if (!post.secondsToShowFor) {
         post.secondsToShowFor = settings[INITIAL_SECONDS_TO_SHOW_FOR];
     }
-    post.postTime = Date.now();
+    if (!post.postTime) {
+        post.postTime = Date.now();
+    }
     post.mainDatabaseAddr = baseAddr;
     post.backupDatabaseAddr = backupAddr;
     post._id = mongoose.Types.ObjectId();
@@ -993,7 +1126,7 @@ function addPostToBackup(post) {
 }
 
 function addPostsToBackup(posts) {
-    networkUtils.apiCall(backupAddr, 'backupposts', networkUtils.POST, posts)
+    networkUtils.apiCall(backupAddr, 'backupposts?stream=false', networkUtils.POST, posts)
         .catch(
             (err) => {
                 log.err('post_database:addPostsToBackup:' + err);
@@ -1029,6 +1162,65 @@ function clearBackups() {
             }
         );
 }
+
+const POST_COUNT_FOR_SEND = 100;
+
+function readAndSavePostStream(req, savePosts) {
+    let responsesWaiting = 0;
+    let doneReading = false;
+    let body = [];
+    return new Promise((resolve, reject) => {
+        req.on('data', data => {
+            body.push(data);
+            if (body.length >= POST_COUNT_FOR_SEND) {
+                responsesWaiting += 1;
+                sendAndResetBody().then(() => {
+                    responsesWaiting -= 1;
+                    if (responsesWaiting == 0 && doneReading) {
+                        resolve();
+                    }
+                }).catch(err => {
+                    log.err('post_database:readAndSavePostStream:' + err);
+                    req.pause();
+                    reject(err);
+                });
+            }
+        }).on('end', () => {
+            responsesWaiting += 1;
+            doneReading = true;
+            sendAndResetBody().then(() => {
+                responsesWaiting -= 1;
+                if (responsesWaiting == 0 && doneReading) {
+                    resolve();
+                }
+            }).catch((err) => {
+                log.err('post_database:readAndSavePostStream:' + err);
+                reject(err);
+            });
+        }).on('error', err => {
+            log.err('post_database:readAndSavePostStream:' + err);
+            reject(err);
+        });
+    })
+
+    function sendAndResetBody() {
+        let bodyString = Buffer.concat(body).toString().trim();
+        if (bodyString.charAt(0) == ',') {
+            bodyString = bodyString.substring(1);
+        }
+        if (bodyString.charAt(0) !== '[') {
+            bodyString = '[' + bodyString;
+        }
+        if (bodyString.charAt(bodyString.length - 1) != ']') {
+            bodyString = bodyString + ']';
+        }
+        let posts = JSON.parse(bodyString);
+        posts.forEach(addExtraPostProperties);
+        body = [];
+        return savePosts(posts);
+    }
+}
+
 console.log('');
 log.msg('post database listening on port ' + settings[PORT_KEY]);
 console.log('');

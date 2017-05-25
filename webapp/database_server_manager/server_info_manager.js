@@ -214,7 +214,6 @@ function generateAndStoreServerInfo(serverInfo) {
             // implemented to have database servers store posts only from 
             // their area, we want to avoid having servers back up other
             // servers in the same area
-            clearBackupsAtServer(farthestServer.backupAddr);
             backupAddr = farthestServer.backupAddr;
             changeServerBackupAddr(farthestServer.baseAddr, newBaseAddr);
             updatedServers.push({
@@ -231,7 +230,6 @@ function generateAndStoreServerInfo(serverInfo) {
 // function (list of removed servers, list of updated servers)
 function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
     let updatesByAddr = {};
-    let postsFromRemovedServer;
 
     return serverInfoModelWrapper
         .removeOne({
@@ -242,20 +240,16 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
                 throw 'Server not found in database';
             }
         })
-        .then(getPostsFromRemovedServer)
-        .then(posts => {
-            postsFromRemovedServer = posts;
-        })
         .then(getBackupAddrUpdates)
         .then(addToUpdatesObject)
         .then(getRangeUpdates)
         .then(addToUpdatesObject)
-        .then(generateUpdatedServersInfo)
-        .then(updatedServersInfo =>
-            preformUpdatesLocally(updatedServersInfo)
-            .then(redistributePostsFromRemovedServer)
-            .then(() => updatedServersInfo)
-        )
+        .then(() => generateUpdatedServersInfo(['backupAddr']))
+        .then(preformUpdatesLocally)
+        .then(redistributeBackupPosts)
+        .then(() => generateUpdatedServersInfo(['readRng', 'writeRng']))
+        .then(preformUpdatesLocally)
+        .then(() => generateUpdatedServersInfo([]))
         .catch(err => {
             log.err("server_info_manager:removeServerAndAdjust:" + err);
         });
@@ -290,12 +284,21 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
         }
     }
 
-    function generateUpdatedServersInfo() {
+    function generateUpdatedServersInfo(keysToExclude) {
         return Object.keys(updatesByAddr).map(addr => {
-            let updatedServerInfo = updatesByAddr[addr];
+            let updatedServerInfo = removeKeys(updatesByAddr[addr], keysToExclude);
             updatedServerInfo.baseAddr = addr;
             return updatedServerInfo;
         });
+    }
+
+    function removeKeys(object, keys) {
+        return Object.keys(object).reduce((result, key) => {
+            if (keys.indexOf(key) == -1) {
+                result[key] = object[key];
+            }
+            return result;
+        }, {});
     }
 
     function preformUpdatesLocally(updatedServersInfo) {
@@ -310,62 +313,29 @@ function removeServerAndAdjust(serverToRemove, useBackupServerForData) {
             .then(() => updateServersInfo(updatedServersInfo));
     }
 
-    function redistributePostsFromRemovedServer() {
-        let remainingPosts = postsFromRemovedServer.slice(0);
-        serverInfoModelWrapper.getAllServers()
-            .then(servers => {
-                return Promise.all(servers.reduce((promises, server) => {
-                    const fittingPosts = getPostsThatFitInServer(server, remainingPosts);
-                    if (fittingPosts && fittingPosts.length !== 0) {
-                        promises.push(
-                            sendPostsToServer(server.baseAddr, fittingPosts)
-                        );
-                        remainingPosts = remainingPosts.filter(post =>
-                            !fittingPosts.some(fittingPost => fittingPost._id === post._id)
-                        );
-                    }
-                    return promises;
-                }, []));
-            })
-    }
+    function redistributeBackupPosts() {
+        return serverInfoModelWrapper.getAllServers().then(redistributeBackups);
 
-    function getPostsThatFitInServer(serverInfo, posts) {
-        return posts.filter(post =>
-            serverInfo.writeRng
-            .containsPoint(post.loc.coordinates[0], post.loc.coordinates[1])
-        );
-    }
-
-    function getPostsFromRemovedServer() {
-        let fromUrl;
-        if (useBackupServerForData) {
-            fromUrl = getApiCallURL(serverToRemove.backupAddr, 'allbackupposts');
-        } else {
-            fromUrl = getApiCallURL(serverToRemove.baseAddr, 'allposts');
-        }
-
-        return request.get({
-                url: fromUrl,
-                json: true
-            })
-            .catch(err => {
-                log.err('server_manager:getPostsFromRemovedServer:' + err);
-                throw err;
+        function redistributeBackups(servers) {
+            console.log("reedistributing backups from servers " + JSON.stringify(servers));
+            let serverRangesAndAddresses = [];
+            servers.forEach(serverInfo => {
+                if (serverInfo.writeRng) {
+                    serverRangesAndAddresses.push({
+                        range: serverInfo.writeRng,
+                        address: serverInfo.baseAddr
+                    });
+                }
             });
-    }
-
-    function sendPostsToServer(targetAddr, posts) {
-        const toUrl = getApiCallURL(targetAddr, 'posts');
-        const requestParams = {
-            url: toUrl,
-            method: 'POST',
-            body: posts,
-            json: true
+            const requestParams = {
+                url: serverToRemove.backupAddr + '/api/redistributebackups?stream=true',
+                body: {
+                    targetServers: serverRangesAndAddresses
+                },
+                json: true
+            };
+            return request.post(requestParams);
         }
-        return request(requestParams).catch(err => {
-            log.err('server_info_manager:sendPostsToServer:' + err);
-            throw err;
-        });
     }
 }
 
@@ -399,7 +369,6 @@ function fillSpaceLeftByServer(oldServer, useBackupServerForData) {
 
     // returns an object with address keys of the servers that were modified CLEAN UP LATER
     function onBorderingServerRetrieval(servers) {
-
         let rangeUpdatesByAddr = {};
         const edges = ['minLng', 'maxLat', 'maxLng', 'minLat'];
         for (let i = 0; i < 4; ++i) {
@@ -492,7 +461,7 @@ function getMostFilledServer(servers) {
                     maxVal = serverFilledAmounts[i];
                     index = i;
                 } else if (maxVal === serverFilledAmounts[i] &&
-                        servers[i].writeRng.getArea() > servers[index].writeRng.getArea()) {
+                    servers[i].writeRng.getArea() > servers[index].writeRng.getArea()) {
                     index = i;
                 }
             }
@@ -517,18 +486,6 @@ function getMostFilledServer(servers) {
     }
 }
 
-function clearBackupsAtServer(serverAddress) {
-    var requestParams = {
-        url: getApiCallURL(serverAddress, 'backups'),
-        json: true
-    };
-    return request.delete(requestParams)
-        .catch(err => {
-            log.err('server_manager:clearBackupsAtServer:' + err);
-            throw err;
-        });
-}
-
 function changeServerBackupAddr(serverAddr, newBackupAddr) {
     return serverInfoModelWrapper
         .updateOne({
@@ -537,9 +494,6 @@ function changeServerBackupAddr(serverAddr, newBackupAddr) {
             $set: {
                 backupAddr: newBackupAddr,
             }
-        })
-        .then(() => {
-            return clearBackupsAtServer(newBackupAddr);
         })
         .then(() => {
             return notifyServerOfChange();

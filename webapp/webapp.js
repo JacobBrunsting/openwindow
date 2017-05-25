@@ -192,7 +192,16 @@ app.post('/director/newserver', (req, res) => {
     }
     databaseServerManager.generateAndStoreServerInfo(req.body)
         .then((newAndUpdatedServers) => {
-            return Promise.all([
+            const requestParams = {
+                url: req.body.baseAddr + '/api/backupaddr',
+                method: 'POST',
+                body: {
+                    backupAddr: newAndUpdatedServers.newServer.backupAddr
+                },
+                json: true
+            }
+            return request(requestParams).then(() =>
+                Promise.all([
                     webServerManager.notifyOtherServers(
                         'POST', 'director/serverinfo', newAndUpdatedServers.newServer
                     ),
@@ -202,7 +211,7 @@ app.post('/director/newserver', (req, res) => {
                 ])
                 .then(() => {
                     res.json(newAndUpdatedServers.newServer.backupAddr);
-                });
+                }));
         })
         .catch((err) => {
             res.status(500).send(err);
