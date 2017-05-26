@@ -669,6 +669,7 @@ function getPosts(req, res) {
     const rad = req.query.radius;
     postModel
         .find()
+        .select(req.query.excludeContent ? '-comments -title -body' : '')
         .lean()
         .where('loc')
         .near({

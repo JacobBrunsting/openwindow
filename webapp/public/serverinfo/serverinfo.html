@@ -101,26 +101,5 @@
         </tr>
     </table>
 </div>
-<h2>
-    Posts
-</h2>
-<div class="tableContainer">
-    <table>
-        <tr>
-            <th>Address of Database Storing</th>
-            <th>Longitude</th>
-            <th>Latitude</th>
-            <th>Title</th>
-            <th>Body</th>
-        </tr>
-        <tr ng-repeat="post in posts track by $index">
-            <td>{{post.mainDatabaseAddr.replace('http://', '')}}</td>
-            <td>{{post.loc.coordinates[0]}}</td>
-            <td>{{post.loc.coordinates[1]}}</td>
-            <td>{{post.title}}</td>
-            <td>{{post.body}}</td>
-        </tr>
-    </table>
-</div>
 
 </html>

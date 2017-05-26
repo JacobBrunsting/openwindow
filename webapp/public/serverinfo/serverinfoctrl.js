@@ -16,22 +16,31 @@ angular.module('openwindow').controller('serverinfoctrl', [
         $http.get("/director/allserverinfo")
             .success(servers => {
                 $scope.databaseservers = servers;
+                drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers);
                 getPosts($scope, $http, servers)
                     .then(() => {
-                        drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers, $scope.posts);
+                        drawPosts(serverWriteAreaCanvas, serverReadAreaCanvas, $scope.posts);
                     });
             });
 
         $scope.posts = [];
 
         $scope.killServer = function (baseAddr) {
-            $http.delete('/server', { params: { baseAddr }});
+            $http.delete('/server', {
+                params: {
+                    baseAddr
+                }
+            });
+        }
+
+        $scope.showPosts = function () {
+            $scope.postsVisible = true;
         }
     }
 ]);
 
 function getPosts($scope, $http, servers) {
-    return $http.get('/api/posts', {
+    return $http.get('/api/posts?excludeContent=true', {
             params: {
                 radius: 9999999999999,
                 longitude: 0,
@@ -42,9 +51,7 @@ function getPosts($scope, $http, servers) {
             if (!res.data) {
                 return;
             }
-            res.data.body.forEach(post => {
-                $scope.posts.push(post);
-            });
+            $scope.posts = res.data.body;
         })
         .catch(err => {
             console.log("serverinfoctrl:" + JSON.stringify(err));
@@ -64,9 +71,12 @@ function drawServers(serverWriteAreaCanvas, serverReadAreaCanvas, servers, posts
             server.readRng.minLat, server.readRng.maxLng, server.readRng.maxLat,
             index + 1, server.baseAddr);
     });
+}
+
+function drawPosts(serverWriteAreaCanvas, serverReadAreaCanvas, posts) {
     posts.forEach(function (post) {
-        drawPost(serverWriteAreaCanvas, post.loc.coordinates[0], post.loc.coordinates[1], post.mainDatabaseAddr);
-        drawPost(serverReadAreaCanvas, post.loc.coordinates[0], post.loc.coordinates[1], post.mainDatabaseAddr);
+            drawPost(serverWriteAreaCanvas, post.loc.coordinates[0], post.loc.coordinates[1], post.mainDatabaseAddr);
+            drawPost(serverReadAreaCanvas, post.loc.coordinates[0], post.loc.coordinates[1], post.mainDatabaseAddr);
     });
 }
 
@@ -91,7 +101,6 @@ function drawServerArea(canvas, minLng, minLat, maxLng, maxLat, text, serverAddr
     var maxX = mapToNewRange(maxLng, MIN_LNG, MAX_LNG, 0, canvas.width);
     var maxY = mapToNewRange(-minLat, MIN_LAT, MAX_LAT, 0, canvas.height);
     var rgbVals = getRgbFromServerAddr(serverAddr);
-    console.log("rgb values are " + JSON.stringify(rgbVals));
     ctx.beginPath();
     ctx.lineWidth = "12";
     ctx.strokeStyle = `rgb(${rgbVals[0]}, ${rgbVals[1]}, ${rgbVals[2]})`;
@@ -115,11 +124,11 @@ function drawPost(canvas, lng, lat, serverAddr) {
     var x = mapToNewRange(lng, MIN_LNG, MAX_LNG, 0, canvas.width);
     var y = mapToNewRange(-lat, MIN_LAT, MAX_LAT, 0, canvas.height);
     var rgbVals = getRgbFromServerAddr(serverAddr);
-    ctx.lineWidth = "5";
+    ctx.lineWidth = "3";
     ctx.strokeStyle = `rgb(${rgbVals[0]}, ${rgbVals[1]}, ${rgbVals[2]})`;
     ctx.fillStyle = 'rgb(0, 0, 0)';
     ctx.beginPath();
-    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.arc(x, y, 4, 0, 2 * Math.PI);
     ctx.fill();
     ctx.stroke();
 }
