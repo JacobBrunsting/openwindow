@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/JacobBrunsting/openwindow#readme",
   "dependencies": {
+    "JSONStream": "^1.3.1",
     "apidoc": "^0.17.5",
     "bluebird": "^3.5.0",
     "body-parser": "^1.15.2",
