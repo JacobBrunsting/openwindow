@@ -108,17 +108,6 @@ app.use(express.static('./public'));
 let backupAddr;
 const JSONStream = require('JSONStream');
 
-// ========= Add Server to List =========
-
-networkUtils.serverCall(constants.apiAddress + 'director/newserver', // its getting posts before this terminates, so backup addr is undefined
-        networkUtils.POST, {
-            baseAddr: baseAddr
-        })
-    .catch((err) => {
-        log.err('error connecting to server network: ' + err);
-        process.exit(1);
-    });
-
 // =============== Models ================
 
 const commentSchema = mongoose.Schema({
@@ -189,8 +178,20 @@ postSchema.index({
 const postModel = mongoose.model(settings[SITE_POST_MODEL_KEY], postSchema);
 const backupPostModel = mongoose.model(settings[BACKUP_POST_MODEL_KEY], postSchema);
 
-postModel.remove({});
-backupPostModel.remove({});
+// ========= Add Server to List =========
+
+Promise.all([
+        postModel.remove({}),
+        backupPostModel.remove({})
+    ]).then(() =>
+        networkUtils.serverCall(constants.apiAddress + 'director/newserver',
+            networkUtils.POST, {
+                baseAddr: baseAddr
+            }))
+    .catch((err) => {
+        log.err('error connecting to server network: ' + err);
+        process.exit(1);
+    });
 
 // ========== Old Post Cleanup ==========
 
@@ -1218,6 +1219,7 @@ function readAndSavePostStream(req, savePosts) {
         let posts = JSON.parse(bodyString);
         posts.forEach(addExtraPostProperties);
         body = [];
+        log.msg('post_database:readAndSavePostStream: saved ' + posts.length + ' posts');
         return savePosts(posts);
     }
 }
